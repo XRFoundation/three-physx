@@ -1,12 +1,22 @@
 ///<reference path="./types/PhysX.d.ts"/>
-console.log(location)
-import * as Comlink from 'comlink';
-interface PhysXConfig {
-  build: string;
+
+import { MessageQueue } from "./utils/MessageQueue";
+export interface PhysXConfig {
+  jsPath: string;
+  wasmPath: string;
   tps?: number;
 }
 
-export class PhysXManager {
+const noop = () => {}
+
+
+export interface PhysXInteface {
+  addBody: (body: any) => void;
+  initPhysX: (config: PhysXConfig) => void;
+  startPhysX: (start?: boolean) => void;
+}
+
+export class PhysXManager implements PhysXInteface {
 
   physxVersion: number;
   defaultErrorCallback: PhysX.PxDefaultErrorCallback;
@@ -21,15 +31,17 @@ export class PhysXManager {
 
   updateInterval: any;
   tps: number = 60;
+  onUpdate: any = noop;
 
-  async initPhysX (config: PhysXConfig): Promise<void> {
+  initPhysX = async (config: PhysXConfig): Promise<void> => {
     //@ts-ignore
-    importScripts(config.build)
-    console.log(globalThis)
+    importScripts(config.jsPath)
     if(config?.tps) {
       this.tps = config.tps;
     } 
-    (globalThis as any).PhysX = await new (globalThis as any).PHYSX();
+    (globalThis as any).PhysX = await new (globalThis as any).PHYSX({
+      locateFile: () => { return config.wasmPath; }
+    });
     this.physxVersion = PhysX.PX_PHYSICS_VERSION;
     this.defaultErrorCallback = new PhysX.PxDefaultErrorCallback();
     this.allocator = new PhysX.PxDefaultAllocator();
@@ -54,24 +66,51 @@ export class PhysXManager {
 
     console.log(this.scene)
 
-    this.simulate = this.simulate.bind(this)
     this.startPhysX(true);
   }
 
-  simulate() {
-    this.scene.simulate(1/this.tps, true);
-    this.scene.fetchResults(true);
+  simulate = () => {
+    // this.scene.simulate(1/this.tps, true);
+    // this.scene.fetchResults(true);
+    this.onUpdate(new Uint8Array([0, 1, 2]));
   }
 
-  startPhysX(start: boolean) {
+  startPhysX = (start: boolean = true) => {
     if(start) {
       this.updateInterval = setInterval(this.simulate, 1000/this.tps);
     } else {
       clearInterval()
     }
   }
+
+
+  /**
+   * PhysxInteface
+   */
+
+ addBody(body) {
+   console.log(body)
+ }
+
 }
 
-const _physxmanager = new PhysXManager()
+export const receiveWorker = async (): Promise<void> => {
+  const messageQueue = new MessageQueue(globalThis as any);
+  const _physxmanager = new PhysXManager()
+  _physxmanager.onUpdate = (data: Uint8Array) => {
+    messageQueue.sendEvent('data', data, [data.buffer])
+  }
+  const addFunctionListener = (eventLabel) => {
+    messageQueue.addEventListener(eventLabel, ({ detail }) => {
+      _physxmanager[eventLabel](...detail)
+    })
+  }
+  Object.keys(_physxmanager).forEach((key) => {
+    if(typeof _physxmanager[key] === 'function') {
+      addFunctionListener(key)
+    }
+  })
+  messageQueue.sendEvent('init', {})
+}
 
-Comlink.expose(_physxmanager);
+receiveWorker()

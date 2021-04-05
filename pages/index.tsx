@@ -1,13 +1,39 @@
 
 import React from 'react';
-import * as physx from '../src'
+import { initializePhysX } from '../src'
 
 const page = () => {
-  return (<canvas/>);
+  return (<canvas />);
 };
 
 export default page;
 
-if(typeof Worker !== 'undefined') { 
-  physx.initializePhysX(new Worker(new URL("../src/worker.ts", import.meta.url)), '/physx.release.js')
+const load = async () => {
+
+  const renderer = await import('./renderer')
+  const { makeEntities } = await import('./entities')
+
+  const onUpdate = (transforms) => {
+    console.log('got transforms', transforms)
+  }
+
+  const physics = await initializePhysX(new Worker(new URL("../src/worker.ts", import.meta.url)), onUpdate, { jsPath: '/physx.release.js', wasmPath: '/physx.release.wasm' });
+  physics.addBody('body added!!!');
+  physics.startPhysX(true);
+  
+  const entities = makeEntities()
+  
+  const update = () => {
+    renderer.update(entities)
+    requestAnimationFrame(update)
+  }
+  
+  renderer.init(entities)
+  update()
+
+
+}
+
+if (typeof window !== 'undefined') {
+  load();
 }
