@@ -4,17 +4,20 @@ declare module '*.wasm' {
 }
 
 declare namespace PhysX {
-	interface PxShapeFlag {
-		eSIMULATION_SHAPE: {
+	class PxShapeFlag {
+		static eSIMULATION_SHAPE: {
 			value: number;
 		};
-		eSCENE_QUERY_SHAPE: {
+		static eSCENE_QUERY_SHAPE: {
 			value: number;
 		};
-		eTRIGGER_SHAPE: {
+		static eTRIGGER_SHAPE: {
 			value: number;
 		};
-		eVISUALIZATION: {
+		static eVISUALIZATION: {
+			value: number;
+		};
+		static ePARTICLE_DRAIN: {
 			value: number;
 		};
 	}

@@ -1,4 +1,4 @@
-import type { PhysXConfig, PhysXInteface } from "./worker";
+import type { PhysXConfig, PhysXInteface, PhysXBodyConfig } from "./worker";
 import { MessageQueue } from "./utils/MessageQueue";
 
 export const initializePhysX = async (worker: Worker, onUpdate: any, config: PhysXConfig): Promise<PhysXInteface> => {
@@ -16,16 +16,32 @@ export const initializePhysX = async (worker: Worker, onUpdate: any, config: Phy
     initPhysX: pipeRemoteFunction(messageQueue, 'initPhysX'),
     startPhysX: pipeRemoteFunction(messageQueue, 'startPhysX'),
   }
-  physics.initPhysX(config);
+  await physics.initPhysX(config);
   return physics;
 }
 
 const pipeRemoteFunction = (messageQueue: MessageQueue, id: string) => {
   return (...args) => {
-    messageQueue.sendEvent(id, args);
+    return new Promise<any>((resolve) => {
+      const uuid = generateUUID();
+      messageQueue.addEventListener(uuid, ({ detail }) => {
+        resolve(detail.returnValue);
+      });
+      messageQueue.sendEvent(id, { args, uuid });
+    })
   }
 }
 
 const getTransformsFromBuffer = (buffer: ArrayBuffer) => {
   return buffer;
 }
+
+const generateUUID = (): string => {
+  return new Array(4)
+    .fill(0)
+    .map(() => Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16))
+    .join("-");
+}
+
+export { threeToPhysXModelDescription } from './threeToPhysXModelDescription'
+export type { PhysXBodyConfig };
