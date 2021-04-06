@@ -149,6 +149,10 @@ export class PhysXManager implements PhysXInteface {
     this.scene.addActor(body, null);
   }
 
+  updateBody = async () => {
+    // todo
+  }
+
   removeBody = async ({ id }) => {
     const body = this.bodies.get(id);
     this.scene.removeActor(body, false);

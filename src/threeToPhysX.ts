@@ -2,7 +2,7 @@
 
 import { PhysXBodyConfig } from '.'
 import { Object3D, Vector3, Matrix4, Box3, Mesh, SphereBufferGeometry, Quaternion } from 'three'
-import { PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, PhysXUserData } from './types/ThreePhysX';
+import { PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, PhysXUserData, RigidBodyProxy } from './types/ThreePhysX';
 
 const transform = new Matrix4();
 const inverse = new Matrix4();
@@ -10,7 +10,7 @@ const vec3 = new Vector3();
 const quat = new Quaternion();
 
 //createPhysXBody(entity, id, threeToPhysXModelDescription(entity, { type: threeToPhysXModelDescription.Shape.MESH }), true)
-export const threeToPhysX = (object: Object3D, id: number) => {
+export const threeToPhysX = (object: any, id: number) => {
   object.updateMatrixWorld(true)
   if(object.parent) {
     inverse.copy(object.parent.matrixWorld).invert();
@@ -18,15 +18,11 @@ export const threeToPhysX = (object: Object3D, id: number) => {
   } else {
     transform.copy(object.matrixWorld);
   }
+  const { type } = object.userData.physx ?? PhysXBodyType.STATIC;
 
-  if(!object.userData.physx) {
-    object.userData.physx = {
-      type: PhysXBodyType.STATIC,
-    } as PhysXUserData
+  object.physx = {
+    id
   }
-
-  const { type } = object.userData.physx; // 
-  object.userData.physx.id = id;
 
   const shapes: PhysXShapeConfig[] = [];
 
@@ -35,7 +31,7 @@ export const threeToPhysX = (object: Object3D, id: number) => {
   const rot = object.getWorldQuaternion(quat);
   const pos = object.getWorldPosition(vec3);
 
-  const physxBodyConfig: PhysXBodyConfig = {
+  const bodyConfig: PhysXBodyConfig = {
     id,
     transform: {
       translation: {
@@ -55,7 +51,21 @@ export const threeToPhysX = (object: Object3D, id: number) => {
       type,
     }
   }
-  return physxBodyConfig;
+
+  const body: RigidBodyProxy = {
+    id,
+    bodyConfig, 
+    transform: {
+      translation: new Vector3(),
+      rotation: new Quaternion(),
+    }
+  }
+  if(bodyConfig.bodyOptions.type === PhysXBodyType.DYNAMIC) {
+    body.transform.linearVelocity = new Vector3();
+    body.transform.angularVelocity = new Vector3();
+  }
+  object.body = body;
+  return bodyConfig;
 }
 
 // from three-to-ammo

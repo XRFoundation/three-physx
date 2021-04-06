@@ -2,7 +2,7 @@
 import { PhysXInstance } from '..'
 import { Object3D, Mesh, TorusKnotBufferGeometry, MeshNormalMaterial, BoxBufferGeometry, SphereBufferGeometry, PlaneBufferGeometry, CylinderBufferGeometry, DoubleSide } from 'three'
 import * as BufferConfig from "../src/BufferConfig";
-import { PhysXBodyType } from '../src/types/ThreePhysX';
+import { PhysXBodyType, RigidBodyProxy } from '../src/types/ThreePhysX';
 let ids = 0;
 const load = async () => {
 
@@ -12,12 +12,9 @@ const load = async () => {
   (globalThis as any).objects = objects
 
   const onUpdate = (buffer: Float32Array) => {
-    objects.forEach((obj, id) => {
-      const offset = id * BufferConfig.BODY_DATA_SIZE;
-      obj.position.fromArray(buffer, offset);
-      obj.quaternion.fromArray(buffer, offset + 3);
-      // linearVelocity.fromArray(buffer, offset + 8);
-      // angularVelocity.fromArray(buffer, offset + 12);
+    objects.forEach((obj: any, id) => {
+      obj.position.copy((obj.body as RigidBodyProxy).transform.translation);
+      obj.quaternion.copy((obj.body as RigidBodyProxy).transform.rotation);
     })
   }
   new PhysXInstance(new Worker(new URL("../src/worker.ts", import.meta.url)), onUpdate);

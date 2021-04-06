@@ -1,4 +1,4 @@
-import { Quaternion, Vector3 } from "three";
+import type { Object3D, Quaternion, Vector3 } from "three";
 
 export interface PhysXConfig {
   jsPath: string;
@@ -37,8 +37,8 @@ export interface PhysXBodyTransform {
 export interface PhysXBodyData {
   translation: Vector3
   rotation: Quaternion
-  linearVelocity: Vector3
-  angularVelocity: Vector3
+  linearVelocity?: Vector3
+  angularVelocity?: Vector3
 }
 
 export interface PhysXShapeOptions {
@@ -72,10 +72,29 @@ export interface PhysXBodyConfig {
 
 export interface PhysXUserData {
   type: PhysXBodyType
+  bodyData: PhysXBodyData
+  id: number
 }
 
 export interface PhysXInteface {
   initPhysX: any
   startPhysX: any
   addBody: any
+  updateBody: any
+  removeBody: any
+  addConstraint: any
+  removeConstraint: any
+  enableDebug: any
+  resetDynamicBody: any
+  activateBody: any
+}
+
+export interface Object3DBody extends Object3D {
+  body: RigidBodyProxy
+}
+
+export interface RigidBodyProxy {
+  id: number
+  transform: PhysXBodyData
+  bodyConfig: PhysXBodyConfig
 }
