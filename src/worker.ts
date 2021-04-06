@@ -1,15 +1,19 @@
 ///<reference path="./types/PhysX.d.ts"/>
 
 import { Matrix4, Vector3, Quaternion, Matrix } from "three";
-import { threeToPhysX } from "./threeToPhysX";
-import { PhysXBodyConfig, PhysXConfig, PhysXInteface, PhysXModelShapes, PhysXBodyTransform } from "./types/threePhysX";
+import { getShape } from "./getShape";
+import { PhysXBodyConfig, PhysXConfig, PhysXInteface, PhysXModelShapes, PhysXBodyTransform } from "./types/ThreePhysX";
 import { MessageQueue } from "./utils/MessageQueue";
-const noop = () => {};
+import * as BufferConfig from "./BufferConfig";
+
+const noop = () => { };
 
 const mat4 = new Matrix4();
 const pos = new Vector3();
 const quat = new Quaternion();
 const scale = new Vector3();
+
+let lastTick = 0;
 
 export class PhysXManager implements PhysXInteface {
 
@@ -31,22 +35,24 @@ export class PhysXManager implements PhysXInteface {
   onUpdate: any = noop;
   transformArray: Float32Array;
 
-  ids: number[];
-  bodies: Map<number, PhysX.RigidBody> = new Map<number, PhysX.RigidBody>();
-  shapes: Map<number, PhysX.PxShape> = new Map<number, PhysX.PxShape>();
+  bodies: Map<number, PhysX.RigidActor> = new Map<number, PhysX.RigidActor>();
+  dynamic: Map<number, PhysX.RigidActor> = new Map<number, PhysX.RigidActor>();
+  shapes: Map<number, PhysX.PxShape[]> = new Map<number, PhysX.PxShape[]>();
   matrices: Map<number, Matrix4> = new Map<number, Matrix4>();
   indices: Map<number, number> = new Map<number, number>();
 
-  
+  objectArray: Float32Array;
+
   // constraints: // TODO
 
 
-  initPhysX = async (config: PhysXConfig): Promise<void> => {
+  initPhysX = async (config: PhysXConfig, objectArray: Float32Array): Promise<void> => {
     //@ts-ignore
-    importScripts(config.jsPath)
-    if(config?.tps) {
+    importScripts(config.jsPath);
+    this.objectArray = objectArray;
+    if (config?.tps) {
       this.tps = config.tps;
-    } 
+    }
     (globalThis as any).PhysX = await new (globalThis as any).PHYSX({
       locateFile: () => { return config.wasmPath; }
     });
@@ -59,11 +65,11 @@ export class PhysXManager implements PhysXInteface {
     this.physics = PhysX.PxCreatePhysics(this.physxVersion, this.foundation, new PhysX.PxTolerancesScale(), false, null);
 
     const triggerCallback = {
-      onContactBegin : () => {},
-      onContactEnd : () => {},
-      onContactPersist : () => {},
-      onTriggerBegin : () => {},
-      onTriggerEnd : () => {},
+      onContactBegin: () => { },
+      onContactEnd: () => { },
+      onContactPersist: () => { },
+      onTriggerBegin: () => { },
+      onTriggerEnd: () => { },
     };
 
     this.scale = this.physics.getTolerancesScale();
@@ -76,43 +82,60 @@ export class PhysXManager implements PhysXInteface {
   }
 
   simulate = async () => {
-    this.scene.simulate(1/this.tps, true);
+    const now = Date.now();
+    const delta = now - lastTick;
+    this.scene.simulate(delta/1000, true);
     this.scene.fetchResults(true);
-    this.onUpdate(new Uint8Array([0, 1, 2]));
+    this.bodies.forEach((body: PhysX.RigidActor, id: number) => {
+      this.objectArray.set(getBodyData(body), id * BufferConfig.BODY_DATA_SIZE);
+    })
+    this.onUpdate(this.objectArray);
+    lastTick = now;
   }
 
   startPhysX = async (start: boolean = true) => {
-    if(start) {
-      this.updateInterval = setInterval(this.simulate, 1000/this.tps);
+    if (start) {
+      lastTick = Date.now() - 1 / this.tps; // pretend like it's only been one tick
+      this.updateInterval = setInterval(this.simulate, 1000 / this.tps);
     } else {
       clearInterval()
     }
   }
 
-  addBody = async ({ id, worldMatrix, shapes, bodyOptions }: PhysXBodyConfig) => {
-    console.log(id, worldMatrix, shapes, bodyOptions)
-    const { dynamic } = bodyOptions;
-    let body;
-    mat4.fromArray(worldMatrix);
-    const transform = mat4ToTransform(mat4)
+  addBody = async ({ id, transform, shapes, bodyOptions }: PhysXBodyConfig) => {
+    console.log(id, transform, shapes, bodyOptions)
+    const { dynamic, trigger } = bodyOptions;
+    let body: PhysX.RigidActor;
 
-    if(dynamic) {
+    if (dynamic) {
       body = this.physics.createRigidDynamic(transform);
+      (body as any).dynamic = true;
     } else {
       body = this.physics.createRigidStatic(transform);
     }
 
-    shapes.forEach(({ shape, vertices, indices, matrix, options }) => {
-      body.attachShape(threeToPhysX({ shape, vertices, indices, matrix, worldMatrix, options }));
+    if (trigger) {
+
+    }
+
+    const bodyShapes: PhysX.PxShape[] = [];
+
+    shapes.forEach(({ shape, vertices, indices, options }) => {
+      const bodyShape = getShape({ shape, vertices, indices, options });
+      bodyShape.setContactOffset(0.0000001)
+			const filterData = new PhysX.PxFilterData(0, 0, 0, 0);
+			bodyShape.setSimulationFilterData(filterData);
+      bodyShapes.push(bodyShape)
+      body.attachShape(bodyShape);
     })
 
+    this.shapes.set(id, bodyShapes);
     this.bodies.set(id, body);
     this.scene.addActor(body, null);
-    console.log(body);
   }
 
   removeBody = async () => {
-    
+
   }
 
   addConstraint = async () => {
@@ -136,10 +159,22 @@ export class PhysXManager implements PhysXInteface {
   }
 }
 
+const getBodyData = (body: PhysX.RigidActor) => {
+  const transform = body.getGlobalPose();
+  const linVel = (body as any).dynamic ? body.getLinearVelocity() : { x:0, y:0, z:0 };
+  const angVel = (body as any).dynamic ? body.getAngularVelocity() : { x:0, y:0, z:0 };
+  return [
+    transform.translation.x, transform.translation.y, transform.translation.z,
+    transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w,
+    linVel.x, linVel.y, linVel.z,
+    angVel.x, angVel.y, angVel.z,
+  ]
+}
+
 const mat4ToTransform = (matrix: Matrix4): PhysXBodyTransform => {
   matrix.decompose(pos, quat, scale)
   return {
-    translation: { 
+    translation: {
       x: pos.x,
       y: pos.y,
       z: pos.z
@@ -157,7 +192,7 @@ export const receiveWorker = async (): Promise<void> => {
   const messageQueue = new MessageQueue(globalThis as any);
   PhysXManager.instance = new PhysXManager();
   PhysXManager.instance.onUpdate = (data: Uint8Array) => {
-    messageQueue.sendEvent('data', data, [data.buffer])
+    messageQueue.sendEvent('data', data)
   }
   const addFunctionListener = (eventLabel) => {
     messageQueue.addEventListener(eventLabel, async ({ detail }) => {
@@ -167,7 +202,7 @@ export const receiveWorker = async (): Promise<void> => {
     })
   }
   Object.keys(PhysXManager.instance).forEach((key) => {
-    if(typeof PhysXManager.instance[key] === 'function') {
+    if (typeof PhysXManager.instance[key] === 'function') {
       addFunctionListener(key)
     }
   })

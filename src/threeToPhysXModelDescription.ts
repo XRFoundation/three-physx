@@ -1,6 +1,6 @@
 import { Object3D, Quaternion, Vector3, Matrix4, BufferGeometry, Box3 } from 'three'
-import { PhysXModelShapes } from './types/threePhysX'
-import { quickhull } from './quickhull';
+import { PhysXModelShapes } from './types/ThreePhysX'
+import { quickhull } from './utils/quickhull';
 
 const PI_2 = Math.PI / 2;
 enum Shape {

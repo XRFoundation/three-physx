@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { initializePhysX } from '..'
+import { PhysXInstance } from '..'
 import { Object3D, Mesh, TorusKnotBufferGeometry, MeshNormalMaterial, BoxBufferGeometry, SphereBufferGeometry, PlaneBufferGeometry, CylinderBufferGeometry, DoubleSide } from 'three'
-import { createPhysXBody } from '../src/createPhysXBody';
+import * as BufferConfig from "../src/BufferConfig";
 
 const page = () => {
   return (<></>);
@@ -14,33 +14,57 @@ let ids = 0;
 const load = async () => {
 
   const renderer = await import('./renderer')
-  
-  const objects = new Map<number, Object3D>();
-  objects.set(ids++, (new Mesh(new BoxBufferGeometry(1, 1), new MeshNormalMaterial({ flatShading: true }))).translateX(-4))
-  objects.set(ids++, (new Mesh(new CylinderBufferGeometry(1, 1), new MeshNormalMaterial({ flatShading: true }))).translateX(-2))
-  objects.set(ids++, (new Mesh(new PlaneBufferGeometry(1, 1), new MeshNormalMaterial({ flatShading: true, side: DoubleSide }))))
-  objects.set(ids++, (new Mesh(new SphereBufferGeometry(1, 1), new MeshNormalMaterial({ flatShading: true }))).translateX(2))
-  objects.set(ids++, (new Mesh(new TorusKnotBufferGeometry(1, 1), new MeshNormalMaterial({ flatShading: true }))).translateX(6))
 
-  const onUpdate = (transforms) => {
-    // console.log(transforms)
-    // mesh.position.fromArray(entity.transform.position)
+  const objects = new Map<number, Object3D>();
+  (globalThis as any).objects = objects
+
+  const onUpdate = (buffer: Float32Array) => {
+    objects.forEach((obj, id) => {
+      const offset = id * BufferConfig.BODY_DATA_SIZE;
+      obj.position.fromArray(buffer, offset);
+      obj.quaternion.fromArray(buffer, offset + 3);
+      // linearVelocity.fromArray(buffer, offset + 8);
+      // angularVelocity.fromArray(buffer, offset + 12);
+    })
     // mesh.quaternion.fromArray(entity.transform.rotation)
     // console.log('got transforms', transforms)
   }
-  
-  const physics = await initializePhysX(new Worker(new URL("../src/worker.ts", import.meta.url)), onUpdate, { jsPath: '/physx.release.js', wasmPath: '/physx.release.wasm' });
-  objects.forEach((object, id) => {
-    physics.addBody(createPhysXBody(object, id, true));
+  new PhysXInstance(new Worker(new URL("../src/worker.ts", import.meta.url)), onUpdate);
+  await PhysXInstance.instance.initPhysX({ jsPath: '/physx.release.js', wasmPath: '/physx.release.wasm' });
+
+  createScene().forEach(async (object) => {
+    const body = await PhysXInstance.instance.addBody(object);
+    objects.set(body.id, object)
+    renderer.addToScene(object);
   })
 
   const update = () => {
-    renderer.update(objects)
+    renderer.update()
     requestAnimationFrame(update)
   }
-  
-  renderer.init(objects)
   update()
+}
+
+const createScene = () => {
+  const mesh1 = new Mesh(new BoxBufferGeometry(), new MeshNormalMaterial({ flatShading: true })).translateX(-4);
+  mesh1.userData.physx = { dynamic: true };
+
+  const mesh2 = new Mesh(new CylinderBufferGeometry(), new MeshNormalMaterial({ flatShading: true })).translateX(-2);
+  mesh2.userData.physx = { dynamic: true };
+  
+  const mesh3 = new Mesh(new PlaneBufferGeometry(), new MeshNormalMaterial({ flatShading: true, side: DoubleSide }));
+  mesh3.userData.physx = { dynamic: true };
+  
+  const mesh4 = new Mesh(new SphereBufferGeometry(), new MeshNormalMaterial({ flatShading: true })).translateX(2);
+  mesh4.userData.physx = { dynamic: true };
+  
+  const mesh5 = new Mesh(new TorusKnotBufferGeometry(), new MeshNormalMaterial({ flatShading: true })).translateX(6);
+  mesh5.userData.physx = { dynamic: true };
+  
+  const floor = new Mesh(new BoxBufferGeometry(10, 1, 10), new MeshNormalMaterial({ flatShading: true, side: DoubleSide })).translateY(-4);
+  floor.userData.physx = { dynamic: false };
+  
+  return [mesh1, mesh2, mesh3, mesh4, mesh5, floor];
 }
 
 

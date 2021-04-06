@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { Object3D } from 'three'
+import { DoubleSide, Mesh, MeshNormalMaterial, Object3D, PlaneBufferGeometry } from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 
 const container = document.createElement('div')
@@ -55,22 +55,15 @@ controls.maxDistance = 500
 controls.maxPolarAngle = Math.PI / 2
 
 container.appendChild(renderer.domElement)
+// scene.add(new Mesh(new PlaneBufferGeometry(10, 10), new MeshNormalMaterial({ flatShading: true, side: DoubleSide })).translateY(-4).rotateX(Math.PI / 2))
 
-const meshes = {}
-
-export const init = (entities: Map<number, Object3D>) => {
-  entities.forEach((entity, id) => {
-    entity.castShadow = true
-    entity.receiveShadow = true
-    meshes[id] = entity
-    scene.add(entity)
-  })
+export const addToScene = (entity: Object3D) => {
+  entity.castShadow = true
+  entity.receiveShadow = true
+  scene.add(entity)
 }
 
-export const update = (entities: Map<number, Object3D>) => {
-  // entities.forEach((entity, id) => {
-  //   const mesh = meshes[id]
-  // })
+export const update = () => {
   controls.update()
   renderer.render(scene, camera)
 }

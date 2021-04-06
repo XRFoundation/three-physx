@@ -1,53 +1,67 @@
-import type { PhysXConfig, PhysXInteface, PhysXBodyConfig } from "./types/threePhysX";
+import * as BufferConfig from "./BufferConfig";
 import { MessageQueue } from "./utils/MessageQueue";
-const BUFFER_CONFIG = {
-  HEADER_LENGTH: 2,
-  MAX_BODIES: 10000,
-  MATRIX_OFFSET: 0,
-  LINEAR_VELOCITY_OFFSET: 16,
-  ANGULAR_VELOCITY_OFFSET: 17,
-  COLLISIONS_OFFSET: 18,
-  BODY_DATA_SIZE: 26
-};
 
-export const initializePhysX = async (worker: Worker, onUpdate: any, config: PhysXConfig): Promise<PhysXInteface> => {
-  const messageQueue = new MessageQueue(worker);
-  await new Promise((resolve) => {
-    messageQueue.addEventListener('init', () => {
-      resolve(true)
-    })
-  })
-  messageQueue.addEventListener('data', ({ detail }: { detail: Float32Array }) => {
-    onUpdate(getTransformsFromBuffer(detail))
-  })
-  const physics = {
-    addBody: pipeRemoteFunction(messageQueue, 'addBody'),
-    initPhysX: pipeRemoteFunction(messageQueue, 'initPhysX'),
-    startPhysX: pipeRemoteFunction(messageQueue, 'startPhysX'),
+import type { PhysXConfig, PhysXInteface, PhysXBodyConfig } from "./types/ThreePhysX";
+import type { Object3D } from "three";
+import { threeToPhysX } from "./threeToPhysX";
+
+let nextAvailableBodyIndex = 0;
+const arrayBuffer = new ArrayBuffer(BufferConfig.ARRAY_LENGTH);
+let objectMatricesFloatArray = new Float32Array(arrayBuffer);
+
+export class PhysXInstance implements PhysXInteface {
+  static instance: PhysXInstance;
+  worker: Worker;
+  onUpdate: any;
+  physicsProxy: PhysXInteface;
+
+  constructor(worker: Worker, onUpdate: any) {
+    PhysXInstance.instance = this;
+    this.worker = worker;
+    this.onUpdate = onUpdate;
   }
-  // const arrayBuffer = new ArrayBuffer(
-  //   4 * BUFFER_CONFIG.BODY_DATA_SIZE * BUFFER_CONFIG.MAX_BODIES + //matrices
-  //     4 * BUFFER_CONFIG.MAX_BODIES //velocities
-  // );
-  // let objectMatricesFloatArray = new Float32Array(arrayBuffer);
-  await physics.initPhysX(config);
-  return physics;
+
+  initPhysX = async (config: PhysXConfig): Promise<void> => {
+    const messageQueue = new MessageQueue(this.worker);
+    await new Promise((resolve) => {
+      messageQueue.addEventListener('init', () => {
+        resolve(true)
+      })
+    })
+    messageQueue.addEventListener('data', ({ detail }: { detail: Float32Array }) => {
+      this.onUpdate(detail)
+    })
+
+    this.physicsProxy = {
+      addBody: pipeRemoteFunction(messageQueue, 'addBody'),
+      initPhysX: pipeRemoteFunction(messageQueue, 'initPhysX', [objectMatricesFloatArray.buffer]),
+      startPhysX: pipeRemoteFunction(messageQueue, 'startPhysX'),
+    } as PhysXInteface
+
+    await this.physicsProxy.initPhysX(config, objectMatricesFloatArray)
+  }
+
+  addBody = async (object: Object3D) => {
+    const bodyData = threeToPhysX(object, nextAvailableBodyIndex++);
+    await this.physicsProxy.addBody(bodyData)
+    return bodyData;
+  }
+
+  startPhysX = async (start: boolean) => {
+    return this.physicsProxy.startPhysX(start)
+  }
 }
 
-const pipeRemoteFunction = (messageQueue: MessageQueue, id: string) => {
+const pipeRemoteFunction = (messageQueue: MessageQueue, id: string, transferrables?: Transferable[]) => {
   return (...args) => {
     return new Promise<any>((resolve) => {
       const uuid = generateUUID();
       messageQueue.addEventListener(uuid, ({ detail }) => {
         resolve(detail.returnValue);
       });
-      messageQueue.sendEvent(id, { args, uuid });
+      messageQueue.sendEvent(id, { args, uuid }, transferrables);
     })
   }
-}
-
-const getTransformsFromBuffer = (buffer: ArrayBuffer) => {
-  return buffer;
 }
 
 const generateUUID = (): string => {
