@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { Object3D } from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 
 const container = document.createElement('div')
@@ -57,33 +58,19 @@ container.appendChild(renderer.domElement)
 
 const meshes = {}
 
-export const init = entities => {
-  entities.forEach(entity => {
-    let geometry
-    if (entity.model.type === 'box') {
-      geometry = new THREE.BoxGeometry(
-        entity.model.size[0],
-        entity.model.size[1],
-        entity.model.size[2]
-      )
-    }
-    const material = new THREE.MeshStandardMaterial({ color: '#65C7F1' })
-    const mesh = new THREE.Mesh(geometry, material)
-    mesh.position.fromArray(entity.transform.position)
-    mesh.quaternion.fromArray(entity.transform.rotation)
-    mesh.castShadow = true
-    mesh.receiveShadow = true
-    meshes[entity.id] = mesh
-    scene.add(mesh)
+export const init = (entities: Map<number, Object3D>) => {
+  entities.forEach((entity, id) => {
+    entity.castShadow = true
+    entity.receiveShadow = true
+    meshes[id] = entity
+    scene.add(entity)
   })
 }
 
-export const update = entities => {
-  entities.forEach(entity => {
-    const mesh = meshes[entity.id]
-    mesh.position.fromArray(entity.transform.position)
-    mesh.quaternion.fromArray(entity.transform.rotation)
-  })
+export const update = (entities: Map<number, Object3D>) => {
+  // entities.forEach((entity, id) => {
+  //   const mesh = meshes[id]
+  // })
   controls.update()
   renderer.render(scene, camera)
 }

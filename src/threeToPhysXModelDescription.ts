@@ -1,5 +1,5 @@
 import { Object3D, Quaternion, Vector3, Matrix4, BufferGeometry, Box3 } from 'three'
-import { PhysXBodyConfig, PhysXModelShapes } from './worker'
+import { PhysXModelShapes } from './types/threePhysX'
 import { quickhull } from './quickhull';
 
 const PI_2 = Math.PI / 2;
@@ -18,18 +18,17 @@ export const threeToPhysXModelDescription = (object: Object3D, options: { type?:
 
   if (options.type === Shape.BOX) {
     return createBoundingBoxShape(object);
-  } else if (options.type === Shape.CYLINDER) {
-    throw new Error('WARNING: threeToPhysX - Cylinder shape not yet implemented')
+  // } else if (options.type === Shape.CYLINDER) {
     // return createBoundingCylinderShape(object, options);
   } else if (options.type === Shape.SPHERE) {
     return createBoundingSphereShape(object, options);
-  } else if (options.type === Shape.HULL) {
-    return createConvexPolyhedron(object);
+  // } else if (options.type === Shape.HULL) {
+  //   return createConvexPolyhedron(object);
   } else if (options.type === Shape.MESH) {
     geometry = getGeometry(object);
     return geometry ? createTrimeshShape(geometry) : null;
   } else if (options.type) {
-    throw new Error(options.type);
+    throw new Error('Shape: ' + Shape[options.type] + ' is not currently implemented');
   }
 
   geometry = getGeometry(object);

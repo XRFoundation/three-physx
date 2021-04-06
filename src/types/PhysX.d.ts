@@ -152,8 +152,8 @@ declare namespace PhysX {
 	class PxPlaneGeometry extends PxGeometry {
 		constructor();
 	}
-	class PxTriangleMesh extends PxGeometry {
-		constructor(x: number, y: number, z: number);
+	class PxTriangleMeshGeometry extends PxGeometry {
+		constructor(a: any, b: any, c: any);
 	}
 
 	class Material extends Base { }
@@ -282,8 +282,8 @@ declare namespace PhysX {
 		constructor(flags: number);
 	}
 
-	class PxTriangleMeshGeometry {
-		constructor(a: any, b: any, c: any);
+	class PxTriangleMesh {
+		constructor(x: number, y: number, z: number);
 	}
 
 	class PxMeshGeometryFlags {

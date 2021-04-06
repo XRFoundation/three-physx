@@ -1,62 +1,19 @@
 ///<reference path="./types/PhysX.d.ts"/>
 
+import { Matrix4, Vector3, Quaternion, Matrix } from "three";
+import { threeToPhysX } from "./threeToPhysX";
+import { PhysXBodyConfig, PhysXConfig, PhysXInteface, PhysXModelShapes, PhysXBodyTransform } from "./types/threePhysX";
 import { MessageQueue } from "./utils/MessageQueue";
-export interface PhysXConfig {
-  jsPath: string;
-  wasmPath: string;
-  tps?: number;
-}
-
 const noop = () => {};
 
-export enum PhysXModelShapes {
-  Sphere,
-  Plane,
-  // Capsule,
-  Box,
-  ConvexMesh,
-  TriangleMesh,
-  HeightField
-}
-
-export interface PhysXPrimitiveModelDescription {
-  shape: PhysXModelShapes,
-  size?: number[],
-  vertices?: number[],
-  faces?: number[],
-  indices?: number[]
-}
-
-export interface PhysXConvexShapeDescription {
-}
-export interface PhysXBodyTransformParameters {
-  translation: {
-    x: number;
-    y: number;
-    z: number;
-  };
-  rotation: {
-    w: number;
-    x: number;
-    y: number;
-    z: number;
-  };
-}
-
-export interface PhysXBodyConfig {
-  id: number;
-  dynamic: boolean,
-  model: PhysXPrimitiveModelDescription,
-  transform: PhysXBodyTransformParameters,
-}
-
-export interface PhysXInteface {
-  addBody: (config: PhysXBodyConfig) => Promise<void>;
-  initPhysX: (config: PhysXConfig) => Promise<void>;
-  startPhysX: (start?: boolean) => Promise<void>;
-}
+const mat4 = new Matrix4();
+const pos = new Vector3();
+const quat = new Quaternion();
+const scale = new Vector3();
 
 export class PhysXManager implements PhysXInteface {
+
+  static instance: PhysXManager;
 
   physxVersion: number;
   defaultErrorCallback: PhysX.PxDefaultErrorCallback;
@@ -72,8 +29,17 @@ export class PhysXManager implements PhysXInteface {
   updateInterval: any;
   tps: number = 60;
   onUpdate: any = noop;
+  transformArray: Float32Array;
 
+  ids: number[];
   bodies: Map<number, PhysX.RigidBody> = new Map<number, PhysX.RigidBody>();
+  shapes: Map<number, PhysX.PxShape> = new Map<number, PhysX.PxShape>();
+  matrices: Map<number, Matrix4> = new Map<number, Matrix4>();
+  indices: Map<number, number> = new Map<number, number>();
+
+  
+  // constraints: // TODO
+
 
   initPhysX = async (config: PhysXConfig): Promise<void> => {
     //@ts-ignore
@@ -123,49 +89,85 @@ export class PhysXManager implements PhysXInteface {
     }
   }
 
-  addBody = async (entity: PhysXBodyConfig) => {
-    console.log('addBody', entity)
-    let geometry, body;
-    if (entity.model.shape === PhysXModelShapes.Box) {
-      if(entity.model.size.length !== 3) console.log('Box shape has wrong number of extents')
-      geometry = new PhysX.PxBoxGeometry(...(entity.model.size as [number, number, number]))
-    } else if (entity.model.shape === PhysXModelShapes.Sphere) {
-      geometry = new PhysX.PxSphereGeometry(...(entity.model.size as [number]))
-    }
-    const material = this.physics.createMaterial(0.2, 0.2, 0.2)
-    const flags = new PhysX.PxShapeFlags(
-      PhysX.PxShapeFlag.eSCENE_QUERY_SHAPE.value |
-      PhysX.PxShapeFlag.eSIMULATION_SHAPE.value
-    )
-    const shape = this.physics.createShape(geometry, material, false, flags)
-    if(entity.dynamic) {
-      body = this.physics.createRigidDynamic(entity.transform);
+  addBody = async ({ id, worldMatrix, shapes, bodyOptions }: PhysXBodyConfig) => {
+    console.log(id, worldMatrix, shapes, bodyOptions)
+    const { dynamic } = bodyOptions;
+    let body;
+    mat4.fromArray(worldMatrix);
+    const transform = mat4ToTransform(mat4)
+
+    if(dynamic) {
+      body = this.physics.createRigidDynamic(transform);
     } else {
-      body = this.physics.createRigidStatic(entity.transform);
+      body = this.physics.createRigidStatic(transform);
     }
-    body.attachShape(shape)
-    this.bodies.set(entity.id, body);
-    this.scene.addActor(body, null)
-    console.log(body)
+
+    shapes.forEach(({ shape, vertices, indices, matrix, options }) => {
+      body.attachShape(threeToPhysX({ shape, vertices, indices, matrix, worldMatrix, options }));
+    })
+
+    this.bodies.set(id, body);
+    this.scene.addActor(body, null);
+    console.log(body);
   }
 
+  removeBody = async () => {
+    
+  }
+
+  addConstraint = async () => {
+    // todo
+  }
+
+  removeConstraint = async () => {
+    // todo
+  }
+
+  enableDebug = async () => {
+    // todo
+  }
+
+  resetDynamicBody = async () => {
+    // todo
+  }
+
+  activateBody = async () => {
+    // todo
+  }
+}
+
+const mat4ToTransform = (matrix: Matrix4): PhysXBodyTransform => {
+  matrix.decompose(pos, quat, scale)
+  return {
+    translation: { 
+      x: pos.x,
+      y: pos.y,
+      z: pos.z
+    },
+    rotation: {
+      x: quat.x,
+      y: quat.y,
+      z: quat.z,
+      w: quat.w
+    }
+  }
 }
 
 export const receiveWorker = async (): Promise<void> => {
   const messageQueue = new MessageQueue(globalThis as any);
-  const _physxmanager = new PhysXManager()
-  _physxmanager.onUpdate = (data: Uint8Array) => {
+  PhysXManager.instance = new PhysXManager();
+  PhysXManager.instance.onUpdate = (data: Uint8Array) => {
     messageQueue.sendEvent('data', data, [data.buffer])
   }
   const addFunctionListener = (eventLabel) => {
     messageQueue.addEventListener(eventLabel, async ({ detail }) => {
-      _physxmanager[eventLabel](...detail.args).then((returnValue) => {
+      PhysXManager.instance[eventLabel](...detail.args).then((returnValue) => {
         messageQueue.sendEvent(detail.uuid, { returnValue });
       })
     })
   }
-  Object.keys(_physxmanager).forEach((key) => {
-    if(typeof _physxmanager[key] === 'function') {
+  Object.keys(PhysXManager.instance).forEach((key) => {
+    if(typeof PhysXManager.instance[key] === 'function') {
       addFunctionListener(key)
     }
   })
