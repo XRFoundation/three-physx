@@ -166,8 +166,11 @@ declare namespace PhysX {
 		setFlag(flag: number): void;
 	}
 
-	class PxActorFlags {
-		constructor(value: number);
+	enum PxActorFlags {
+    eVISUALIZATION = 1 << 0,
+    eDISABLE_GRAVITY = 1 << 1,
+    eSEND_SLEEP_NOTIFIES = 1 << 2,
+    eDISABLE_SIMULATION = 1 << 3
 	}
 
 	class Actor extends Base {
@@ -274,13 +277,41 @@ declare namespace PhysX {
 		constructor(a: any, b: any);
 	}
 
-	class PxShapeFlags {
-		constructor(flags: PxShapeFlag | number);
+	enum PxShapeFlags {
+    eSIMULATION_SHAPE = 1 << 0,
+    eSCENE_QUERY_SHAPE = 1 << 1,
+    eTRIGGER_SHAPE = 1 << 2,
+    eVISUALIZATION = 1 << 3,
+    ePARTICLE_DRAIN = 1 << 4
 	}
 
-	class PxRigidBodyFlags {
-		constructor(flags: number);
+	enum PxRigidBodyFlags {
+    eKINEMATIC = 1 << 0,
+    eUSE_KINEMATIC_TARGET_FOR_SCENE_QUERIES = 1 << 1,
+    eENABLE_CCD = 1 << 2,
+    eENABLE_CCD_FRICTION = 1 << 3,
+    eENABLE_POSE_INTEGRATION_PREVIEW = 1 << 4,
+    eENABLE_SPECULATIVE_CCD = 1 << 5,
+    eENABLE_CCD_MAX_CONTACT_IMPULSE = 1 << 6,
+    eRETAIN_ACCELERATIONS = 1 << 7
 	}
+
+  enum PxSceneFlag {
+    eENABLE_ACTIVE_ACTORS = 1 << 0,
+    eENABLE_CCD = 1 << 1,
+    eDISABLE_CCD_RESWEEP = 1 << 2,
+    eADAPTIVE_FORCE = 1 << 3,
+    eENABLE_PCM = 1 << 6,
+    eDISABLE_CONTACT_REPORT_BUFFER_RESIZE = 1 << 7,
+    eDISABLE_CONTACT_CACHE = 1 << 8,
+    eREQUIRE_RW_LOCK = 1 << 9,
+    eENABLE_STABILIZATION = 1 << 10,
+    eENABLE_AVERAGE_POINT = 1 << 11,
+    eEXCLUDE_KINEMATICS_FROM_ACTIVE_ACTORS = 1 << 12,
+    eENABLE_GPU_DYNAMICS = 1 << 13,
+    eENABLE_ENHANCED_DETERMINISM = 1 << 14,
+    eENABLE_FRICTION_EVERY_ITERATION = 1 << 15
+  }
 
 	class PxTriangleMesh {
 		constructor(x: number, y: number, z: number);

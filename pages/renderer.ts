@@ -52,7 +52,7 @@ controls.dampingFactor = 0.05
 controls.screenSpacePanning = false
 controls.minDistance = 1
 controls.maxDistance = 500
-controls.maxPolarAngle = Math.PI / 2
+// controls.maxPolarAngle = Math.PI / 2
 
 container.appendChild(renderer.domElement)
 // scene.add(new Mesh(new PlaneBufferGeometry(10, 10), new MeshNormalMaterial({ flatShading: true, side: DoubleSide })).translateY(-4).rotateX(Math.PI / 2))

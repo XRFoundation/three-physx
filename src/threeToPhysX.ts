@@ -2,7 +2,7 @@
 
 import { PhysXBodyConfig } from '.'
 import { Object3D, Vector3, Matrix4, Box3, Mesh, SphereBufferGeometry, Quaternion } from 'three'
-import { PhysXModelShapes, PhysXShapeConfig, PhysXUserData } from './types/ThreePhysX';
+import { PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, PhysXUserData } from './types/ThreePhysX';
 
 const transform = new Matrix4();
 const inverse = new Matrix4();
@@ -21,11 +21,11 @@ export const threeToPhysX = (object: Object3D, id: number) => {
 
   if(!object.userData.physx) {
     object.userData.physx = {
-      dynamic: false,
+      type: PhysXBodyType.STATIC,
     } as PhysXUserData
   }
 
-  const dynamic = object.userData.physx.dynamic;
+  const { type } = object.userData.physx; // 
   object.userData.physx.id = id;
 
   const shapes: PhysXShapeConfig[] = [];
@@ -52,7 +52,7 @@ export const threeToPhysX = (object: Object3D, id: number) => {
     },
     shapes,
     bodyOptions: {
-      dynamic,
+      type,
     }
   }
   return physxBodyConfig;

@@ -2,6 +2,7 @@
 import { PhysXInstance } from '..'
 import { Object3D, Mesh, TorusKnotBufferGeometry, MeshNormalMaterial, BoxBufferGeometry, SphereBufferGeometry, PlaneBufferGeometry, CylinderBufferGeometry, DoubleSide } from 'three'
 import * as BufferConfig from "../src/BufferConfig";
+import { PhysXBodyType } from '../src/types/ThreePhysX';
 let ids = 0;
 const load = async () => {
 
@@ -18,8 +19,6 @@ const load = async () => {
       // linearVelocity.fromArray(buffer, offset + 8);
       // angularVelocity.fromArray(buffer, offset + 12);
     })
-    // mesh.quaternion.fromArray(entity.transform.rotation)
-    // console.log('got transforms', transforms)
   }
   new PhysXInstance(new Worker(new URL("../src/worker.ts", import.meta.url)), onUpdate);
   await PhysXInstance.instance.initPhysX({ jsPath: '/physx.release.js', wasmPath: '/physx.release.wasm' });
@@ -38,25 +37,30 @@ const load = async () => {
 }
 
 const createScene = () => {
-  const mesh1 = new Mesh(new BoxBufferGeometry(), new MeshNormalMaterial({ flatShading: true })).translateX(-4);
-  mesh1.userData.physx = { dynamic: true };
+  const meshes = []
+  for(let i = 0; i < 1000; i++){
+    const mesh = new Mesh(new BoxBufferGeometry(), new MeshNormalMaterial({ flatShading: true }))
+    mesh.position.set(Math.random() * 50 - 25, Math.random() * 50 - 25, Math.random() * 50 - 25);
+    mesh.userData.physx = { type: PhysXBodyType.KINEMATIC };
+    meshes.push(mesh)
+  }
 
   const mesh2 = new Mesh(new CylinderBufferGeometry(), new MeshNormalMaterial({ flatShading: true })).translateX(-2);
-  mesh2.userData.physx = { dynamic: true };
+  mesh2.userData.physx = { type: PhysXBodyType.DYNAMIC };
   
   const mesh3 = new Mesh(new PlaneBufferGeometry(), new MeshNormalMaterial({ flatShading: true, side: DoubleSide }));
-  mesh3.userData.physx = { dynamic: true };
+  mesh3.userData.physx = { type: PhysXBodyType.DYNAMIC };
   
   const mesh4 = new Mesh(new SphereBufferGeometry(), new MeshNormalMaterial({ flatShading: true })).translateX(2);
-  mesh4.userData.physx = { dynamic: true };
+  mesh4.userData.physx = { type: PhysXBodyType.DYNAMIC };
   
   const mesh5 = new Mesh(new TorusKnotBufferGeometry(), new MeshNormalMaterial({ flatShading: true })).translateX(6);
-  mesh5.userData.physx = { dynamic: true };
+  mesh5.userData.physx = { type: PhysXBodyType.DYNAMIC };
   
-  const floor = new Mesh(new BoxBufferGeometry(10, 1, 10), new MeshNormalMaterial({ flatShading: true, side: DoubleSide })).translateY(-4);
-  floor.userData.physx = { dynamic: false };
+  const floor = new Mesh(new BoxBufferGeometry(100, 1, 100), new MeshNormalMaterial({ flatShading: true, side: DoubleSide })).translateY(-25);
+  floor.userData.physx = { type: PhysXBodyType.STATIC };
   
-  return [mesh1, mesh2, mesh3, mesh4, mesh5, floor];
+  return [...meshes, mesh2, mesh3, mesh4, mesh5, floor];
 }
 
 load()

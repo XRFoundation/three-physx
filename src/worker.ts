@@ -2,7 +2,7 @@
 
 import { Matrix4, Vector3, Quaternion, Matrix } from "three";
 import { getShape } from "./getShape";
-import { PhysXBodyConfig, PhysXConfig, PhysXInteface, PhysXModelShapes, PhysXBodyTransform } from "./types/ThreePhysX";
+import { PhysXBodyConfig, PhysXConfig, PhysXInteface, PhysXModelShapes, PhysXBodyTransform, PhysXBodyType } from "./types/ThreePhysX";
 import { MessageQueue } from "./utils/MessageQueue";
 import * as BufferConfig from "./BufferConfig";
 
@@ -65,11 +65,21 @@ export class PhysXManager implements PhysXInteface {
     this.physics = PhysX.PxCreatePhysics(this.physxVersion, this.foundation, new PhysX.PxTolerancesScale(), false, null);
 
     const triggerCallback = {
-      onContactBegin: () => { },
-      onContactEnd: () => { },
-      onContactPersist: () => { },
-      onTriggerBegin: () => { },
-      onTriggerEnd: () => { },
+      onContactBegin: (shapeA, shapeB) => { 
+        // console.log('onContactBegin', shapeA, shapeB) 
+      },
+      onContactEnd: (shapeA, shapeB) => { 
+        // console.log('onContactEnd', shapeA, shapeB) 
+      },
+      onContactPersist: (shapeA, shapeB) => { 
+        // console.log('onContactPersist', shapeA, shapeB) 
+      },
+      onTriggerBegin: (shapeA, shapeB) => { 
+        // console.log('onTriggerBegin', shapeA, shapeB) 
+      },
+      onTriggerEnd: (shapeA, shapeB) => { 
+        // console.log('onTriggerEnd', shapeA, shapeB) 
+      },
     };
 
     this.scale = this.physics.getTolerancesScale();
@@ -103,15 +113,21 @@ export class PhysXManager implements PhysXInteface {
   }
 
   addBody = async ({ id, transform, shapes, bodyOptions }: PhysXBodyConfig) => {
-    console.log(id, transform, shapes, bodyOptions)
-    const { dynamic, trigger } = bodyOptions;
-    let body: PhysX.RigidActor;
+    // console.log(id, transform, shapes, bodyOptions)
+    const { type, trigger } = bodyOptions;
 
-    if (dynamic) {
-      body = this.physics.createRigidDynamic(transform);
-      (body as any).dynamic = true;
-    } else {
+    let body: PhysX.RigidStatic | PhysX.RigidDynamic;
+
+    if (type === PhysXBodyType.STATIC) {
       body = this.physics.createRigidStatic(transform);
+    } else {
+      body = this.physics.createRigidDynamic(transform) as PhysX.RigidDynamic;
+      if(type === PhysXBodyType.KINEMATIC) {
+        // (body as PhysX.RigidDynamic).setKinematicTarget(new PhysX.PxTransform([0,0,0], [0,0,0,0]));
+        // (body as PhysX.RigidDynamic).setRigidBodyFlags(PhysX.PxRigidBodyFlags.eKINEMATIC);
+      }
+
+      (body as any)._type = type;
     }
 
     if (trigger) {
@@ -119,11 +135,10 @@ export class PhysXManager implements PhysXInteface {
     }
 
     const bodyShapes: PhysX.PxShape[] = [];
-
     shapes.forEach(({ shape, vertices, indices, options }) => {
       const bodyShape = getShape({ shape, vertices, indices, options });
       bodyShape.setContactOffset(0.0000001)
-			const filterData = new PhysX.PxFilterData(0, 0, 0, 0);
+			const filterData = new PhysX.PxFilterData(1, 1, 0, 0);
 			bodyShape.setSimulationFilterData(filterData);
       bodyShapes.push(bodyShape)
       body.attachShape(bodyShape);
@@ -134,7 +149,10 @@ export class PhysXManager implements PhysXInteface {
     this.scene.addActor(body, null);
   }
 
-  removeBody = async () => {
+  removeBody = async ({ id }) => {
+    const body = this.bodies.get(id);
+    this.scene.removeActor(body, false);
+    this.bodies.delete(id);
 
   }
 
@@ -159,10 +177,14 @@ export class PhysXManager implements PhysXInteface {
   }
 }
 
+const isDynamicBody = (body: PhysX.RigidDynamic) => {
+  return (body as any)._type === PhysXBodyType.DYNAMIC;
+}
+
 const getBodyData = (body: PhysX.RigidActor) => {
   const transform = body.getGlobalPose();
-  const linVel = (body as any).dynamic ? body.getLinearVelocity() : { x:0, y:0, z:0 };
-  const angVel = (body as any).dynamic ? body.getAngularVelocity() : { x:0, y:0, z:0 };
+  const linVel = isDynamicBody(body as PhysX.RigidDynamic) ? body.getLinearVelocity() : { x:0, y:0, z:0 };
+  const angVel = isDynamicBody(body as PhysX.RigidDynamic) ? body.getAngularVelocity() : { x:0, y:0, z:0 };
   return [
     transform.translation.x, transform.translation.y, transform.translation.z,
     transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w,

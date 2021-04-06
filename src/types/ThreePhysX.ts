@@ -46,6 +46,11 @@ export interface PhysXShapeOptions {
   sphereRadius?: number
 }
 
+export enum PhysXBodyType {
+  STATIC,
+  DYNAMIC,
+  KINEMATIC
+}
 
 export interface PhysXShapeConfig {
   shape: PhysXModelShapes
@@ -60,15 +65,14 @@ export interface PhysXBodyConfig {
   transform: PhysXBodyTransform
   shapes: PhysXShapeConfig[]
   bodyOptions: {
-    dynamic?: boolean
+    type?: PhysXBodyType
     trigger?: boolean
   }
 }
 
 export interface PhysXUserData {
-  dynamic: boolean
+  type: PhysXBodyType
 }
-
 
 export interface PhysXInteface {
   initPhysX: any
