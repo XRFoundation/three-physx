@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { DoubleSide, Mesh, MeshNormalMaterial, Object3D, PlaneBufferGeometry } from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
+import { OrbitControls } from './OrbitControls'
 
 const container = document.createElement('div')
 container.style.position = 'fixed'
