@@ -1,7 +1,7 @@
 
 import { PhysXInstance } from '../../src'
 import { Mesh, TorusKnotBufferGeometry, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, PlaneBufferGeometry, CylinderBufferGeometry, DoubleSide, Color, Object3D } from 'three'
-import { Object3DBody, PhysXBodyType, RigidBodyProxy } from '../../src/types/ThreePhysX';
+import { Object3DBody, PhysXBodyType, PhysXModelShapes, RigidBodyProxy } from '../../src/types/ThreePhysX';
 import { PhysXDebugRenderer } from './PhysXDebugRenderer';
 
 const load = async () => {
@@ -13,7 +13,7 @@ const load = async () => {
 
   const onUpdate = () => {
     objects.forEach((obj: any, id) => {
-      if((obj.body as RigidBodyProxy).bodyConfig.bodyOptions.type === PhysXBodyType.DYNAMIC) {
+      if((obj.body as RigidBodyProxy).bodyOptions.type === PhysXBodyType.DYNAMIC) {
         const translation = (obj.body as RigidBodyProxy).transform.translation;
         const rotation = (obj.body as RigidBodyProxy).transform.rotation;
         obj.position.set(translation.x, translation.y, translation.z);
@@ -33,7 +33,7 @@ const load = async () => {
   const kinematicObject = new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() }));
   kinematicObject.userData.physx = { type: PhysXBodyType.KINEMATIC };
   
-  const body = await PhysXInstance.instance.addBody(kinematicObject);
+  const body = await PhysXInstance.instance.addBody(kinematicObject, [{ id: undefined, shape: PhysXModelShapes.Sphere, options: { sphereRadius: 2 }}]);
   objects.set(body.id, kinematicObject)
   renderer.addToScene(kinematicObject);
 

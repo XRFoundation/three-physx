@@ -1,4 +1,4 @@
-import type { Object3D, Quaternion, Vector3 } from 'three';
+import type { Object3D } from 'three';
 
 export interface PhysXConfig {
   jsPath: string;
@@ -41,10 +41,6 @@ export interface PhysXBodyData {
   angularVelocity?: Vec3;
 }
 
-export interface PhysXShapeOptions {
-  boxExtents?: number[];
-  sphereRadius?: number;
-}
 
 export enum PhysXBodyType {
   STATIC,
@@ -53,47 +49,32 @@ export enum PhysXBodyType {
 }
 
 export interface PhysXShapeConfig {
+  id: number;
   shape: PhysXModelShapes;
   vertices?: number[];
   indices?: number[];
   matrix?: number[];
-  options?: PhysXShapeOptions;
+  options?: {
+    boxExtents?: number[];
+    sphereRadius?: number;
+  };
 }
 
-export interface PhysXBodyConfig {
+export interface RigidBodyProxy {
+  id: number;
+  transform: PhysXBodyData;
   shapes: PhysXShapeConfig[];
   bodyOptions: {
     type?: PhysXBodyType;
     trigger?: boolean;
   };
 }
-
 export interface PhysXUserData {
   type: PhysXBodyType;
   bodyData: PhysXBodyData;
   id: number;
 }
 
-export interface PhysXInteface {
-  initPhysX: any;
-  update: any;
-  startPhysX: any;
-  addBody: any;
-  updateBody: any;
-  removeBody: any;
-  addConstraint: any;
-  removeConstraint: any;
-  enableDebug: any;
-  resetDynamicBody: any;
-  activateBody: any;
-}
-
 export interface Object3DBody extends Object3D {
   body: RigidBodyProxy;
-}
-
-export interface RigidBodyProxy {
-  id: number;
-  transform: PhysXBodyData;
-  bodyConfig: PhysXBodyConfig;
 }

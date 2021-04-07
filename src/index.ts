@@ -3,24 +3,25 @@ import { MessageQueue } from './utils/MessageQueue';
 
 import {
   PhysXConfig,
-  PhysXInteface,
-  PhysXBodyConfig,
   PhysXBodyType,
   RigidBodyProxy,
   Object3DBody,
+  PhysXShapeConfig,
 } from './types/ThreePhysX';
 import { Object3D } from 'three';
-import { threeToPhysX } from './threeToPhysX';
+import { createPhysXBody, createPhysXShapes } from './threeToPhysX';
 
 let nextAvailableBodyIndex = 0;
+let nextAvailablShapeID = 0;
 
-export class PhysXInstance implements PhysXInteface {
+export class PhysXInstance {
   static instance: PhysXInstance;
   worker: Worker;
   onUpdate: any;
-  physicsProxy: PhysXInteface;
+  physicsProxy: any;
 
   bodies: Map<number, RigidBodyProxy> = new Map<number, RigidBodyProxy>();
+  shapes: Map<number, PhysXShapeConfig> = new Map<number, PhysXShapeConfig>();
   kinematicBodies: Map<number, Object3DBody> = new Map<number, Object3DBody>();
 
   kinematicArray: Float32Array;
@@ -41,7 +42,7 @@ export class PhysXInstance implements PhysXInteface {
     messageQueue.addEventListener('data', (ev) => {
       const array: Float32Array = ev.detail;
       this.bodies.forEach((rigidBody, id) => {
-        if (rigidBody.bodyConfig.bodyOptions.type === PhysXBodyType.DYNAMIC) {
+        if (rigidBody.bodyOptions.type === PhysXBodyType.DYNAMIC) {
           const offset = id * BufferConfig.BODY_DATA_SIZE;
           rigidBody.transform.translation.x = array[offset];
           rigidBody.transform.translation.y = array[offset + 1];
@@ -50,7 +51,7 @@ export class PhysXInstance implements PhysXInteface {
           rigidBody.transform.rotation.y = array[offset + 4];
           rigidBody.transform.rotation.z = array[offset + 5];
           rigidBody.transform.rotation.w = array[offset + 6];
-          if (rigidBody.bodyConfig.bodyOptions.type === PhysXBodyType.DYNAMIC) {
+          if (rigidBody.bodyOptions.type === PhysXBodyType.DYNAMIC) {
             rigidBody.transform.linearVelocity.x = array[offset + 7];
             rigidBody.transform.linearVelocity.y = array[offset + 8];
             rigidBody.transform.linearVelocity.z = array[offset + 9];
@@ -75,7 +76,7 @@ export class PhysXInstance implements PhysXInteface {
       enableDebug: pipeRemoteFunction(messageQueue, 'enableDebug'),
       resetDynamicBody: pipeRemoteFunction(messageQueue, 'resetDynamicBody'),
       activateBody: pipeRemoteFunction(messageQueue, 'activateBody'),
-    } as PhysXInteface;
+    };
 
     await this.physicsProxy.initPhysX([config]);
   };
@@ -123,19 +124,34 @@ export class PhysXInstance implements PhysXInteface {
     return this.physicsProxy.startPhysX([start]);
   };
 
-  addBody = async (object: Object3D) => {
-    const id = this._getNextAvailableID();
-    threeToPhysX(object, id);
+  addBody = async (object: Object3D, shapes?: PhysXShapeConfig[]) => {
+    const id = this._getNextAvailableBodyID();
+    if(shapes) {
+      shapes.forEach((shape) => {
+        shape.id = this._getNextAvailableShapeID();
+        this.shapes.set(shape.id, shape);
+      })
+    }
+    createPhysXBody(object, id, shapes || this.addShapes(object, id));
     await this.physicsProxy.addBody([(object as Object3DBody).body]);
     this.bodies.set(id, (object as Object3DBody).body);
     if (
-      (object as Object3DBody).body.bodyConfig.bodyOptions.type ===
-      PhysXBodyType.KINEMATIC
+      (object as Object3DBody).body.bodyOptions.type === PhysXBodyType.KINEMATIC
     ) {
       this.kinematicBodies.set(id, object as Object3DBody);
     }
     return (object as Object3DBody).body;
   };
+
+  addShapes = (object, id) => {
+    const shapes = createPhysXShapes(object, id);
+    shapes.forEach((shape) => {
+      this.shapes.set(shape.id, shape);
+    });
+    return shapes;
+  };
+
+  createShape = () => {};
 
   updateBody = async (object: Object3D, options: any) => {
     const id = (object as Object3DBody).body.id;
@@ -146,7 +162,7 @@ export class PhysXInstance implements PhysXInteface {
   removeBody = async (object: Object3D) => {
     const id = (object as Object3DBody).body.id;
     await this.physicsProxy.removeBody([{ id }]);
-    delete this.bodies[id];
+    this.bodies.delete(id);
     return;
   };
 
@@ -170,9 +186,15 @@ export class PhysXInstance implements PhysXInteface {
     // todo
   };
 
-  private _getNextAvailableID = () => {
+  private _getNextAvailableBodyID = () => {
+    // todo, make this good
     indexOfSmallest(Object.keys(this.bodies));
     return nextAvailableBodyIndex++;
+  };
+
+  _getNextAvailableShapeID = () => {
+    // todo, make this good
+    return nextAvailablShapeID++;
   };
 }
 
@@ -184,11 +206,7 @@ const indexOfSmallest = (a) => {
   return lowest;
 };
 
-const pipeRemoteFunction = (
-  messageQueue: MessageQueue,
-  id: string,
-  transferrables?: Transferable[],
-) => {
+const pipeRemoteFunction = (messageQueue: MessageQueue, id: string) => {
   return (args, transferables) => {
     return new Promise<any>((resolve) => {
       const uuid = generateUUID();
@@ -210,4 +228,3 @@ const generateUUID = (): string => {
 };
 
 export { threeToPhysXModelDescription } from './threeToPhysXModelDescription';
-export type { PhysXBodyConfig };

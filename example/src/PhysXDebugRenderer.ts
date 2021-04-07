@@ -61,7 +61,7 @@ export class PhysXDebugRenderer {
       //@ts-ignore
       const { body } = object;
 
-      body.bodyConfig.shapes.forEach((shape) => {
+      body.shapes.forEach((shape) => {
 
         this._updateMesh(meshIndex, body, shape)
 
@@ -171,7 +171,6 @@ export class PhysXDebugRenderer {
         break;
 
       case PhysXModelShapes.TriangleMesh:
-        console.log("creatin trimesh debug")
         geometry = new BufferGeometry();
         points = []
         for (let i = 0; i < shape.vertices.length; i += 3) {

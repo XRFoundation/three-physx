@@ -3,10 +3,7 @@
 import { Matrix4, Vector3, Quaternion, Matrix } from 'three';
 import { getShape } from './getShape';
 import {
-  PhysXBodyConfig,
   PhysXConfig,
-  PhysXInteface,
-  PhysXModelShapes,
   PhysXBodyTransform,
   PhysXBodyType,
 } from './types/ThreePhysX';
@@ -22,7 +19,7 @@ const scale = new Vector3();
 
 let lastTick = 0;
 
-export class PhysXManager implements PhysXInteface {
+export class PhysXManager {
   static instance: PhysXManager;
 
   physxVersion: number;
@@ -38,14 +35,17 @@ export class PhysXManager implements PhysXInteface {
 
   updateInterval: any;
   tps: number = 60;
-  onUpdate: any = noop;
+  onUpdate: any;
+  onEvent: any;
   transformArray: Float32Array;
 
   bodies: Map<number, PhysX.RigidActor> = new Map<number, PhysX.RigidActor>();
   dynamic: Map<number, PhysX.RigidActor> = new Map<number, PhysX.RigidActor>();
-  shapes: Map<number, PhysX.PxShape[]> = new Map<number, PhysX.PxShape[]>();
+  shapes: Map<PhysX.PxShape, number> = new Map<PhysX.PxShape, number>();
   matrices: Map<number, Matrix4> = new Map<number, Matrix4>();
   indices: Map<number, number> = new Map<number, number>();
+
+  bodyIDByShape: Map<PhysX.PxShape, number> = new Map<PhysX.PxShape, number>();
 
   objectArray: Float32Array;
 
@@ -88,19 +88,39 @@ export class PhysXManager implements PhysXInteface {
 
     const triggerCallback = {
       onContactBegin: (shapeA, shapeB) => {
-        // console.log('onContactBegin', shapeA, shapeB)
+        this.onEvent(
+          'onContactBegin',
+          this.shapes.get(shapeA),
+          this.shapes.get(shapeB),
+        );
       },
       onContactEnd: (shapeA, shapeB) => {
-        // console.log('onContactEnd', shapeA, shapeB)
+        this.onEvent(
+          'onContactEnd',
+          this.shapes.get(shapeA),
+          this.shapes.get(shapeB),
+        );
       },
       onContactPersist: (shapeA, shapeB) => {
-        // console.log('onContactPersist', shapeA, shapeB)
+        this.onEvent(
+          'onContactPersist',
+          this.shapes.get(shapeA),
+          this.shapes.get(shapeB),
+        );
       },
       onTriggerBegin: (shapeA, shapeB) => {
-        // console.log('onTriggerBegin', shapeA, shapeB)
+        this.onEvent(
+          'onTriggerBegin',
+          this.shapes.get(shapeA),
+          this.shapes.get(shapeB),
+        );
       },
       onTriggerEnd: (shapeA, shapeB) => {
-        // console.log('onTriggerEnd', shapeA, shapeB)
+        this.onEvent(
+          'onTriggerEnd',
+          this.shapes.get(shapeA),
+          this.shapes.get(shapeB),
+        );
       },
     };
 
@@ -165,8 +185,7 @@ export class PhysXManager implements PhysXInteface {
     }
   };
 
-  addBody = async ({ id, transform, bodyConfig }) => {
-    const { shapes, bodyOptions }: PhysXBodyConfig = bodyConfig;
+  addBody = async ({ id, transform, shapes, bodyOptions }) => {
     const { type, trigger } = bodyOptions;
 
     let rigidBody: PhysX.RigidStatic | PhysX.RigidDynamic;
@@ -192,16 +211,17 @@ export class PhysXManager implements PhysXInteface {
     }
 
     const bodyShapes: PhysX.PxShape[] = [];
-    shapes.forEach(({ shape, vertices, indices, options }) => {
+    shapes.forEach(({ id: shapeID, shape, vertices, indices, options }) => {
       const bodyShape = getShape({ shape, vertices, indices, options });
       bodyShape.setContactOffset(0.0000001);
       const filterData = new PhysX.PxFilterData(1, 1, 0, 0);
       bodyShape.setSimulationFilterData(filterData);
       bodyShapes.push(bodyShape);
       rigidBody.attachShape(bodyShape);
+      this.bodyIDByShape.set(bodyShape, id);
+      this.shapes.set(bodyShape, shapeID);
     });
 
-    this.shapes.set(id, bodyShapes);
     this.bodies.set(id, rigidBody);
     this.scene.addActor(rigidBody, null);
   };
@@ -288,6 +308,9 @@ export const receiveWorker = async (): Promise<void> => {
   PhysXManager.instance = new PhysXManager();
   PhysXManager.instance.onUpdate = (data: Uint8Array) => {
     messageQueue.sendEvent('data', data, [data.buffer]);
+  };
+  PhysXManager.instance.onEvent = (event: string, idA: any, idB: any) => {
+    messageQueue.sendEvent(event, { idA, idB });
   };
   const addFunctionListener = (eventLabel) => {
     messageQueue.addEventListener(eventLabel, async ({ detail }) => {
