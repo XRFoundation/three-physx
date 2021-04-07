@@ -12,9 +12,10 @@ import {
   BoxGeometry,
   PlaneGeometry,
   Object3D,
+  Matrix4,
 } from 'three';
 import { Object3DBody, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy } from '../../src/types/ThreePhysX';
-
+const mat4 = new Matrix4();
 export class PhysXDebugRenderer {
 
   private scene: Scene
@@ -61,7 +62,7 @@ export class PhysXDebugRenderer {
       //@ts-ignore
       const { body } = object;
 
-      body.shapes.forEach((shape) => {
+      body.shapes.forEach((shape: PhysXShapeConfig) => {
 
         this._updateMesh(meshIndex, body, shape)
 
@@ -72,6 +73,10 @@ export class PhysXDebugRenderer {
           // Copy to meshes
           mesh.position.copy(body.transform.translation);
           mesh.quaternion.copy(body.transform.rotation);
+          if(shape.matrix) {
+            mat4.fromArray(shape.matrix)
+            mesh.applyMatrix4(mat4);
+          }
         }
 
         meshIndex++;

@@ -78,14 +78,16 @@ const createShape = (mesh, root: boolean) => {
       return {
         id,
         shape,
+        matrix,
         options: { boxExtents: getBoxExtents(mesh.geometry) },
       };
     case PhysXModelShapes.Plane:
-      return { id, shape };
+      return { id, matrix, shape };
     case PhysXModelShapes.Sphere:
       return {
         id,
         shape,
+        matrix,
         options: {
           sphereRadius: (mesh.geometry as SphereBufferGeometry).parameters
             .radius,

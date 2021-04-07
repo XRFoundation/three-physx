@@ -1,52 +1,75 @@
-import { PhysXModelShapes, PhysXShapeOptions } from './types/ThreePhysX';
+import { Matrix4, Quaternion, Vector3 } from 'three';
+import { PhysXModelShapes } from './types/ThreePhysX';
 import { PhysXManager } from './worker';
+
+const mat4 = new Matrix4();
+const pos = new Vector3();
+const rot = new Quaternion();
+const scale = new Vector3();
 
 export const getShape = ({
   shape,
   vertices,
   indices,
+  matrix,
   options,
 }): PhysX.PxShape => {
-  const geometry = getGeometry({ shape, vertices, indices, options });
+  const geometry = getGeometry({ shape, vertices, indices, matrix, options });
 
+  pos.set(0,0,0);
+  rot.set(0,0,0,1);
+  scale.set(0,0,0);
+
+  if(matrix) {
+    mat4.fromArray(matrix);
+    mat4.decompose(pos, rot, scale);
+  }
+
+  // TODO: use matrix and worldMatrix to transform child shapes
   const material = PhysXManager.instance.physics.createMaterial(0.2, 0.2, 0.2);
   const flags = new PhysX.PxShapeFlags(
     PhysX.PxShapeFlag.eSCENE_QUERY_SHAPE.value |
       PhysX.PxShapeFlag.eSIMULATION_SHAPE.value,
   );
 
-  return PhysXManager.instance.physics.createShape(
+  const newShape = PhysXManager.instance.physics.createShape(
     geometry,
     material,
     false,
     flags,
   );
+  //@ts-ignore
+  newShape.setLocalPose({
+    translation: { x: pos.x, y: pos.y, z: pos.z },
+    rotation: { x: rot.x, y: rot.y, z: rot.z, w: rot.w },
+  } as PhysX.PxTransform)
+  return newShape;
 };
 
 const getGeometry = ({
   shape,
   vertices,
+  matrix,
   indices,
-  options = {},
+  options,
 }): PhysX.PxGeometry => {
-  const { boxExtents, sphereRadius } = options as PhysXShapeOptions;
-
-  // TODO: use matrix and worldMatrix to transform child shapes
-
+  const { boxExtents, sphereRadius } = options || {};
+  let geometry: PhysX.PxGeometry;
   if (shape === PhysXModelShapes.Box) {
-    return new PhysX.PxBoxGeometry(boxExtents[0], boxExtents[1], boxExtents[2]);
+    geometry = new PhysX.PxBoxGeometry(boxExtents[0], boxExtents[1], boxExtents[2]);
   } else if (shape === PhysXModelShapes.Sphere) {
-    return new PhysX.PxSphereGeometry(sphereRadius);
+    geometry = new PhysX.PxSphereGeometry(sphereRadius);
   } else if (shape === PhysXModelShapes.Plane) {
-    return new PhysX.PxPlaneGeometry();
+    geometry = new PhysX.PxPlaneGeometry();
   } else if (shape === PhysXModelShapes.TriangleMesh) {
-    return createTrimesh(
+    geometry = createTrimesh(
       PhysXManager.instance.cooking,
       PhysXManager.instance.physics,
       vertices,
       indices,
     );
   }
+  return geometry;
 };
 
 const createTrimesh = (

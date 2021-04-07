@@ -31,15 +31,15 @@ const load = async () => {
   })
 
   const kinematicObject = new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() }));
+  kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateX(1).rotateY(1).rotateZ(1));
   kinematicObject.userData.physx = { type: PhysXBodyType.KINEMATIC };
   
-  const body = await PhysXInstance.instance.addBody(kinematicObject, [{ id: undefined, shape: PhysXModelShapes.Sphere, options: { sphereRadius: 2 }}]);
+  const body = await PhysXInstance.instance.addBody(kinematicObject)//, [{ id: undefined, shape: PhysXModelShapes.Sphere, options: { sphereRadius: 2 }}]);
   objects.set(body.id, kinematicObject)
   renderer.addToScene(kinematicObject);
   body.addEventListener(PhysXEvents.COLLISION_START, ({ bodySelf, bodyOther, shapeSelf, shapeOther }) => {
-    console.log('COLLISION DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
+    // console.log('COLLISION DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
   })
-  console.log(body)
 
   const debug = new PhysXDebugRenderer(renderer.scene)
   debug.setEnabled(true);
