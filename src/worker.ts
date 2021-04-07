@@ -6,6 +6,7 @@ import {
   PhysXConfig,
   PhysXBodyTransform,
   PhysXBodyType,
+  PhysXEvents,
 } from './types/ThreePhysX';
 import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
@@ -41,7 +42,7 @@ export class PhysXManager {
 
   bodies: Map<number, PhysX.RigidActor> = new Map<number, PhysX.RigidActor>();
   dynamic: Map<number, PhysX.RigidActor> = new Map<number, PhysX.RigidActor>();
-  shapes: Map<PhysX.PxShape, number> = new Map<PhysX.PxShape, number>();
+  shapes: Map<number, number> = new Map<number, number>();
   matrices: Map<number, Matrix4> = new Map<number, Matrix4>();
   indices: Map<number, number> = new Map<number, number>();
 
@@ -87,39 +88,39 @@ export class PhysXManager {
     );
 
     const triggerCallback = {
-      onContactBegin: (shapeA, shapeB) => {
+      onContactBegin: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
         this.onEvent(
-          'onContactBegin',
-          this.shapes.get(shapeA),
-          this.shapes.get(shapeB),
+          PhysXEvents.COLLISION_START,
+          this.shapes.get(shapeA.$$.ptr),
+          this.shapes.get(shapeB.$$.ptr),
         );
       },
-      onContactEnd: (shapeA, shapeB) => {
+      onContactEnd: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
         this.onEvent(
-          'onContactEnd',
-          this.shapes.get(shapeA),
-          this.shapes.get(shapeB),
+          PhysXEvents.COLLISION_END,
+          this.shapes.get(shapeA.$$.ptr),
+          this.shapes.get(shapeB.$$.ptr),
         );
       },
-      onContactPersist: (shapeA, shapeB) => {
+      onContactPersist: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
         this.onEvent(
-          'onContactPersist',
-          this.shapes.get(shapeA),
-          this.shapes.get(shapeB),
+          PhysXEvents.COLLISION_PERSIST,
+          this.shapes.get(shapeA.$$.ptr),
+          this.shapes.get(shapeB.$$.ptr),
         );
       },
-      onTriggerBegin: (shapeA, shapeB) => {
+      onTriggerBegin: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
         this.onEvent(
-          'onTriggerBegin',
-          this.shapes.get(shapeA),
-          this.shapes.get(shapeB),
+          PhysXEvents.TRIGGER_START,
+          this.shapes.get(shapeA.$$.ptr),
+          this.shapes.get(shapeB.$$.ptr),
         );
       },
-      onTriggerEnd: (shapeA, shapeB) => {
+      onTriggerEnd: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
         this.onEvent(
-          'onTriggerEnd',
-          this.shapes.get(shapeA),
-          this.shapes.get(shapeB),
+          PhysXEvents.TRIGGER_END,
+          this.shapes.get(shapeA.$$.ptr),
+          this.shapes.get(shapeB.$$.ptr),
         );
       },
     };
@@ -219,7 +220,7 @@ export class PhysXManager {
       bodyShapes.push(bodyShape);
       rigidBody.attachShape(bodyShape);
       this.bodyIDByShape.set(bodyShape, id);
-      this.shapes.set(bodyShape, shapeID);
+      this.shapes.set(bodyShape.$$.ptr, shapeID);
     });
 
     this.bodies.set(id, rigidBody);
@@ -310,7 +311,7 @@ export const receiveWorker = async (): Promise<void> => {
     messageQueue.sendEvent('data', data, [data.buffer]);
   };
   PhysXManager.instance.onEvent = (event: string, idA: any, idB: any) => {
-    messageQueue.sendEvent(event, { idA, idB });
+    messageQueue.sendEvent('colliderEvent', { event, idA, idB });
   };
   const addFunctionListener = (eventLabel) => {
     messageQueue.addEventListener(eventLabel, async ({ detail }) => {

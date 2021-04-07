@@ -1,7 +1,7 @@
 
 import { PhysXInstance } from '../../src'
-import { Mesh, TorusKnotBufferGeometry, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, PlaneBufferGeometry, CylinderBufferGeometry, DoubleSide, Color, Object3D } from 'three'
-import { Object3DBody, PhysXBodyType, PhysXModelShapes, RigidBodyProxy } from '../../src/types/ThreePhysX';
+import { Mesh, TorusKnotBufferGeometry, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D } from 'three'
+import { PhysXBodyType, PhysXEvents, PhysXModelShapes, RigidBodyProxy } from '../../src/types/ThreePhysX';
 import { PhysXDebugRenderer } from './PhysXDebugRenderer';
 
 const load = async () => {
@@ -36,6 +36,10 @@ const load = async () => {
   const body = await PhysXInstance.instance.addBody(kinematicObject, [{ id: undefined, shape: PhysXModelShapes.Sphere, options: { sphereRadius: 2 }}]);
   objects.set(body.id, kinematicObject)
   renderer.addToScene(kinematicObject);
+  body.addEventListener(PhysXEvents.COLLISION_START, ({ bodySelf, bodyOther, shapeSelf, shapeOther }) => {
+    console.log('COLLISION DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
+  })
+  console.log(body)
 
   const debug = new PhysXDebugRenderer(renderer.scene)
   debug.setEnabled(true);
@@ -55,7 +59,7 @@ const load = async () => {
 const createScene = () => {
   const geoms = [new BoxBufferGeometry(), new SphereBufferGeometry(1)]
   const meshes = []
-  for(let i = 0; i < 1000; i++){
+  for(let i = 0; i < 100; i++){
     const mesh = new Mesh(geoms[i%2], new MeshBasicMaterial({ color: randomColor() }))
     mesh.position.set(Math.random() * 50 - 25, Math.random() * 50, Math.random() * 50 - 25);
     mesh.userData.physx = { type: PhysXBodyType.DYNAMIC };

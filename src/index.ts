@@ -7,9 +7,11 @@ import {
   RigidBodyProxy,
   Object3DBody,
   PhysXShapeConfig,
+  PhysXEvents,
 } from './types/ThreePhysX';
 import { Object3D } from 'three';
 import { createPhysXBody, createPhysXShapes } from './threeToPhysX';
+import { proxyEventListener } from './utils/proxyEventListener';
 
 let nextAvailableBodyIndex = 0;
 let nextAvailablShapeID = 0;
@@ -62,6 +64,16 @@ export class PhysXInstance {
         }
       });
       this.onUpdate();
+    });
+    messageQueue.addEventListener('colliderEvent', ({ detail }) => {
+      const { event, idA, idB } = detail;
+      const shapeA = this.shapes.get(idA);
+      const shapeB = this.shapes.get(idB);
+      const bodyA = (shapeA as any).body;
+      const bodyB = (shapeB as any).body;
+      if(!bodyA || !bodyB) return; // TODO this is a hack
+      bodyA.dispatchEvent({ type: event, bodySelf: bodyA, bodyOther: bodyB, shapeSelf: shapeA, shapeOther: shapeB });
+      bodyB.dispatchEvent({ type: event, bodySelf: bodyB, bodyOther: bodyA, shapeSelf: shapeB, shapeOther: shapeA });
     });
 
     this.physicsProxy = {
@@ -126,14 +138,18 @@ export class PhysXInstance {
 
   addBody = async (object: Object3D, shapes?: PhysXShapeConfig[]) => {
     const id = this._getNextAvailableBodyID();
-    if(shapes) {
+    if (shapes) {
       shapes.forEach((shape) => {
         shape.id = this._getNextAvailableShapeID();
         this.shapes.set(shape.id, shape);
-      })
+      });
     }
     createPhysXBody(object, id, shapes || this.addShapes(object, id));
     await this.physicsProxy.addBody([(object as Object3DBody).body]);
+    (object as Object3DBody).body.shapes.forEach((shape) => {
+      (shape as any).body = (object as Object3DBody).body;
+    });
+    proxyEventListener((object as Object3DBody).body);
     this.bodies.set(id, (object as Object3DBody).body);
     if (
       (object as Object3DBody).body.bodyOptions.type === PhysXBodyType.KINEMATIC

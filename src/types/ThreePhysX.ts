@@ -41,7 +41,6 @@ export interface PhysXBodyData {
   angularVelocity?: Vec3;
 }
 
-
 export enum PhysXBodyType {
   STATIC,
   DYNAMIC,
@@ -68,6 +67,10 @@ export interface RigidBodyProxy {
     type?: PhysXBodyType;
     trigger?: boolean;
   };
+  addEventListener?: any
+  removeEventListener?: any
+  hasEventListener?: any
+  dispatchEvent?: any
 }
 export interface PhysXUserData {
   type: PhysXBodyType;
@@ -77,4 +80,13 @@ export interface PhysXUserData {
 
 export interface Object3DBody extends Object3D {
   body: RigidBodyProxy;
+}
+
+export enum PhysXEvents {
+  COLLISION_START = 'COLLISION_START',
+  COLLISION_PERSIST = 'COLLISION_PERSIST',
+  COLLISION_END = 'COLLISION_END',
+
+  TRIGGER_START = 'TRIGGER_START',
+  TRIGGER_END = 'TRIGGER_END',
 }
