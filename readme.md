@@ -13,7 +13,7 @@ Progress:
 - [ ] update bodies
 - [ ] character & vehicle
 - [ ] implement all API functions
-- [ ] collision events
+- [x] collision events
 - [ ] raycasts
 
 ## Example
