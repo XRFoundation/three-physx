@@ -1,0 +1,248 @@
+import {
+  Scene,
+  Mesh,
+  Points,
+  SphereBufferGeometry,
+  BoxBufferGeometry,
+  PlaneBufferGeometry,
+  BufferGeometry,
+  MeshBasicMaterial,
+  Vector3,
+  SphereGeometry,
+  BoxGeometry,
+  PlaneGeometry,
+} from 'three';
+import { Object3DBody, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy } from '../src/types/ThreePhysX';
+
+export class PhysXDebugRenderer {
+
+  public scene: Scene
+  private _meshes: Mesh[] | Points[]
+  private _material: MeshBasicMaterial
+  private _sphereGeometry: SphereBufferGeometry
+  private _boxGeometry: BoxBufferGeometry
+  private _planeGeometry: PlaneBufferGeometry
+  private _particleGeometry: BufferGeometry
+
+  private enabled: boolean;
+
+  constructor(scene: Scene) {
+
+    this.scene = scene
+    this.enabled = true;
+
+    this._meshes = []
+
+    this._material = new MeshBasicMaterial({ color: 0x00ff00, wireframe: true })
+    this._sphereGeometry = new SphereBufferGeometry(1)
+    this._boxGeometry = new BoxBufferGeometry(1, 1, 1)
+    this._planeGeometry = new PlaneBufferGeometry(10, 10, 10, 10)
+  }
+
+  public setEnabled(enabled) {
+    this.enabled = enabled;
+    for(const mesh of this._meshes) {
+      mesh.visible = this.enabled;
+    }
+  }
+
+  public update(objects: Map<number, Object3DBody>) {
+
+    if (!this.enabled) {
+      return;
+    }
+
+    const meshes: Mesh[] | Points[] = this._meshes
+
+    let meshIndex = 0
+
+    objects.forEach((object, id) => {
+
+      const { body } = object;
+
+      body.bodyConfig.shapes.forEach((shape) => {
+
+        this._updateMesh(meshIndex, body, shape)
+
+        const mesh = meshes[meshIndex]
+
+        if (mesh) {
+
+          // Copy to meshes
+          mesh.position.copy(body.transform.translation);
+          mesh.quaternion.copy(body.transform.rotation);
+        }
+
+        meshIndex++;
+      })
+
+    })
+
+    for (let i = meshIndex; i < meshes.length; i++) {
+      const mesh: Mesh | Points = meshes[i];
+      if (mesh) {
+        this.scene.remove(mesh)
+      }
+    }
+
+    meshes.length = meshIndex
+  }
+
+  private _updateMesh(index: number, body: RigidBodyProxy, shape: PhysXShapeConfig) {
+    let mesh = this._meshes[index]
+    if (!this._typeMatch(mesh, shape)) {
+      if (mesh) {
+        this.scene.remove(mesh)
+      }
+      mesh = this._meshes[index] = this._createMesh(shape)
+    }
+    this._scaleMesh(mesh, shape)
+  }
+
+  private _typeMatch(mesh: Mesh | Points, shape: PhysXShapeConfig): Boolean {
+    if (!mesh) {
+      return false
+    }
+    const geo: BufferGeometry = mesh.geometry
+    return (
+      (geo instanceof SphereGeometry && shape.shape === PhysXModelShapes.Sphere) ||
+      (geo instanceof BoxGeometry && shape.shape === PhysXModelShapes.Box) ||
+      (geo instanceof PlaneGeometry && shape.shape === PhysXModelShapes.Plane) ||
+      (shape.shape === PhysXModelShapes.ConvexMesh) ||
+      (shape.shape === PhysXModelShapes.TriangleMesh) ||
+      (shape.shape === PhysXModelShapes.HeightField)
+    );
+  }
+
+  private _createMesh(shape: PhysXShapeConfig): Mesh | Points {
+    let mesh: Mesh | Points
+    let geometry: BufferGeometry
+    let v0: Vector3
+    let v1: Vector3
+    let v2: Vector3
+    const material: MeshBasicMaterial = this._material;
+    let points: Vector3[] = []
+
+    switch (shape.shape) {
+
+      case PhysXModelShapes.Sphere:
+        mesh = new Mesh(this._sphereGeometry, material)
+        break
+
+      case PhysXModelShapes.Box:
+        mesh = new Mesh(this._boxGeometry, material)
+        break
+
+      case PhysXModelShapes.Plane:
+        mesh = new Mesh(this._planeGeometry, material)
+        break
+
+      case PhysXModelShapes.ConvexMesh:
+        geometry = new BufferGeometry()
+        points = []
+        for (let i = 0; i < shape.vertices.length; i += 3) {
+          const [x, y, z] = [shape.vertices[i], shape.vertices[i+1], shape.vertices[i+2]]
+          points.push(new Vector3(x, y, z));
+        }
+        geometry.setFromPoints(points)
+        mesh = new Mesh(geometry, material);
+
+        //highlight faces that the CONVEXPOLYHEDRON thinks are pointing into the shape.
+        // geometry.faces.forEach(f => {
+        //     const n = f.normal
+        //     n.negate();
+        //     f.normal = n
+        //     const v1 = geometry.vertices[f.a]
+        //     if (n.dot(v1) > 0) {
+        //         const v2 = geometry.vertices[f.b]
+        //         const v3 = geometry.vertices[f.c]
+
+        //         const p = new Vector3();
+        //         p.x = (v1.x + v2.x + v3.x) / 3;
+        //         p.y = (v1.y + v2.y + v3.y) / 3;
+        //         p.z = (v1.z + v2.z + v3.z) / 3;
+
+        //         const g = new Geometry();
+        //         g.vertices.push(v1, v2, v3)
+        //         g.faces.push(new Face3(0, 1, 2));
+        //         g.computeFaceNormals();
+        //         const m = new Mesh(g, new MeshBasicMaterial({ color: 0xff0000 }));
+        //         mesh.add(m)
+        //     }
+        // });
+        break;
+
+      case PhysXModelShapes.TriangleMesh:
+        console.log("creatin trimesh debug")
+        geometry = new BufferGeometry();
+        points = []
+        for (let i = 0; i < shape.vertices.length; i += 3) {
+          points.push(new Vector3(
+            shape.vertices[i],
+            shape.vertices[i + 1],
+            shape.vertices[i + 2]));
+        }
+        geometry.setFromPoints(points)
+        geometry.setIndex(Array.from(shape.indices))
+        mesh = new Mesh(geometry, material);
+        break;
+
+      // case Shape.types.HEIGHTFIELD:
+      //   geometry = new BufferGeometry();
+
+      //   v0 = this.tmpVec0
+      //   v1 = this.tmpVec1
+      //   v2 = this.tmpVec2
+      //   for (let xi = 0; xi < (shape as Heightfield).data.length - 1; xi++) {
+      //     for (let yi = 0; yi < (shape as Heightfield).data[xi].length - 1; yi++) {
+      //       for (let k = 0; k < 2; k++) {
+      //         (shape as Heightfield).getConvexTrianglePillar(xi, yi, k === 0)
+      //         v0.copy((shape as Heightfield).pillarConvex.vertices[0])
+      //         v1.copy((shape as Heightfield).pillarConvex.vertices[1])
+      //         v2.copy((shape as Heightfield).pillarConvex.vertices[2])
+      //         v0.vadd((shape as Heightfield).pillarOffset, v0)
+      //         v1.vadd((shape as Heightfield).pillarOffset, v1)
+      //         v2.vadd((shape as Heightfield).pillarOffset, v2)
+      //         points.push(
+      //           new Vector3(v0.x, v0.y, v0.z),
+      //           new Vector3(v1.x, v1.y, v1.z),
+      //           new Vector3(v2.x, v2.y, v2.z)
+      //         );
+      //         //const i = geometry.vertices.length - 3
+      //         //geometry.faces.push(new Face3(i, i + 1, i + 2))
+      //       }
+      //     }
+      //   }
+      //   geometry.setFromPoints(points)
+      //   //geometry.computeBoundingSphere()
+      //   //geometry.computeFaceNormals()
+      //   mesh = new Mesh(geometry, material)
+      //   break;
+      default:
+        mesh = new Mesh()
+        break
+    }
+
+    if (mesh && mesh.geometry) {
+      this.scene.add(mesh)
+    }
+
+    return mesh;
+  }
+
+  private _scaleMesh(mesh: Mesh | Points, shape: PhysXShapeConfig) {
+    switch (shape.shape) {
+
+      case PhysXModelShapes.Sphere:
+        const radius = shape.options.sphereRadius
+        mesh.scale.set(radius, radius, radius)
+        break
+
+      case PhysXModelShapes.Box:
+        const [x, y, z] = shape.options.boxExtents
+        mesh.scale.copy(new Vector3(x, y, z))
+        mesh.scale.multiplyScalar(2)
+        break;
+    }
+  }
+}

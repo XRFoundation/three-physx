@@ -149,7 +149,7 @@ export class PhysXManager implements PhysXInteface {
     this.scene.addActor(body, null);
   }
 
-  updateBody = async () => {
+  updateBody = async ({ options }) => {
     // todo
   }
 

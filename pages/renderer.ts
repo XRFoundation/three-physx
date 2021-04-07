@@ -67,3 +67,5 @@ export const update = () => {
   controls.update()
   renderer.render(scene, camera)
 }
+
+export { scene };
