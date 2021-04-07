@@ -1,7 +1,7 @@
 
-import { PhysXInstance } from '..'
+import { PhysXInstance } from '../../src'
 import { Mesh, TorusKnotBufferGeometry, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, PlaneBufferGeometry, CylinderBufferGeometry, DoubleSide, Color, Object3D } from 'three'
-import { Object3DBody, PhysXBodyType, RigidBodyProxy } from '../src/types/ThreePhysX';
+import { Object3DBody, PhysXBodyType, RigidBodyProxy } from '../../src/types/ThreePhysX';
 import { PhysXDebugRenderer } from './PhysXDebugRenderer';
 
 const load = async () => {
@@ -21,8 +21,8 @@ const load = async () => {
       }
     })
   }
-  new PhysXInstance(new Worker(new URL("../src/worker.ts", import.meta.url)), onUpdate);
-  await PhysXInstance.instance.initPhysX({ jsPath: '/physx.release.js', wasmPath: '/physx.release.wasm' });
+  new PhysXInstance(new Worker(new URL("../../src/worker.ts", import.meta.url)), onUpdate);
+  await PhysXInstance.instance.initPhysX({ jsPath: '/physx/physx.release.js', wasmPath: '/physx/physx.release.wasm' });
 
   createScene().forEach(async (object) => {
     const body = await PhysXInstance.instance.addBody(object);

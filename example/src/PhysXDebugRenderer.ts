@@ -13,7 +13,7 @@ import {
   PlaneGeometry,
   Object3D,
 } from 'three';
-import { Object3DBody, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy } from '../src/types/ThreePhysX';
+import { Object3DBody, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy } from '../../src/types/ThreePhysX';
 
 export class PhysXDebugRenderer {
 

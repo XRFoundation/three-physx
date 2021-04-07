@@ -9,6 +9,9 @@ Progress:
 - [x] Set up message queue & function calls over events
 - [x] three-to-physx shape converter
 - [x] return transforms
+- [x] kinematic
+- [ ] update bodies
+- [ ] character & vehicle
 - [ ] implement all API functions
 - [ ] collision events
 - [ ] raycasts

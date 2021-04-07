@@ -1,9 +1,11 @@
 {
-  "name": "three-physx",
+  "name": "three-physx-example",
   "version": "1.0.0",
   "description": "",
-  "main": "./src/index.ts",
+  "private": true,
   "scripts": {
+    "start": "npx webpack serve",
+    "build": "webpack",
     "test": "echo \"This template does not include a test runner by default.\" && exit 1",
     "format": "prettier --write \"src/**/*.{ts,js}\" \"example/**/*.{ts,js}\"",
     "lint": "prettier --check \"src/**/*.{ts,js}\" \"example/**/*.{ts,js}\"",
@@ -21,9 +23,17 @@
   },
   "homepage": "https://github.com/HexaField/three-physx#readme",
   "devDependencies": {
+    "babel-loader": "^8.2.2",
+    "cache-loader": "^4.1.0",
+    "file-loader": "^6.2.0",
     "prettier": "^2.0.5",
+    "thread-loader": "^3.0.0",
     "three": "^0.127.0",
-    "typescript": "^4.2.3"
+    "ts-loader": "^8.1.0",
+    "wasm-loader": "^1.3.0",
+    "webpack": "^5.30.0",
+    "webpack-cli": "^4.6.0",
+    "webpack-dev-server": "^3.11.2"
   },
   "dependencies": {
     "@types/three": "^0.127.0"
