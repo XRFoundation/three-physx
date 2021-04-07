@@ -4,7 +4,7 @@
   "description": "",
   "main": "./lib/index.js",
   "scripts": {
-    "example": "cd example && npm run build",
+    "example": "cd example && && npm install && npm run build",
     "test": "echo \"This template does not include a test runner by default.\" && exit 1",
     "format": "prettier --write \"src/**/*.{ts,js}\" ",
     "lint": "prettier --check \"src/**/*.{ts,js}\" ",
