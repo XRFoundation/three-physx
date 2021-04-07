@@ -46,10 +46,9 @@ export class PhysXManager implements PhysXInteface {
   // constraints: // TODO
 
 
-  initPhysX = async (config: PhysXConfig, objectArray: Float32Array): Promise<void> => {
+  initPhysX = async (config: PhysXConfig): Promise<void> => {
     //@ts-ignore
     importScripts(config.jsPath);
-    this.objectArray = objectArray;
     if (config?.tps) {
       this.tps = config.tps;
     }
@@ -96,11 +95,30 @@ export class PhysXManager implements PhysXInteface {
     const delta = now - lastTick;
     this.scene.simulate(delta/1000, true);
     this.scene.fetchResults(true);
+    this.objectArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
     this.bodies.forEach((body: PhysX.RigidActor, id: number) => {
-      this.objectArray.set(getBodyData(body), id * BufferConfig.BODY_DATA_SIZE);
+      if(isDynamicBody(body)) {
+        this.objectArray.set(getBodyData(body), id * BufferConfig.BODY_DATA_SIZE);
+      }
     })
     this.onUpdate(this.objectArray);
     lastTick = now;
+  }
+
+  update = async (kinematicIDs: number[], kinematicBodiesArray: Float32Array) => {
+    kinematicIDs.forEach((id) => {
+      const body =  this.bodies.get(id) as PhysX.RigidDynamic;
+      const offset = id * BufferConfig.BODY_DATA_SIZE;
+      const currentPose = body.getGlobalPose();
+      currentPose.translation.x = kinematicBodiesArray[offset];
+      currentPose.translation.y = kinematicBodiesArray[offset + 1];
+      currentPose.translation.z = kinematicBodiesArray[offset + 2];
+      currentPose.rotation.x = kinematicBodiesArray[offset + 3];
+      currentPose.rotation.y = kinematicBodiesArray[offset + 4];
+      currentPose.rotation.z = kinematicBodiesArray[offset + 5];
+      currentPose.rotation.w = kinematicBodiesArray[offset + 6];
+      body.setKinematicTarget(currentPose);
+    })
   }
 
   startPhysX = async (start: boolean = true) => {
@@ -112,22 +130,23 @@ export class PhysXManager implements PhysXInteface {
     }
   }
 
-  addBody = async ({ id, transform, shapes, bodyOptions }: PhysXBodyConfig) => {
-    // console.log(id, transform, shapes, bodyOptions)
+  addBody = async ({ id, transform, bodyConfig }) => {
+    const { shapes, bodyOptions }: PhysXBodyConfig = bodyConfig;
     const { type, trigger } = bodyOptions;
 
-    let body: PhysX.RigidStatic | PhysX.RigidDynamic;
+    let rigidBody: PhysX.RigidStatic | PhysX.RigidDynamic;
 
     if (type === PhysXBodyType.STATIC) {
-      body = this.physics.createRigidStatic(transform);
+      rigidBody = this.physics.createRigidStatic(transform);
     } else {
-      body = this.physics.createRigidDynamic(transform) as PhysX.RigidDynamic;
+      rigidBody = this.physics.createRigidDynamic(transform) as PhysX.RigidDynamic;
       if(type === PhysXBodyType.KINEMATIC) {
-        // (body as PhysX.RigidDynamic).setKinematicTarget(new PhysX.PxTransform([0,0,0], [0,0,0,0]));
-        // (body as PhysX.RigidDynamic).setRigidBodyFlags(PhysX.PxRigidBodyFlags.eKINEMATIC);
+        const flags = new PhysX.PxRigidBodyFlags(PhysX.PxRigidBodyFlag.eKINEMATIC.value);
+        (rigidBody as PhysX.RigidDynamic).setRigidBodyFlags(flags);
+        // (rigidBody as PhysX.RigidDynamic).setRigidBodyFlag(PhysX.PxRigidBodyFlag.eKINEMATIC.value, true);
       }
 
-      (body as any)._type = type;
+      (rigidBody as any)._type = type;
     }
 
     if (trigger) {
@@ -141,12 +160,12 @@ export class PhysXManager implements PhysXInteface {
 			const filterData = new PhysX.PxFilterData(1, 1, 0, 0);
 			bodyShape.setSimulationFilterData(filterData);
       bodyShapes.push(bodyShape)
-      body.attachShape(bodyShape);
+      rigidBody.attachShape(bodyShape);
     })
 
     this.shapes.set(id, bodyShapes);
-    this.bodies.set(id, body);
-    this.scene.addActor(body, null);
+    this.bodies.set(id, rigidBody);
+    this.scene.addActor(rigidBody, null);
   }
 
   updateBody = async ({ options }) => {
@@ -181,14 +200,18 @@ export class PhysXManager implements PhysXInteface {
   }
 }
 
-const isDynamicBody = (body: PhysX.RigidDynamic) => {
+const isKinematicBody = (body: PhysX.RigidActor) => {
+  return (body as any)._type === PhysXBodyType.KINEMATIC;
+}
+
+const isDynamicBody = (body: PhysX.RigidActor) => {
   return (body as any)._type === PhysXBodyType.DYNAMIC;
 }
 
 const getBodyData = (body: PhysX.RigidActor) => {
   const transform = body.getGlobalPose();
-  const linVel = isDynamicBody(body as PhysX.RigidDynamic) ? body.getLinearVelocity() : { x:0, y:0, z:0 };
-  const angVel = isDynamicBody(body as PhysX.RigidDynamic) ? body.getAngularVelocity() : { x:0, y:0, z:0 };
+  const linVel = body.getLinearVelocity();
+  const angVel = body.getAngularVelocity();
   return [
     transform.translation.x, transform.translation.y, transform.translation.z,
     transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w,
@@ -218,7 +241,7 @@ export const receiveWorker = async (): Promise<void> => {
   const messageQueue = new MessageQueue(globalThis as any);
   PhysXManager.instance = new PhysXManager();
   PhysXManager.instance.onUpdate = (data: Uint8Array) => {
-    messageQueue.sendEvent('data', data)
+    messageQueue.sendEvent('data', data, [data.buffer])
   }
   const addFunctionListener = (eventLabel) => {
     messageQueue.addEventListener(eventLabel, async ({ detail }) => {

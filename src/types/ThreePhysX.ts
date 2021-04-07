@@ -35,10 +35,10 @@ export interface PhysXBodyTransform {
 }
 
 export interface PhysXBodyData {
-  translation: Vector3
-  rotation: Quaternion
-  linearVelocity?: Vector3
-  angularVelocity?: Vector3
+  translation: Vec3
+  rotation: Quat
+  linearVelocity?: Vec3
+  angularVelocity?: Vec3
 }
 
 export interface PhysXShapeOptions {
@@ -61,8 +61,6 @@ export interface PhysXShapeConfig {
 }
 
 export interface PhysXBodyConfig {
-  id: number
-  transform: PhysXBodyTransform
   shapes: PhysXShapeConfig[]
   bodyOptions: {
     type?: PhysXBodyType
@@ -78,6 +76,7 @@ export interface PhysXUserData {
 
 export interface PhysXInteface {
   initPhysX: any
+  update: any;
   startPhysX: any
   addBody: any
   updateBody: any

@@ -129,7 +129,7 @@ export class MessageQueue extends EventDispatcherProxy {
     try {
       this.messagePort.postMessage(messages, transferables);
     } catch (e) {
-      console.log(e, messages, this);
+      console.log(e, messages, this, globalThis);
     }
     this.queue = [];
   }

@@ -1,13 +1,11 @@
 import * as BufferConfig from "./BufferConfig";
 import { MessageQueue } from "./utils/MessageQueue";
 
-import { PhysXConfig, PhysXInteface, PhysXBodyConfig, PhysXBodyTransform, PhysXBodyData, PhysXBodyType, RigidBodyProxy, Object3DBody } from "./types/ThreePhysX";
-import { Object3D, Quaternion, Vector3 } from "three";
+import { PhysXConfig, PhysXInteface, PhysXBodyConfig, PhysXBodyType, RigidBodyProxy, Object3DBody } from "./types/ThreePhysX";
+import { Object3D } from "three";
 import { threeToPhysX } from "./threeToPhysX";
 
 let nextAvailableBodyIndex = 0;
-const arrayBuffer = new ArrayBuffer(BufferConfig.ARRAY_LENGTH);
-let objectMatricesFloatArray = new Float32Array(arrayBuffer);
 
 export class PhysXInstance implements PhysXInteface {
   static instance: PhysXInstance;
@@ -16,6 +14,9 @@ export class PhysXInstance implements PhysXInteface {
   physicsProxy: PhysXInteface;
 
   bodies: Map<number, RigidBodyProxy> = new Map<number, RigidBodyProxy>();
+  kinematicBodies: Map<number, Object3DBody> = new Map<number, Object3DBody>();
+
+  kinematicArray: Float32Array;
 
   constructor(worker: Worker, onUpdate: any) {
     PhysXInstance.instance = this;
@@ -31,23 +32,36 @@ export class PhysXInstance implements PhysXInteface {
       })
     })
     messageQueue.addEventListener('data', (ev) => {
-      const buffer: Float32Array = ev.detail;
+      const array: Float32Array = ev.detail;
       this.bodies.forEach((rigidBody, id) => {
-        const offset = id * BufferConfig.BODY_DATA_SIZE;
-        rigidBody.transform.translation.fromArray(buffer, offset);
-        rigidBody.transform.rotation.fromArray(buffer, offset + 3);
-        if(rigidBody.bodyConfig.bodyOptions.type === PhysXBodyType.DYNAMIC) {
-          rigidBody.transform.linearVelocity.fromArray(buffer, offset + 8);
-          rigidBody.transform.angularVelocity.fromArray(buffer, offset + 12);
+        if (rigidBody.bodyConfig.bodyOptions.type === PhysXBodyType.DYNAMIC) {
+          const offset = id * BufferConfig.BODY_DATA_SIZE;
+          rigidBody.transform.translation.x = array[offset];
+          rigidBody.transform.translation.y = array[offset + 1];
+          rigidBody.transform.translation.z = array[offset + 2];
+          rigidBody.transform.rotation.x = array[offset + 3];
+          rigidBody.transform.rotation.y = array[offset + 4];
+          rigidBody.transform.rotation.z = array[offset + 5];
+          rigidBody.transform.rotation.w = array[offset + 6];
+          if (rigidBody.bodyConfig.bodyOptions.type === PhysXBodyType.DYNAMIC) {
+            rigidBody.transform.linearVelocity.x = array[offset + 7];
+            rigidBody.transform.linearVelocity.y = array[offset + 8];
+            rigidBody.transform.linearVelocity.z = array[offset + 9];
+            rigidBody.transform.angularVelocity.x = array[offset + 10];
+            rigidBody.transform.angularVelocity.y = array[offset + 11];
+            rigidBody.transform.angularVelocity.z = array[offset + 12];
+          }
         }
       })
       this.onUpdate();
     })
 
     this.physicsProxy = {
-      initPhysX: pipeRemoteFunction(messageQueue, 'initPhysX', [objectMatricesFloatArray.buffer]),
+      initPhysX: pipeRemoteFunction(messageQueue, 'initPhysX'),
+      update: pipeRemoteFunction(messageQueue, 'update'),
       startPhysX: pipeRemoteFunction(messageQueue, 'startPhysX'),
       addBody: pipeRemoteFunction(messageQueue, 'addBody'),
+      updateBody: pipeRemoteFunction(messageQueue, 'updateBody'),
       removeBody: pipeRemoteFunction(messageQueue, 'removeBody'),
       addConstraint: pipeRemoteFunction(messageQueue, 'addConstraint'),
       removeConstraint: pipeRemoteFunction(messageQueue, 'removeConstraint'),
@@ -56,33 +70,63 @@ export class PhysXInstance implements PhysXInteface {
       activateBody: pipeRemoteFunction(messageQueue, 'activateBody'),
     } as PhysXInteface
 
-    await this.physicsProxy.initPhysX(config, objectMatricesFloatArray)
+    await this.physicsProxy.initPhysX([config])
+  }
+  getBuffer() {
+    return this.kinematicArray.buffer;
+  }
+
+  // update kinematic bodies
+  update = async () => {
+    // TODO: make this rely on kinematicBodies.size instead of bodies.size
+    this.kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
+    const kinematicIDs = []
+    this.kinematicBodies.forEach((obj, id) => {
+      kinematicIDs.push(id);
+      obj.body.transform.translation.x = obj.position.x;
+      obj.body.transform.translation.y = obj.position.y;
+      obj.body.transform.translation.z = obj.position.z;
+      obj.body.transform.rotation.x = obj.quaternion.x;
+      obj.body.transform.rotation.y = obj.quaternion.y;
+      obj.body.transform.rotation.z = obj.quaternion.z;
+      obj.body.transform.rotation.w = obj.quaternion.w;
+      const transform = obj.body.transform;
+      this.kinematicArray.set([
+        transform.translation.x, transform.translation.y, transform.translation.z,
+        transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w,
+      ], id * BufferConfig.BODY_DATA_SIZE);
+    })
+    this.physicsProxy.update([kinematicIDs, this.kinematicArray], [this.kinematicArray.buffer]);
   }
 
   startPhysX = async (start: boolean) => {
-    return this.physicsProxy.startPhysX(start)
+    return this.physicsProxy.startPhysX([start])
   }
 
   addBody = async (object: Object3D) => {
     const id = this._getNextAvailableID();
-    const bodyConfig = threeToPhysX(object, id);
-    await this.physicsProxy.addBody(bodyConfig)
+    threeToPhysX(object, id);
+    await this.physicsProxy.addBody([(object as Object3DBody).body])
     this.bodies.set(id, (object as Object3DBody).body);
-    return bodyConfig;
+    if ((object as Object3DBody).body.bodyConfig.bodyOptions.type === PhysXBodyType.KINEMATIC) {
+      this.kinematicBodies.set(id, (object as Object3DBody));
+    }
+    return (object as Object3DBody).body;
   }
 
   updateBody = async (object: Object3D, options: any) => {
     const id = (object as Object3DBody).body.id;
-    await this.physicsProxy.updateBody({ id, options })
+    await this.physicsProxy.updateBody([{ id, options }])
     return;
   }
 
   removeBody = async (object: Object3D) => {
     const id = (object as Object3DBody).body.id;
-    await this.physicsProxy.removeBody({ id });
+    await this.physicsProxy.removeBody([{ id }]);
     delete this.bodies[id];
     return;
   }
+
   addConstraint = async () => {
     // todo
   }
@@ -103,29 +147,31 @@ export class PhysXInstance implements PhysXInteface {
     // todo
   }
 
-  _getNextAvailableID = () => {
+  private _getNextAvailableID = () => {
     indexOfSmallest(Object.keys(this.bodies))
     return nextAvailableBodyIndex++;
   }
-  
+
 }
 
 const indexOfSmallest = (a) => {
   var lowest = 0;
   for (var i = 1; i < a.length; i++) {
-   if (a[i] < a[lowest]) lowest = i;
+    if (a[i] < a[lowest]) lowest = i;
   }
   return lowest;
- }
+}
 
 const pipeRemoteFunction = (messageQueue: MessageQueue, id: string, transferrables?: Transferable[]) => {
-  return (...args) => {
+  return (args, transferables) => {
     return new Promise<any>((resolve) => {
       const uuid = generateUUID();
-      messageQueue.addEventListener(uuid, ({ detail }) => {
+      const callback = ({ detail }) => {
+        messageQueue.removeEventListener(uuid, callback)
         resolve(detail.returnValue);
-      });
-      messageQueue.sendEvent(id, { args, uuid }, transferrables);
+      }
+      messageQueue.addEventListener(uuid, callback);
+      messageQueue.sendEvent(id, { args, uuid }, transferables);
     })
   }
 }

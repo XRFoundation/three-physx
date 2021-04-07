@@ -1,21 +1,24 @@
 
 import { PhysXInstance } from '..'
-import { Object3D, Mesh, TorusKnotBufferGeometry, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, PlaneBufferGeometry, CylinderBufferGeometry, DoubleSide, Color } from 'three'
-import * as BufferConfig from "../src/BufferConfig";
+import { Mesh, TorusKnotBufferGeometry, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, PlaneBufferGeometry, CylinderBufferGeometry, DoubleSide, Color, Object3D } from 'three'
 import { Object3DBody, PhysXBodyType, RigidBodyProxy } from '../src/types/ThreePhysX';
 import { PhysXDebugRenderer } from './PhysXDebugRenderer';
-let ids = 0;
+
 const load = async () => {
 
   const renderer = await import('./renderer')
 
-  const objects = new Map<number, Object3DBody>();
+  const objects = new Map<number, Object3D>();
   (globalThis as any).objects = objects
 
   const onUpdate = () => {
     objects.forEach((obj: any, id) => {
-      obj.position.copy((obj.body as RigidBodyProxy).transform.translation);
-      obj.quaternion.copy((obj.body as RigidBodyProxy).transform.rotation);
+      if((obj.body as RigidBodyProxy).bodyConfig.bodyOptions.type === PhysXBodyType.DYNAMIC) {
+        const translation = (obj.body as RigidBodyProxy).transform.translation;
+        const rotation = (obj.body as RigidBodyProxy).transform.rotation;
+        obj.position.set(translation.x, translation.y, translation.z);
+        obj.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+      }
     })
   }
   new PhysXInstance(new Worker(new URL("../src/worker.ts", import.meta.url)), onUpdate);
@@ -27,9 +30,21 @@ const load = async () => {
     renderer.addToScene(object);
   })
 
+  const kinematicObject = new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() }));
+  kinematicObject.userData.physx = { type: PhysXBodyType.KINEMATIC };
+  
+  const body = await PhysXInstance.instance.addBody(kinematicObject);
+  objects.set(body.id, kinematicObject)
+  renderer.addToScene(kinematicObject);
+
   const debug = new PhysXDebugRenderer(renderer.scene)
+  debug.setEnabled(true);
 
   const update = () => {
+    const time = Date.now() / 1000;
+    kinematicObject.position.set(Math.sin(time) * 10, 0, Math.cos(time) * 10);
+    kinematicObject.lookAt(0, 0, 0)
+    PhysXInstance.instance.update();
     debug.update(objects)
     renderer.update()
     requestAnimationFrame(update)
@@ -38,30 +53,18 @@ const load = async () => {
 }
 
 const createScene = () => {
+  const geoms = [new BoxBufferGeometry(), new SphereBufferGeometry(1)]
   const meshes = []
   for(let i = 0; i < 1000; i++){
-    const mesh = new Mesh(new BoxBufferGeometry(), new MeshBasicMaterial({ color: randomColor() }))
-    mesh.position.set(Math.random() * 50 - 25, Math.random() * 50 - 25, Math.random() * 50 - 25);
-    mesh.userData.physx = { type: PhysXBodyType.KINEMATIC };
+    const mesh = new Mesh(geoms[i%2], new MeshBasicMaterial({ color: randomColor() }))
+    mesh.position.set(Math.random() * 50 - 25, Math.random() * 50, Math.random() * 50 - 25);
+    mesh.userData.physx = { type: PhysXBodyType.DYNAMIC };
     meshes.push(mesh)
   }
-
-  const mesh2 = new Mesh(new CylinderBufferGeometry(), new MeshBasicMaterial({ color: randomColor() })).translateX(-2);
-  mesh2.userData.physx = { type: PhysXBodyType.DYNAMIC };
-  
-  const mesh3 = new Mesh(new PlaneBufferGeometry(), new MeshBasicMaterial({ color: randomColor(), side: DoubleSide }));
-  mesh3.userData.physx = { type: PhysXBodyType.DYNAMIC };
-  
-  const mesh4 = new Mesh(new SphereBufferGeometry(), new MeshBasicMaterial({ color: randomColor() })).translateX(2);
-  mesh4.userData.physx = { type: PhysXBodyType.DYNAMIC };
-  
-  const mesh5 = new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() })).translateX(6);
-  mesh5.userData.physx = { type: PhysXBodyType.DYNAMIC };
-  
-  const floor = new Mesh(new BoxBufferGeometry(100, 1, 100), new MeshBasicMaterial({ color: randomColor(), side: DoubleSide })).translateY(-25);
+  const floor = new Mesh(new BoxBufferGeometry(100, 1, 100), new MeshBasicMaterial({ color: randomColor(), side: DoubleSide })).translateY(-2);
   floor.userData.physx = { type: PhysXBodyType.STATIC };
   
-  return [...meshes, mesh2, mesh3, mesh4, mesh5, floor];
+  return [...meshes, floor];
 }
 
 const randomColor = () => {

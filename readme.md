@@ -11,6 +11,7 @@ Progress:
 - [x] return transforms
 - [ ] implement all API functions
 - [ ] collision events
+- [ ] raycasts
 
 
 
@@ -36,7 +37,7 @@ Body parameters are read from `object.userData`. This allows externally loaded m
 
 ```javascript
 object.userData.physx = {
-    type: PhysXBodyType,
-    // todo
+  type: PhysXBodyType,
+  // todo
 }
 ```

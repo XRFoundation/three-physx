@@ -18,11 +18,7 @@ export const threeToPhysX = (object: any, id: number) => {
   } else {
     transform.copy(object.matrixWorld);
   }
-  const { type } = object.userData.physx ?? PhysXBodyType.STATIC;
-
-  object.physx = {
-    id
-  }
+  const type = object.userData.physx ? object.userData.physx.type : PhysXBodyType.STATIC;
 
   const shapes: PhysXShapeConfig[] = [];
 
@@ -32,40 +28,25 @@ export const threeToPhysX = (object: any, id: number) => {
   const pos = object.getWorldPosition(vec3);
 
   const bodyConfig: PhysXBodyConfig = {
-    id,
-    transform: {
-      translation: {
-        x: pos.x,
-        y: pos.y,
-        z: pos.z,
-      },
-      rotation: {
-        x: rot.x,
-        y: rot.y,
-        z: rot.z,
-        w: rot.w,
-      },
-    },
     shapes,
     bodyOptions: {
       type,
     }
   }
-
   const body: RigidBodyProxy = {
     id,
     bodyConfig, 
     transform: {
-      translation: new Vector3(),
-      rotation: new Quaternion(),
+      translation: { x: pos.x, y: pos.y, z: pos.z },
+      rotation: { x: rot.x, y: rot.y, z: rot.z, w: rot.w },
     }
   }
   if(bodyConfig.bodyOptions.type === PhysXBodyType.DYNAMIC) {
-    body.transform.linearVelocity = new Vector3();
-    body.transform.angularVelocity = new Vector3();
+    body.transform.linearVelocity = { x: 0, y: 0, z: 0 };
+    body.transform.angularVelocity = { x: 0, y: 0, z: 0 };
   }
   object.body = body;
-  return bodyConfig;
+  return body;
 }
 
 // from three-to-ammo

@@ -4,5 +4,3 @@ const _velocity = 3; // Vector3
 const _angular = 3; // Vector3
 
 export const BODY_DATA_SIZE = _positionSize + _quaternionSize + _velocity + _angular;
-export const MAX_BODIES = 100000;
-export const ARRAY_LENGTH = BODY_DATA_SIZE * MAX_BODIES;

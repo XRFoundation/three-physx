@@ -11,32 +11,32 @@ import {
   SphereGeometry,
   BoxGeometry,
   PlaneGeometry,
+  Object3D,
 } from 'three';
 import { Object3DBody, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy } from '../src/types/ThreePhysX';
 
 export class PhysXDebugRenderer {
 
-  public scene: Scene
+  private scene: Scene
   private _meshes: Mesh[] | Points[]
   private _material: MeshBasicMaterial
   private _sphereGeometry: SphereBufferGeometry
   private _boxGeometry: BoxBufferGeometry
   private _planeGeometry: PlaneBufferGeometry
-  private _particleGeometry: BufferGeometry
 
   private enabled: boolean;
 
   constructor(scene: Scene) {
 
     this.scene = scene
-    this.enabled = true;
+    this.enabled = false;
 
     this._meshes = []
 
     this._material = new MeshBasicMaterial({ color: 0x00ff00, wireframe: true })
     this._sphereGeometry = new SphereBufferGeometry(1)
-    this._boxGeometry = new BoxBufferGeometry(1, 1, 1)
-    this._planeGeometry = new PlaneBufferGeometry(10, 10, 10, 10)
+    this._boxGeometry = new BoxBufferGeometry()
+    this._planeGeometry = new PlaneBufferGeometry()
   }
 
   public setEnabled(enabled) {
@@ -46,7 +46,7 @@ export class PhysXDebugRenderer {
     }
   }
 
-  public update(objects: Map<number, Object3DBody>) {
+  public update(objects: Map<number, Object3D>) {
 
     if (!this.enabled) {
       return;
@@ -58,6 +58,7 @@ export class PhysXDebugRenderer {
 
     objects.forEach((object, id) => {
 
+      //@ts-ignore
       const { body } = object;
 
       body.bodyConfig.shapes.forEach((shape) => {
@@ -117,9 +118,6 @@ export class PhysXDebugRenderer {
   private _createMesh(shape: PhysXShapeConfig): Mesh | Points {
     let mesh: Mesh | Points
     let geometry: BufferGeometry
-    let v0: Vector3
-    let v1: Vector3
-    let v2: Vector3
     const material: MeshBasicMaterial = this._material;
     let points: Vector3[] = []
 
