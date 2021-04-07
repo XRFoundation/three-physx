@@ -59,7 +59,7 @@ const load = async () => {
 const createScene = () => {
   const geoms = [new BoxBufferGeometry(), new SphereBufferGeometry(1)]
   const meshes = []
-  for(let i = 0; i < 100; i++){
+  for(let i = 0; i < 1000; i++){
     const mesh = new Mesh(geoms[i%2], new MeshBasicMaterial({ color: randomColor() }))
     mesh.position.set(Math.random() * 50 - 25, Math.random() * 50, Math.random() * 50 - 25);
     mesh.userData.physx = { type: PhysXBodyType.DYNAMIC };
