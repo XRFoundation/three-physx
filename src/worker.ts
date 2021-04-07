@@ -1,12 +1,19 @@
 ///<reference path="./types/PhysX.d.ts"/>
 
-import { Matrix4, Vector3, Quaternion, Matrix } from "three";
-import { getShape } from "./getShape";
-import { PhysXBodyConfig, PhysXConfig, PhysXInteface, PhysXModelShapes, PhysXBodyTransform, PhysXBodyType } from "./types/ThreePhysX";
-import { MessageQueue } from "./utils/MessageQueue";
-import * as BufferConfig from "./BufferConfig";
+import { Matrix4, Vector3, Quaternion, Matrix } from 'three';
+import { getShape } from './getShape';
+import {
+  PhysXBodyConfig,
+  PhysXConfig,
+  PhysXInteface,
+  PhysXModelShapes,
+  PhysXBodyTransform,
+  PhysXBodyType,
+} from './types/ThreePhysX';
+import { MessageQueue } from './utils/MessageQueue';
+import * as BufferConfig from './BufferConfig';
 
-const noop = () => { };
+const noop = () => {};
 
 const mat4 = new Matrix4();
 const pos = new Vector3();
@@ -16,7 +23,6 @@ const scale = new Vector3();
 let lastTick = 0;
 
 export class PhysXManager implements PhysXInteface {
-
   static instance: PhysXManager;
 
   physxVersion: number;
@@ -45,7 +51,6 @@ export class PhysXManager implements PhysXInteface {
 
   // constraints: // TODO
 
-
   initPhysX = async (config: PhysXConfig): Promise<void> => {
     //@ts-ignore
     importScripts(config.jsPath);
@@ -53,61 +58,91 @@ export class PhysXManager implements PhysXInteface {
       this.tps = config.tps;
     }
     (globalThis as any).PhysX = await new (globalThis as any).PHYSX({
-      locateFile: () => { return config.wasmPath; }
+      locateFile: () => {
+        return config.wasmPath;
+      },
     });
     this.physxVersion = PhysX.PX_PHYSICS_VERSION;
     this.defaultErrorCallback = new PhysX.PxDefaultErrorCallback();
     this.allocator = new PhysX.PxDefaultAllocator();
-    this.foundation = PhysX.PxCreateFoundation(this.physxVersion, this.allocator, this.defaultErrorCallback);
-    this.cookingParamas = new PhysX.PxCookingParams(new PhysX.PxTolerancesScale());
-    this.cooking = PhysX.PxCreateCooking(this.physxVersion, this.foundation, this.cookingParamas);
-    this.physics = PhysX.PxCreatePhysics(this.physxVersion, this.foundation, new PhysX.PxTolerancesScale(), false, null);
+    this.foundation = PhysX.PxCreateFoundation(
+      this.physxVersion,
+      this.allocator,
+      this.defaultErrorCallback,
+    );
+    this.cookingParamas = new PhysX.PxCookingParams(
+      new PhysX.PxTolerancesScale(),
+    );
+    this.cooking = PhysX.PxCreateCooking(
+      this.physxVersion,
+      this.foundation,
+      this.cookingParamas,
+    );
+    this.physics = PhysX.PxCreatePhysics(
+      this.physxVersion,
+      this.foundation,
+      new PhysX.PxTolerancesScale(),
+      false,
+      null,
+    );
 
     const triggerCallback = {
-      onContactBegin: (shapeA, shapeB) => { 
-        // console.log('onContactBegin', shapeA, shapeB) 
+      onContactBegin: (shapeA, shapeB) => {
+        // console.log('onContactBegin', shapeA, shapeB)
       },
-      onContactEnd: (shapeA, shapeB) => { 
-        // console.log('onContactEnd', shapeA, shapeB) 
+      onContactEnd: (shapeA, shapeB) => {
+        // console.log('onContactEnd', shapeA, shapeB)
       },
-      onContactPersist: (shapeA, shapeB) => { 
-        // console.log('onContactPersist', shapeA, shapeB) 
+      onContactPersist: (shapeA, shapeB) => {
+        // console.log('onContactPersist', shapeA, shapeB)
       },
-      onTriggerBegin: (shapeA, shapeB) => { 
-        // console.log('onTriggerBegin', shapeA, shapeB) 
+      onTriggerBegin: (shapeA, shapeB) => {
+        // console.log('onTriggerBegin', shapeA, shapeB)
       },
-      onTriggerEnd: (shapeA, shapeB) => { 
-        // console.log('onTriggerEnd', shapeA, shapeB) 
+      onTriggerEnd: (shapeA, shapeB) => {
+        // console.log('onTriggerEnd', shapeA, shapeB)
       },
     };
 
     this.scale = this.physics.getTolerancesScale();
-    this.sceneDesc = PhysX.getDefaultSceneDesc(this.scale, 0, PhysX.PxSimulationEventCallback.implement(triggerCallback as any));
+    this.sceneDesc = PhysX.getDefaultSceneDesc(
+      this.scale,
+      0,
+      PhysX.PxSimulationEventCallback.implement(triggerCallback as any),
+    );
     this.sceneDesc.bounceThresholdVelocity = 0.001;
 
     this.scene = this.physics.createScene(this.sceneDesc);
 
     this.startPhysX(true);
-  }
+  };
 
   simulate = async () => {
     const now = Date.now();
     const delta = now - lastTick;
-    this.scene.simulate(delta/1000, true);
+    this.scene.simulate(delta / 1000, true);
     this.scene.fetchResults(true);
-    this.objectArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
+    this.objectArray = new Float32Array(
+      new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size),
+    );
     this.bodies.forEach((body: PhysX.RigidActor, id: number) => {
-      if(isDynamicBody(body)) {
-        this.objectArray.set(getBodyData(body), id * BufferConfig.BODY_DATA_SIZE);
+      if (isDynamicBody(body)) {
+        this.objectArray.set(
+          getBodyData(body),
+          id * BufferConfig.BODY_DATA_SIZE,
+        );
       }
-    })
+    });
     this.onUpdate(this.objectArray);
     lastTick = now;
-  }
+  };
 
-  update = async (kinematicIDs: number[], kinematicBodiesArray: Float32Array) => {
+  update = async (
+    kinematicIDs: number[],
+    kinematicBodiesArray: Float32Array,
+  ) => {
     kinematicIDs.forEach((id) => {
-      const body =  this.bodies.get(id) as PhysX.RigidDynamic;
+      const body = this.bodies.get(id) as PhysX.RigidDynamic;
       const offset = id * BufferConfig.BODY_DATA_SIZE;
       const currentPose = body.getGlobalPose();
       currentPose.translation.x = kinematicBodiesArray[offset];
@@ -118,17 +153,17 @@ export class PhysXManager implements PhysXInteface {
       currentPose.rotation.z = kinematicBodiesArray[offset + 5];
       currentPose.rotation.w = kinematicBodiesArray[offset + 6];
       body.setKinematicTarget(currentPose);
-    })
-  }
+    });
+  };
 
   startPhysX = async (start: boolean = true) => {
     if (start) {
       lastTick = Date.now() - 1 / this.tps; // pretend like it's only been one tick
       this.updateInterval = setInterval(this.simulate, 1000 / this.tps);
     } else {
-      clearInterval()
+      clearInterval();
     }
-  }
+  };
 
   addBody = async ({ id, transform, bodyConfig }) => {
     const { shapes, bodyOptions }: PhysXBodyConfig = bodyConfig;
@@ -139,9 +174,13 @@ export class PhysXManager implements PhysXInteface {
     if (type === PhysXBodyType.STATIC) {
       rigidBody = this.physics.createRigidStatic(transform);
     } else {
-      rigidBody = this.physics.createRigidDynamic(transform) as PhysX.RigidDynamic;
-      if(type === PhysXBodyType.KINEMATIC) {
-        const flags = new PhysX.PxRigidBodyFlags(PhysX.PxRigidBodyFlag.eKINEMATIC.value);
+      rigidBody = this.physics.createRigidDynamic(
+        transform,
+      ) as PhysX.RigidDynamic;
+      if (type === PhysXBodyType.KINEMATIC) {
+        const flags = new PhysX.PxRigidBodyFlags(
+          PhysX.PxRigidBodyFlag.eKINEMATIC.value,
+        );
         (rigidBody as PhysX.RigidDynamic).setRigidBodyFlags(flags);
         // (rigidBody as PhysX.RigidDynamic).setRigidBodyFlag(PhysX.PxRigidBodyFlag.eKINEMATIC.value, true);
       }
@@ -150,112 +189,119 @@ export class PhysXManager implements PhysXInteface {
     }
 
     if (trigger) {
-
     }
 
     const bodyShapes: PhysX.PxShape[] = [];
     shapes.forEach(({ shape, vertices, indices, options }) => {
       const bodyShape = getShape({ shape, vertices, indices, options });
-      bodyShape.setContactOffset(0.0000001)
-			const filterData = new PhysX.PxFilterData(1, 1, 0, 0);
-			bodyShape.setSimulationFilterData(filterData);
-      bodyShapes.push(bodyShape)
+      bodyShape.setContactOffset(0.0000001);
+      const filterData = new PhysX.PxFilterData(1, 1, 0, 0);
+      bodyShape.setSimulationFilterData(filterData);
+      bodyShapes.push(bodyShape);
       rigidBody.attachShape(bodyShape);
-    })
+    });
 
     this.shapes.set(id, bodyShapes);
     this.bodies.set(id, rigidBody);
     this.scene.addActor(rigidBody, null);
-  }
+  };
 
   updateBody = async ({ options }) => {
     // todo
-  }
+  };
 
   removeBody = async ({ id }) => {
     const body = this.bodies.get(id);
     this.scene.removeActor(body, false);
     this.bodies.delete(id);
-
-  }
+  };
 
   addConstraint = async () => {
     // todo
-  }
+  };
 
   removeConstraint = async () => {
     // todo
-  }
+  };
 
   enableDebug = async () => {
     // todo
-  }
+  };
 
   resetDynamicBody = async () => {
     // todo
-  }
+  };
 
   activateBody = async () => {
     // todo
-  }
+  };
 }
 
 const isKinematicBody = (body: PhysX.RigidActor) => {
   return (body as any)._type === PhysXBodyType.KINEMATIC;
-}
+};
 
 const isDynamicBody = (body: PhysX.RigidActor) => {
   return (body as any)._type === PhysXBodyType.DYNAMIC;
-}
+};
 
 const getBodyData = (body: PhysX.RigidActor) => {
   const transform = body.getGlobalPose();
   const linVel = body.getLinearVelocity();
   const angVel = body.getAngularVelocity();
   return [
-    transform.translation.x, transform.translation.y, transform.translation.z,
-    transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w,
-    linVel.x, linVel.y, linVel.z,
-    angVel.x, angVel.y, angVel.z,
-  ]
-}
+    transform.translation.x,
+    transform.translation.y,
+    transform.translation.z,
+    transform.rotation.x,
+    transform.rotation.y,
+    transform.rotation.z,
+    transform.rotation.w,
+    linVel.x,
+    linVel.y,
+    linVel.z,
+    angVel.x,
+    angVel.y,
+    angVel.z,
+  ];
+};
 
 const mat4ToTransform = (matrix: Matrix4): PhysXBodyTransform => {
-  matrix.decompose(pos, quat, scale)
+  matrix.decompose(pos, quat, scale);
   return {
     translation: {
       x: pos.x,
       y: pos.y,
-      z: pos.z
+      z: pos.z,
     },
     rotation: {
       x: quat.x,
       y: quat.y,
       z: quat.z,
-      w: quat.w
-    }
-  }
-}
+      w: quat.w,
+    },
+  };
+};
 
 export const receiveWorker = async (): Promise<void> => {
   const messageQueue = new MessageQueue(globalThis as any);
   PhysXManager.instance = new PhysXManager();
   PhysXManager.instance.onUpdate = (data: Uint8Array) => {
-    messageQueue.sendEvent('data', data, [data.buffer])
-  }
+    messageQueue.sendEvent('data', data, [data.buffer]);
+  };
   const addFunctionListener = (eventLabel) => {
     messageQueue.addEventListener(eventLabel, async ({ detail }) => {
       PhysXManager.instance[eventLabel](...detail.args).then((returnValue) => {
         messageQueue.sendEvent(detail.uuid, { returnValue });
-      })
-    })
-  }
+      });
+    });
+  };
   Object.keys(PhysXManager.instance).forEach((key) => {
     if (typeof PhysXManager.instance[key] === 'function') {
-      addFunctionListener(key)
+      addFunctionListener(key);
     }
-  })
-  messageQueue.sendEvent('init', {})
-}
+  });
+  messageQueue.sendEvent('init', {});
+};
 
-receiveWorker()
+receiveWorker();

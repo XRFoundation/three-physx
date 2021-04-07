@@ -1,0 +1,1 @@
+{"version":3,"file":"BufferConfig.js","sourceRoot":"","sources":["../src/BufferConfig.ts"],"names":[],"mappings":"AAAA,MAAM,aAAa,GAAG,CAAC,CAAC,CAAC,UAAU;AACnC,MAAM,eAAe,GAAG,CAAC,CAAC,CAAC,aAAa;AACxC,MAAM,SAAS,GAAG,CAAC,CAAC,CAAC,UAAU;AAC/B,MAAM,QAAQ,GAAG,CAAC,CAAC,CAAC,UAAU;AAE9B,MAAM,CAAC,MAAM,cAAc,GACzB,aAAa,GAAG,eAAe,GAAG,SAAS,GAAG,QAAQ,CAAC"}

@@ -1,5 +1,12 @@
-import { Object3D, Quaternion, Vector3, Matrix4, BufferGeometry, Box3 } from 'three'
-import { PhysXModelShapes } from './types/ThreePhysX'
+import {
+  Object3D,
+  Quaternion,
+  Vector3,
+  Matrix4,
+  BufferGeometry,
+  Box3,
+} from 'three';
+import { PhysXModelShapes } from './types/ThreePhysX';
 import { quickhull } from './utils/quickhull';
 
 const PI_2 = Math.PI / 2;
@@ -9,34 +16,44 @@ enum Shape {
   SPHERE,
   HULL,
   MESH,
-};
+}
 
-type BodyShape = { size: number[], shape: PhysXModelShapes } | { shape: PhysXModelShapes, vertices: number[], faces?: number[], indices?: number[] };
+type BodyShape =
+  | { size: number[]; shape: PhysXModelShapes }
+  | {
+      shape: PhysXModelShapes;
+      vertices: number[];
+      faces?: number[];
+      indices?: number[];
+    };
 
-export const threeToPhysXModelDescription = (object: Object3D, options: { type?: Shape } = {}): BodyShape => {
+export const threeToPhysXModelDescription = (
+  object: Object3D,
+  options: { type?: Shape } = {},
+): BodyShape => {
   let geometry;
 
   if (options.type === Shape.BOX) {
     return createBoundingBoxShape(object);
-  // } else if (options.type === Shape.CYLINDER) {
+    // } else if (options.type === Shape.CYLINDER) {
     // return createBoundingCylinderShape(object, options);
   } else if (options.type === Shape.SPHERE) {
     return createBoundingSphereShape(object, options);
-  // } else if (options.type === Shape.HULL) {
-  //   return createConvexPolyhedron(object);
+    // } else if (options.type === Shape.HULL) {
+    //   return createConvexPolyhedron(object);
   } else if (options.type === Shape.MESH) {
     geometry = getGeometry(object);
     return geometry ? createTrimeshShape(geometry) : null;
   } else if (options.type) {
-    throw new Error('Shape: ' + Shape[options.type] + ' is not currently implemented');
+    throw new Error(
+      'Shape: ' + Shape[options.type] + ' is not currently implemented',
+    );
   }
 
   geometry = getGeometry(object);
   if (!geometry) return null;
 
-  const type = geometry.metadata
-    ? geometry.metadata.type
-    : geometry.type;
+  const type = geometry.metadata ? geometry.metadata.type : geometry.type;
 
   switch (type) {
     case 'BoxGeometry':
@@ -44,7 +61,9 @@ export const threeToPhysXModelDescription = (object: Object3D, options: { type?:
       return createBoxShape(geometry);
     case 'CylinderGeometry':
     case 'CylinderBufferGeometry':
-      throw new Error('WARNING: threeToPhysX - Cylinder shape not yet implemented');// createCylinderShape(geometry);
+      throw new Error(
+        'WARNING: threeToPhysX - Cylinder shape not yet implemented',
+      ); // createCylinderShape(geometry);
     case 'PlaneGeometry':
     case 'PlaneBufferGeometry':
       return createPlaneShape(geometry);
@@ -56,13 +75,15 @@ export const threeToPhysXModelDescription = (object: Object3D, options: { type?:
     case 'BufferGeometry':
       return createBoundingBoxShape(object);
     default:
-      console.warn('Unrecognized geometry: "%s". Using bounding box as shape.', geometry.type);
+      console.warn(
+        'Unrecognized geometry: "%s". Using bounding box as shape.',
+        geometry.type,
+      );
       return createBoxShape(geometry);
   }
-}
+};
 
 threeToPhysXModelDescription.Shape = Shape;
-
 
 /******************************************************************************
  * Shape construction
@@ -81,11 +102,11 @@ const createBoxShape = (geometry): BodyShape => {
     size: [
       (box.max.x - box.min.x) / 2,
       (box.max.y - box.min.y) / 2,
-      (box.max.z - box.min.z) / 2
+      (box.max.z - box.min.z) / 2,
     ],
-    shape: PhysXModelShapes.Box
-  }
-}
+    shape: PhysXModelShapes.Box,
+  };
+};
 
 /**
  * Bounding box needs to be computed with the entire mesh, not just geometry.
@@ -102,7 +123,9 @@ const createBoundingBoxShape = (object): BodyShape => {
   box.setFromObject(clone);
 
   if (!isFinite(box.min.lengthSq())) return null;
-  const localPosition = box.translate(clone.position.negate()).getCenter(new Vector3());
+  const localPosition = box
+    .translate(clone.position.negate())
+    .getCenter(new Vector3());
   if (localPosition.lengthSq()) {
     box.translate(localPosition);
   }
@@ -111,11 +134,11 @@ const createBoundingBoxShape = (object): BodyShape => {
     size: [
       (box.max.x - box.min.x) / 2,
       (box.max.y - box.min.y) / 2,
-      (box.max.z - box.min.z) / 2
+      (box.max.z - box.min.z) / 2,
     ],
-    shape: PhysXModelShapes.Box
-  }
-}
+    shape: PhysXModelShapes.Box,
+  };
+};
 
 /**
  * Computes 3D convex hull as a CANNON.ConvexPolyhedron.
@@ -137,12 +160,16 @@ function createConvexPolyhedron(object): BodyShape {
 
   const hull = quickhull(geometry);
 
-  const verticesIn = hull.getAttribute('position')
+  const verticesIn = hull.getAttribute('position');
   const vertices = new Array(verticesIn.count);
   const index = hull.getIndex();
 
   for (i = 0; i < verticesIn.count / 3; i++) {
-    vertices[i] = [verticesIn[i * 3], verticesIn[i * 3 + 1], verticesIn[i * 3 + 2]];
+    vertices[i] = [
+      verticesIn[i * 3],
+      verticesIn[i * 3 + 1],
+      verticesIn[i * 3 + 2],
+    ];
   }
 
   // Convert from Face to Array<number>.
@@ -151,10 +178,10 @@ function createConvexPolyhedron(object): BodyShape {
     faces[i] = [index[i * 3], index[i * 3 + 1], index[i * 3 + 2]];
   }
 
-  return { 
+  return {
     shape: PhysXModelShapes.ConvexMesh,
     vertices,
-    faces
+    faces,
   };
 }
 
@@ -238,8 +265,8 @@ function createPlaneShape(geometry): BodyShape {
     size: [
       (box.max.x - box.min.x) / 2 || 0.1,
       (box.max.y - box.min.y) / 2 || 0.1,
-      (box.max.z - box.min.z) / 2 || 0.1
-    ]
+      (box.max.z - box.min.z) / 2 || 0.1,
+    ],
   };
 }
 
@@ -251,11 +278,11 @@ function createSphereShape(geometry): BodyShape {
   const params = geometry.metadata
     ? geometry.metadata.parameters
     : geometry.parameters;
-  
+
   return {
     shape: PhysXModelShapes.Sphere,
-    size: [params.radius]
-  }
+    size: [params.radius],
+  };
 }
 
 /**
@@ -266,16 +293,16 @@ function createBoundingSphereShape(object, options): BodyShape {
   if (options.sphereRadius) {
     return {
       shape: PhysXModelShapes.Sphere,
-      size: [options.sphereRadius]
-    }
+      size: [options.sphereRadius],
+    };
   }
   const geometry = getGeometry(object);
   if (!geometry) return null;
   geometry.computeBoundingSphere();
   return {
     shape: PhysXModelShapes.Sphere,
-    size: [geometry.boundingSphere.radius]
-  }
+    size: [geometry.boundingSphere.radius],
+  };
 }
 
 /**
@@ -289,8 +316,8 @@ function createTrimeshShape(geometry): BodyShape {
   return {
     shape: PhysXModelShapes.TriangleMesh,
     vertices,
-    indices
-  }
+    indices,
+  };
 }
 
 /******************************************************************************
@@ -318,8 +345,10 @@ export function getGeometry(object) {
       quaternion = new Quaternion(),
       scale = new Vector3();
     if (meshes[0].geometry.isBufferGeometry) {
-      if (meshes[0].geometry.attributes.position
-        && meshes[0].geometry.attributes.position.itemSize > 2) {
+      if (
+        meshes[0].geometry.attributes.position &&
+        meshes[0].geometry.attributes.position.itemSize > 2
+      ) {
         tmp = meshes[0].geometry;
       }
     } else {
@@ -335,8 +364,10 @@ export function getGeometry(object) {
   while ((mesh = meshes.pop())) {
     mesh.updateMatrixWorld();
     if (mesh.geometry.isBufferGeometry) {
-      if (mesh.geometry.attributes.position
-        && mesh.geometry.attributes.position.itemSize > 2) {
+      if (
+        mesh.geometry.attributes.position &&
+        mesh.geometry.attributes.position.itemSize > 2
+      ) {
         const tmpGeom = mesh.geometry;
         combined.merge(tmpGeom, mesh.matrixWorld);
         tmpGeom.dispose();

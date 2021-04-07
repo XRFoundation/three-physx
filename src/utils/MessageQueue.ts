@@ -10,7 +10,8 @@ export interface Message {
   transferables?: Transferable[];
 }
 
-export class EventDispatcherProxy {//extends ExtendableProxy {
+export class EventDispatcherProxy {
+  //extends ExtendableProxy {
   [x: string]: any;
   eventTarget: EventTarget = new EventTarget();
   eventListener: any;
@@ -88,8 +89,8 @@ export class EventDispatcherProxy {//extends ExtendableProxy {
 export class MessageQueue extends EventDispatcherProxy {
   messagePort: any;
   queue: Message[];
-  interval: NodeJS.Timeout;
-  eventTarget: EventTarget = new EventTarget;
+  interval: any;
+  eventTarget: EventTarget = new EventTarget();
 
   constructor(messagePort: any) {
     super();
@@ -110,7 +111,7 @@ export class MessageQueue extends EventDispatcherProxy {
         type,
         detail,
       },
-      transferables
+      transferables,
     } as Message);
   }
   sendQueue() {
@@ -143,10 +144,7 @@ export class MessageQueue extends EventDispatcherProxy {
     });
   }
 
-  addEventListener(
-    type: string,
-    listener: (event: any) => void,
-  ): void {
+  addEventListener(type: string, listener: (event: any) => void): void {
     this.queue.push({
       messageType: MessageType.ADD_EVENT,
       message: { type },
@@ -154,10 +152,7 @@ export class MessageQueue extends EventDispatcherProxy {
     super.addEventListener(type, listener);
   }
 
-  removeEventListener(
-    type: string,
-    listener: (event: any) => void,
-  ): void {
+  removeEventListener(type: string, listener: (event: any) => void): void {
     this.queue.push({
       messageType: MessageType.REMOVE_EVENT,
       message: { type },
@@ -165,11 +160,8 @@ export class MessageQueue extends EventDispatcherProxy {
     super.removeEventListener(type, listener);
   }
 
-  dispatchEvent(
-    ev: any,
-    fromSelf?: boolean
-  ): void {
-    if(!fromSelf) {
+  dispatchEvent(ev: any, fromSelf?: boolean): void {
+    if (!fromSelf) {
       this.queue.push({
         messageType: MessageType.EVENT,
         message: simplifyObject(ev),
@@ -182,7 +174,6 @@ export class MessageQueue extends EventDispatcherProxy {
 function simplifyObject(object: any): any {
   const messageData = {};
   for (const prop in object)
-    if (typeof object[prop] !== 'function')
-      messageData[prop] = object[prop];
+    if (typeof object[prop] !== 'function') messageData[prop] = object[prop];
   return messageData;
 }

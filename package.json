@@ -2,11 +2,12 @@
   "name": "three-physx",
   "version": "1.0.0",
   "description": "",
-  "main": "./src/index.ts",
+  "main": "./lib/index.js",
   "scripts": {
+    "example": "cd example && yarn build",
     "test": "echo \"This template does not include a test runner by default.\" && exit 1",
-    "format": "prettier --write \"src/**/*.{ts,js}\" \"example/**/*.{ts,js}\"",
-    "lint": "prettier --check \"src/**/*.{ts,js}\" \"example/**/*.{ts,js}\"",
+    "format": "prettier --write \"src/**/*.{ts,js}\" ",
+    "lint": "prettier --check \"src/**/*.{ts,js}\" ",
     "dist": "tsc"
   },
   "repository": {

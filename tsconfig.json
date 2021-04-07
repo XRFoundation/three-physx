@@ -23,9 +23,7 @@
     "outDir": "./lib"
   },
   "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx"
+    "./src/**/*.ts",
   ],
   "exclude": [
     "node_modules"

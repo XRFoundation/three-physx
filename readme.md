@@ -16,6 +16,11 @@ Progress:
 - [ ] collision events
 - [ ] raycasts
 
+## Example
+
+https://three-physx.netlify.app/
+
+[![Netlify Status](https://api.netlify.com/api/v1/badges/dce6d784-da79-4e45-8c34-5f034526853f/deploy-status)](https://app.netlify.com/sites/three-physx/deploys)
 
 
 ## API
