@@ -16,10 +16,13 @@ import {
   Quaternion,
 } from 'three';
 import { Object3DBody, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy } from '../../src/types/ThreePhysX';
-const mat4 = new Matrix4();
+const parentMatrix = new Matrix4();
+const childMatrix = new Matrix4();
 const pos = new Vector3();
 const rot = new Quaternion();
-const scale = new Vector3();
+const quat = new Quaternion();
+const scale = new Vector3(1, 1, 1);
+const scale2 = new Vector3(1, 1, 1);
 export class PhysXDebugRenderer {
 
   private scene: Scene
@@ -66,6 +69,10 @@ export class PhysXDebugRenderer {
       //@ts-ignore
       const { body } = object;
 
+      quat.set(body.transform.rotation.x, body.transform.rotation.y, body.transform.rotation.z, body.transform.rotation.w)
+      pos.set(body.transform.translation.x, body.transform.translation.y, body.transform.translation.z)
+      parentMatrix.compose(pos, quat, scale);
+
       body.shapes.forEach((shape: PhysXShapeConfig) => {
 
         this._updateMesh(meshIndex, body, shape)
@@ -75,10 +82,20 @@ export class PhysXDebugRenderer {
         if (mesh) {
 
           // Copy to meshes
-          mesh.position.copy(body.transform.translation);
-          mesh.quaternion.copy(body.transform.rotation);
-          mesh.position.add(pos.set(shape.transform.translation.x, shape.transform.translation.y, shape.transform.translation.z))
-          mesh.quaternion.multiply(rot.set(shape.transform.rotation.x, shape.transform.rotation.y, shape.transform.rotation.z, shape.transform.rotation.w))
+          pos.set(shape.transform.translation.x, shape.transform.translation.y, shape.transform.translation.z)
+          rot.set(shape.transform.rotation.x, shape.transform.rotation.y, shape.transform.rotation.z, shape.transform.rotation.w)
+          childMatrix.compose(pos, rot, scale)
+          childMatrix.premultiply(parentMatrix)
+          childMatrix.decompose(pos, rot, scale2)
+          mesh.position.copy(pos);
+          mesh.quaternion.copy(rot);
+
+          if(body.id === 1001) console.log(parentMatrix, childMatrix, pos, rot)
+
+          // mesh.position.copy(body.transform.translation);
+          // mesh.quaternion.copy(body.transform.rotation);
+          // mesh.position.add(pos.set(shape.transform.translation.x, shape.transform.translation.y, shape.transform.translation.z))
+          // mesh.quaternion.multiply(rot.set(shape.transform.rotation.x, shape.transform.rotation.y, shape.transform.rotation.z, shape.transform.rotation.w).invert())
 
           // todo
           // mat4.fromArray(shape.matrix)

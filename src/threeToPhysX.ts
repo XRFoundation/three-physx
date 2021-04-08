@@ -30,7 +30,6 @@ export const createPhysXShapes = (object: any, id: number) => {
 };
 
 export const createPhysXBody = (object, id, shapes?) => {
-  console.log(id)
   const rot = object.getWorldQuaternion(quat);
   const pos = object.getWorldPosition(vec3);
   const type = object.userData.physx
@@ -138,7 +137,6 @@ const getTransformDifferentFromRoot = (mesh: Object3D, root: Object3D) => {
   const pos = new Vector3().subVectors(mesh.getWorldPosition(new Vector3()), root.getWorldPosition(new Vector3()));
   const quat2 = root.getWorldQuaternion(quat)
   const rot = new Quaternion().multiply(mesh.getWorldQuaternion(quat2).invert());
-  console.log(rot, quat2, quat, root.getWorldQuaternion(quat), mesh.getWorldQuaternion(quat))
   return {
     translation: { x: pos.x, y: pos.y, z: pos.z },
     rotation: { x: rot.x, y: rot.y, z: rot.z, w: rot.w }

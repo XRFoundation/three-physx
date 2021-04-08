@@ -32,7 +32,8 @@ const load = async () => {
   })
 
   const kinematicObject = new Group()//new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() }));
-  kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateX(-4));
+  kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateX(-4).rotateY(Math.PI / 2));
+  // kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateZ(-3).rotateX(Math.PI / 2));
   kinematicObject.userData.physx = { type: PhysXBodyType.KINEMATIC };
   
   const body = await PhysXInstance.instance.addBody(kinematicObject)//, [{ id: undefined, shape: PhysXModelShapes.Sphere, options: { sphereRadius: 2 }}]);
