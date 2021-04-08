@@ -108,14 +108,8 @@ export const quickhull = (function () {
 
     // Sory all the points by there distance from the plane
     pointset.sort((aItem, bItem) => {
-      dots[aItem.x / 3] =
-        dots[aItem.x / 3] !== undefined
-          ? dots[aItem.x / 3]
-          : norm.dot(suba.subVectors(aItem, p0));
-      dots[bItem.x / 3] =
-        dots[bItem.x / 3] !== undefined
-          ? dots[bItem.x / 3]
-          : norm.dot(subb.subVectors(bItem, p0));
+      dots[aItem.x / 3] = dots[aItem.x / 3] !== undefined ? dots[aItem.x / 3] : norm.dot(suba.subVectors(aItem, p0));
+      dots[bItem.x / 3] = dots[bItem.x / 3] !== undefined ? dots[bItem.x / 3] : norm.dot(subb.subVectors(bItem, p0));
 
       return dots[aItem.x / 3] - dots[bItem.x / 3];
     });
@@ -123,8 +117,7 @@ export const quickhull = (function () {
     //TODO :: Must be a faster way of finding and index in this array
     let index = pointset.length;
 
-    if (index === 1)
-      dots[pointset[0].x / 3] = norm.dot(suba.subVectors(pointset[0], p0));
+    if (index === 1) dots[pointset[0].x / 3] = norm.dot(suba.subVectors(pointset[0], p0));
     while (index-- > 0 && dots[pointset[index].x / 3] > 0)
       if (index + 1 < pointset.length && dots[pointset[index + 1].x / 3] > 0) {
         face.visiblePoints = pointset.splice(index + 1);
@@ -144,9 +137,7 @@ export const quickhull = (function () {
       currentFace = faces[i];
       if (currentFace !== face) {
         // ...and check if they're pointing in the same direction
-        dot = getNormal(currentFace, points).dot(
-          diff.subVectors(points[apex], points[currentFace[0]]),
-        );
+        dot = getNormal(currentFace, points).dot(diff.subVectors(points[apex], points[currentFace[0]]));
         if (dot > 0) {
           visibleFaces.push(currentFace);
         }
@@ -174,33 +165,18 @@ export const quickhull = (function () {
       b;
 
     let allPoints = [];
-    const originFace = [
-      visibleFaces[0][0],
-      visibleFaces[0][1],
-      visibleFaces[0][1],
-      visibleFaces[0][2],
-      visibleFaces[0][2],
-      visibleFaces[0][0],
-    ];
+    const originFace = [visibleFaces[0][0], visibleFaces[0][1], visibleFaces[0][1], visibleFaces[0][2], visibleFaces[0][2], visibleFaces[0][0]];
 
     if (visibleFaces.length === 1) {
       currentFace = visibleFaces[0];
 
-      perimeter = [
-        currentFace[0],
-        currentFace[1],
-        currentFace[1],
-        currentFace[2],
-        currentFace[2],
-        currentFace[0],
-      ];
+      perimeter = [currentFace[0], currentFace[1], currentFace[1], currentFace[2], currentFace[2], currentFace[0]];
       // remove visible face from list of faces
       if (faceStack.indexOf(currentFace) > -1) {
         faceStack.splice(faceStack.indexOf(currentFace), 1);
       }
 
-      if (currentFace.visiblePoints)
-        allPoints = allPoints.concat(currentFace.visiblePoints);
+      if (currentFace.visiblePoints) allPoints = allPoints.concat(currentFace.visiblePoints);
       faces.splice(faces.indexOf(currentFace), 1);
     } else {
       while (i-- > 0) {
@@ -213,8 +189,7 @@ export const quickhull = (function () {
           faceStack.splice(faceStack.indexOf(currentFace), 1);
         }
 
-        if (currentFace.visiblePoints)
-          allPoints = allPoints.concat(currentFace.visiblePoints);
+        if (currentFace.visiblePoints) allPoints = allPoints.concat(currentFace.visiblePoints);
         faces.splice(faces.indexOf(currentFace), 1);
 
         let isSharedEdge;
@@ -240,11 +215,7 @@ export const quickhull = (function () {
                 //Check all it's indices
 
                 nextIndex = edgeIndex + 1;
-                isSharedEdge =
-                  (compareFace[edgeIndex] === a &&
-                    compareFace[nextIndex % 3] === b) ||
-                  (compareFace[edgeIndex] === b &&
-                    compareFace[nextIndex % 3] === a);
+                isSharedEdge = (compareFace[edgeIndex] === a && compareFace[nextIndex % 3] === b) || (compareFace[edgeIndex] === b && compareFace[nextIndex % 3] === a);
 
                 edgeIndex++;
               }
@@ -415,10 +386,7 @@ export const quickhull = (function () {
     }
 
     //One for each face of the pyramid
-    const pointsCloned = new BufferAttribute(
-      new Uint16Array(points.count - 4),
-      1,
-    );
+    const pointsCloned = new BufferAttribute(new Uint16Array(points.count - 4), 1);
     let offset = 0;
     for (let i = 0; i < points.count; i++) {
       if (i === v0Index || i === v1Index || i == v2Index || i === v3Index) {

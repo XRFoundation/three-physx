@@ -1,7 +1,7 @@
 
 import { PhysXInstance } from '../../src'
 import { Mesh, TorusKnotBufferGeometry, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group } from 'three'
-import { PhysXBodyType, PhysXEvents, PhysXModelShapes, RigidBodyProxy } from '../../src/types/ThreePhysX';
+import { Object3DBody, PhysXBodyType, PhysXEvents, PhysXModelShapes, RigidBodyProxy } from '../../src/types/ThreePhysX';
 import { PhysXDebugRenderer } from './PhysXDebugRenderer';
 
 const load = async () => {
@@ -31,14 +31,19 @@ const load = async () => {
     renderer.addToScene(object);
   })
 
-  const kinematicObject = new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() })).translateY(-2.5).rotateZ(Math.PI / 2);
+  const kinematicObject = new Group()//new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() })).translateY(-2.5).rotateZ(Math.PI / 2);
   // kinematicObject.scale.setScalar(2)
   kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateX(2).rotateY(Math.PI / 2));
   kinematicObject.children[0].scale.setScalar(2)
   kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
-  kinematicObject.userData.physx = { type: PhysXBodyType.KINEMATIC };
+  kinematicObject.userData.physx = { type: PhysXBodyType.DYNAMIC };
   
   const body = await PhysXInstance.instance.addBody(kinematicObject)//, [{ id: undefined, shape: PhysXModelShapes.Sphere, options: { sphereRadius: 2 }}]);
+  let kinematic = false;
+  setInterval(() => {
+    PhysXInstance.instance.updateBody(kinematicObject, {angularVelocity: {x:0,y:0,z:0},linearVelocity: {x:0,y:0,z:0}, type: kinematic ? PhysXBodyType.KINEMATIC : PhysXBodyType.DYNAMIC  })
+    kinematic = !kinematic;
+  }, 2000)
   objects.set(body.id, kinematicObject)
   renderer.addToScene(kinematicObject);
   body.addEventListener(PhysXEvents.COLLISION_START, ({ bodySelf, bodyOther, shapeSelf, shapeOther }) => {
@@ -50,8 +55,10 @@ const load = async () => {
 
   const update = () => {
     const time = Date.now() / 1000;
-    kinematicObject.position.set(Math.sin(time) * 10, 0, Math.cos(time) * 10);
-    kinematicObject.lookAt(0, 0, 0)
+    if((kinematicObject as any).body.options.type === PhysXBodyType.KINEMATIC) {
+      kinematicObject.position.set(Math.sin(time) * 10, 0, Math.cos(time) * 10);
+      kinematicObject.lookAt(0, 0, 0)
+    }
     PhysXInstance.instance.update();
     debug.update(objects)
     renderer.update()
@@ -65,13 +72,13 @@ const createScene = () => {
   const meshes = []
   for(let i = 0; i < 1000; i++){
     const mesh = new Mesh(geoms[i%2], new MeshBasicMaterial({ color: randomColor() }))
-    mesh.position.set(Math.random() * 50 - 25, Math.random() * 50, Math.random() * 50 - 25);
+    mesh.position.set(Math.random() * 100 - 50, Math.random() * 50, Math.random() * 100 - 50);
     mesh.userData.physx = { 
       type: PhysXBodyType.DYNAMIC,
     };
     meshes.push(mesh)
   }
-  const floor = new Mesh(new BoxBufferGeometry(100, 1, 100), new MeshBasicMaterial({ color: randomColor(), side: DoubleSide })).translateY(-2);
+  const floor = new Mesh(new BoxBufferGeometry(100, 1, 100), new MeshBasicMaterial({ color: randomColor(), side: DoubleSide })).translateY(-3);
   floor.userData.physx = { type: PhysXBodyType.STATIC };
   
   return [...meshes, floor];

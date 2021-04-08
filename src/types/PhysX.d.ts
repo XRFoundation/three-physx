@@ -41,6 +41,17 @@ declare namespace PhysX {
     static eENABLE_FRICTION_EVERY_ITERATION: { value: number };
   }
 
+  // class PxActorFlags {
+  //   constructor(flags: number);
+  // }
+
+  enum PxActorFlag {
+    eVISUALIZATION = 1 << 0,
+    eDISABLE_GRAVITY = 1 << 1,
+    eSEND_SLEEP_NOTIFIES = 1 << 2,
+    eDISABLE_SIMULATION = 1 << 3,
+  }
+
   class PxShapeFlags {
     constructor(flags: PxShapeFlag | number);
   }
@@ -89,14 +100,8 @@ declare namespace PhysX {
   const NULL: {};
   const HEAPF32: Float32Array;
   function destroy(obj: PhysX.Type): void;
-  function castObject<T1, T2 extends PhysX.Type>(
-    obj: T1,
-    fun: Constructor<T2>,
-  ): T2;
-  function wrapPointer<T extends PhysX.Type>(
-    params: number,
-    obj: Constructor<T>,
-  ): T;
+  function castObject<T1, T2 extends PhysX.Type>(obj: T1, fun: Constructor<T2>): T2;
+  function wrapPointer<T extends PhysX.Type>(params: number, obj: Constructor<T>): T;
   function addFunction(params: Function): number;
   function getClass(obj: PhysX.Type): void;
   function getPointer(obj: PhysX.Type): void;
@@ -145,16 +150,8 @@ declare namespace PhysX {
     onTriggerEnd: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => void;
   }
 
-  function PxCreateFoundation(
-    a: number,
-    b: PxAllocatorCallback,
-    c: PxErrorCallback,
-  ): PxFoundation;
-  function getDefaultSceneDesc(
-    scale: PxTolerancesScale,
-    numThreads: number,
-    simulationCallback: PxSimulationEventCallback,
-  ): PxSceneDesc;
+  function PxCreateFoundation(a: number, b: PxAllocatorCallback, c: PxErrorCallback): PxFoundation;
+  function getDefaultSceneDesc(scale: PxTolerancesScale, numThreads: number, simulationCallback: PxSimulationEventCallback): PxSceneDesc;
   class PxTransform {
     constructor(p: number[], q: number[]);
     constructor();
@@ -211,13 +208,6 @@ declare namespace PhysX {
     setFlag(flag: number): void;
   }
 
-  enum PxActorFlags {
-    eVISUALIZATION = 1 << 0,
-    eDISABLE_GRAVITY = 1 << 1,
-    eSEND_SLEEP_NOTIFIES = 1 << 2,
-    eDISABLE_SIMULATION = 1 << 3,
-  }
-
   class Actor extends Base {
     setActorFlag(flag: number, value: boolean): void;
     setActorFlags(flags: PxActorFlags): void;
@@ -233,11 +223,7 @@ declare namespace PhysX {
   class RigidActor extends Actor {
     attachShape(shape: PxShape): void;
     detachShape(shape: PxShape, wakeOnLostTouch?: boolean | true): void;
-    addForce(
-      force: PxVec3 | any,
-      mode: PxForceMode | number,
-      autowake: boolean,
-    ): void;
+    addForce(force: PxVec3 | any, mode: PxForceMode | number, autowake: boolean): void;
   }
   enum PxForceMode {}
   class RigidBody extends RigidActor {
@@ -269,10 +255,7 @@ declare namespace PhysX {
     getSleepThreshold(): number; //, &PxRigidDynamic::getSleepThreshold)
     setKinematicTarget(transform: PxTransform): void; //, &PxRigidDynamic::setKinematicTarget)
     setRigidDynamicLockFlags(): void; //, &PxRigidDynamic::setRigidDynamicLockFlags);
-    setSolverIterationCounts(
-      minPositionIters: number,
-      minVelocityIters: number,
-    ): void;
+    setSolverIterationCounts(minPositionIters: number, minVelocityIters: number): void;
   }
   class PxVec3 {
     x: number;
@@ -316,19 +299,8 @@ declare namespace PhysX {
     getActiveActors(len: number): Actor[];
     setGravity(value: PxVec3): void;
 
-    raycast(
-      origin: PxVec3,
-      unitDir: PxVec3,
-      maxDistance: number /*PxReal*/,
-      hit: PxRaycastBuffer,
-    ): boolean;
-    sweep(
-      geometry: PxGeometry,
-      pose: PxTransform,
-      unitDir: PxVec3,
-      maxDistance: number /*PxReal*/,
-      hit: PxRaycastBuffer,
-    ): boolean;
+    raycast(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, hit: PxRaycastBuffer): boolean;
+    sweep(geometry: PxGeometry, pose: PxTransform, unitDir: PxVec3, maxDistance: number /*PxReal*/, hit: PxRaycastBuffer): boolean;
   }
 
   class PxCookingParams {
@@ -349,14 +321,7 @@ declare namespace PhysX {
   }
 
   class PxCooking {
-    createTriMesh(
-      verticesPtr: number,
-      vertCount: number,
-      indicesPrt: number,
-      indexCount: number,
-      isU16: boolean,
-      physcis: PxPhysics,
-    ): void;
+    createTriMesh(verticesPtr: number, vertCount: number, indicesPrt: number, indexCount: number, isU16: boolean, physcis: PxPhysics): void;
   }
 
   class PxPhysics {
@@ -364,18 +329,9 @@ declare namespace PhysX {
     createScene(a: PxSceneDesc): PxScene;
     createRigidDynamic(a: PxTransform | any): RigidDynamic;
     createRigidStatic(a: PxTransform | any): RigidStatic;
-    createMaterial(
-      staticFriction: number,
-      dynamicFriction: number,
-      restitution: number,
-    ): Material;
+    createMaterial(staticFriction: number, dynamicFriction: number, restitution: number): Material;
     //shapeFlags = PxShapeFlag:: eVISUALIZATION | PxShapeFlag:: eSCENE_QUERY_SHAPE | PxShapeFlag:: eSIMULATION_SHAPE
-    createShape(
-      geometry: PxGeometry,
-      material: Material,
-      isExclusive?: boolean | false,
-      shapeFlags?: number | PxShapeFlags,
-    ): PxShape;
+    createShape(geometry: PxGeometry, material: Material, isExclusive?: boolean | false, shapeFlags?: number | PxShapeFlags): PxShape;
     getTolerancesScale(): PxTolerancesScale;
   }
   class PxTolerancesScale {
@@ -385,18 +341,8 @@ declare namespace PhysX {
   class PxPvd {
     connect(pvdTransport: PxPvdTransport): void;
   }
-  function PxCreatePhysics(
-    a?: number,
-    b?: PxFoundation,
-    c?: PxTolerancesScale,
-    trackOutstandingAllocations?: boolean,
-    e?: PxPvd,
-  ): PxPhysics;
-  function PxCreateCooking(
-    version: number,
-    foundation: PxFoundation,
-    params: PxCookingParams,
-  ): PxCooking;
+  function PxCreatePhysics(a?: number, b?: PxFoundation, c?: PxTolerancesScale, trackOutstandingAllocations?: boolean, e?: PxPvd): PxPhysics;
+  function PxCreateCooking(version: number, foundation: PxFoundation, params: PxCookingParams): PxCooking;
   function PxCreatePvd(foundation: PxFoundation): PxPvd;
 
   function allocateRaycastHitBuffers(size: number): PxRaycastBuffer;
@@ -409,10 +355,7 @@ declare namespace PhysX {
   const HEAPU16: Uint16Array;
   const HEAPU32: Uint32Array;
 
-  function PxCreateControllerManager(
-    scene: PxScene,
-    lockingEnabled: boolean,
-  ): PxCreateControllerManager;
+  function PxCreateControllerManager(scene: PxScene, lockingEnabled: boolean): PxCreateControllerManager;
 
   class PxCreateControllerManager {
     createController(desc: PxControllerDesc): PxController;
@@ -442,9 +385,7 @@ declare namespace PhysX {
   }
 
   class PxQueryFilterCallback {
-    static implement(
-      queryFilterCallback: PxQueryFilterCallback,
-    ): PxQueryFilterCallback;
+    static implement(queryFilterCallback: PxQueryFilterCallback): PxQueryFilterCallback;
 
     postFilter(filterData: any, hit: any): void;
     preFilter(filterData: any, shape: any, actor: any): void;
@@ -453,31 +394,19 @@ declare namespace PhysX {
   class PxControllerFilterCallback {}
 
   class PxControllerFilters {
-    constructor(
-      filterData?: PxFilterData,
-      callbacks?: PxQueryFilterCallback,
-      cctFilterCb?: PxControllerFilterCallback,
-    );
+    constructor(filterData?: PxFilterData, callbacks?: PxQueryFilterCallback, cctFilterCb?: PxControllerFilterCallback);
   }
 
   class PxObstacleContext {}
 
   class PxController {
-    move(
-      displacement: PxVec3,
-      minDistance: number,
-      elapsedTime: number,
-      filters: PxControllerFilters,
-      obstacles?: PxObstacleContext,
-    ): PxControllerCollisionFlags;
+    move(displacement: PxVec3, minDistance: number, elapsedTime: number, filters: PxControllerFilters, obstacles?: PxObstacleContext): PxControllerCollisionFlags;
     setPosition(pos: PxVec3): any;
     getPosition(): PxVec3;
   }
 
   class PxUserControllerHitReport {
-    static implement(
-      userControllerHitReport: PxUserControllerHitReport,
-    ): PxUserControllerHitReport;
+    static implement(userControllerHitReport: PxUserControllerHitReport): PxUserControllerHitReport;
 
     onShapeHit(event: PxControllerShapeHit): void;
     onControllerHit(event: unknown): void;

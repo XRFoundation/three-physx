@@ -2,19 +2,11 @@
 
 import { Matrix4, Vector3, Quaternion, Matrix } from 'three';
 import { getShape } from './getShape';
-import {
-  PhysXConfig,
-  PhysXBodyTransform,
-  PhysXBodyType,
-  PhysXEvents,
-  BodyConfig,
-  PhysXBodyData,
-  RigidBodyProxy,
-} from './types/ThreePhysX';
+import { PhysXConfig, PhysXBodyTransform, PhysXBodyType, PhysXEvents, BodyConfig, PhysXBodyData, RigidBodyProxy } from './types/ThreePhysX';
 import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
 
-const noop = () => {};
+const noop = () => { };
 
 const mat4 = new Matrix4();
 const pos = new Vector3();
@@ -46,6 +38,7 @@ export class PhysXManager {
   bodies: Map<number, PhysX.RigidActor> = new Map<number, PhysX.RigidActor>();
   dynamic: Map<number, PhysX.RigidActor> = new Map<number, PhysX.RigidActor>();
   shapes: Map<number, number> = new Map<number, number>();
+  bodyShapes: Map<number, PhysX.PxShape[]> = new Map<number, PhysX.PxShape[]>();
   matrices: Map<number, Matrix4> = new Map<number, Matrix4>();
   indices: Map<number, number> = new Map<number, number>();
 
@@ -65,71 +58,31 @@ export class PhysXManager {
     this.physxVersion = PhysX.PX_PHYSICS_VERSION;
     this.defaultErrorCallback = new PhysX.PxDefaultErrorCallback();
     this.allocator = new PhysX.PxDefaultAllocator();
-    this.foundation = PhysX.PxCreateFoundation(
-      this.physxVersion,
-      this.allocator,
-      this.defaultErrorCallback,
-    );
-    this.cookingParamas = new PhysX.PxCookingParams(
-      new PhysX.PxTolerancesScale(),
-    );
-    this.cooking = PhysX.PxCreateCooking(
-      this.physxVersion,
-      this.foundation,
-      this.cookingParamas,
-    );
-    this.physics = PhysX.PxCreatePhysics(
-      this.physxVersion,
-      this.foundation,
-      new PhysX.PxTolerancesScale(),
-      false,
-      null,
-    );
+    this.foundation = PhysX.PxCreateFoundation(this.physxVersion, this.allocator, this.defaultErrorCallback);
+    this.cookingParamas = new PhysX.PxCookingParams(new PhysX.PxTolerancesScale());
+    this.cooking = PhysX.PxCreateCooking(this.physxVersion, this.foundation, this.cookingParamas);
+    this.physics = PhysX.PxCreatePhysics(this.physxVersion, this.foundation, new PhysX.PxTolerancesScale(), false, null);
 
     const triggerCallback = {
       onContactBegin: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        this.onEvent(
-          PhysXEvents.COLLISION_START,
-          this.shapes.get(shapeA.$$.ptr),
-          this.shapes.get(shapeB.$$.ptr),
-        );
+        this.onEvent(PhysXEvents.COLLISION_START, this.shapes.get(shapeA.$$.ptr), this.shapes.get(shapeB.$$.ptr));
       },
       onContactEnd: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        this.onEvent(
-          PhysXEvents.COLLISION_END,
-          this.shapes.get(shapeA.$$.ptr),
-          this.shapes.get(shapeB.$$.ptr),
-        );
+        this.onEvent(PhysXEvents.COLLISION_END, this.shapes.get(shapeA.$$.ptr), this.shapes.get(shapeB.$$.ptr));
       },
       onContactPersist: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        this.onEvent(
-          PhysXEvents.COLLISION_PERSIST,
-          this.shapes.get(shapeA.$$.ptr),
-          this.shapes.get(shapeB.$$.ptr),
-        );
+        this.onEvent(PhysXEvents.COLLISION_PERSIST, this.shapes.get(shapeA.$$.ptr), this.shapes.get(shapeB.$$.ptr));
       },
       onTriggerBegin: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        this.onEvent(
-          PhysXEvents.TRIGGER_START,
-          this.shapes.get(shapeA.$$.ptr),
-          this.shapes.get(shapeB.$$.ptr),
-        );
+        this.onEvent(PhysXEvents.TRIGGER_START, this.shapes.get(shapeA.$$.ptr), this.shapes.get(shapeB.$$.ptr));
       },
       onTriggerEnd: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        this.onEvent(
-          PhysXEvents.TRIGGER_END,
-          this.shapes.get(shapeA.$$.ptr),
-          this.shapes.get(shapeB.$$.ptr),
-        );
+        this.onEvent(PhysXEvents.TRIGGER_END, this.shapes.get(shapeA.$$.ptr), this.shapes.get(shapeB.$$.ptr));
       },
     };
 
     this.scale = this.physics.getTolerancesScale();
-    this.sceneDesc = PhysX.getDefaultSceneDesc(
-      this.scale,
-      0,
-      PhysX.PxSimulationEventCallback.implement(triggerCallback as any),
-    );
+    this.sceneDesc = PhysX.getDefaultSceneDesc(this.scale, 0, PhysX.PxSimulationEventCallback.implement(triggerCallback as any));
     this.sceneDesc.bounceThresholdVelocity = 0.001;
 
     this.scene = this.physics.createScene(this.sceneDesc);
@@ -142,12 +95,8 @@ export class PhysXManager {
     const delta = now - lastTick;
     this.scene.simulate(delta / 1000, true);
     this.scene.fetchResults(true);
-    const bodyArray = new Float32Array(
-      new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size),
-    );
-    const shapeArray = new Float32Array(
-      new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size),
-    );
+    const bodyArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
+    const shapeArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
     this.bodies.forEach((body: PhysX.RigidActor, id: number) => {
       if (isDynamicBody(body)) {
         bodyArray.set(getBodyData(body), id * BufferConfig.BODY_DATA_SIZE);
@@ -157,10 +106,7 @@ export class PhysXManager {
     lastTick = now;
   };
 
-  update = async (
-    kinematicIDs: number[],
-    kinematicBodiesArray: Float32Array,
-  ) => {
+  update = async (kinematicIDs: number[], kinematicBodiesArray: Float32Array) => {
     kinematicIDs.forEach((id) => {
       const body = this.bodies.get(id) as PhysX.RigidDynamic;
       const offset = id * BufferConfig.BODY_DATA_SIZE;
@@ -173,6 +119,7 @@ export class PhysXManager {
       currentPose.rotation.z = kinematicBodiesArray[offset + 5];
       currentPose.rotation.w = kinematicBodiesArray[offset + 6];
       body.setKinematicTarget(currentPose);
+      body.setGlobalPose(currentPose, true);
     });
   };
 
@@ -193,18 +140,12 @@ export class PhysXManager {
     if (type === PhysXBodyType.STATIC) {
       rigidBody = this.physics.createRigidStatic(transform);
     } else {
-      rigidBody = this.physics.createRigidDynamic(
-        transform,
-      ) as PhysX.RigidDynamic;
+      rigidBody = this.physics.createRigidDynamic(transform) as PhysX.RigidDynamic;
       if (type === PhysXBodyType.KINEMATIC) {
-        const flags = new PhysX.PxRigidBodyFlags(
-          PhysX.PxRigidBodyFlag.eKINEMATIC.value,
-        );
-        (rigidBody as PhysX.RigidDynamic).setRigidBodyFlags(flags);
-        // (rigidBody as PhysX.RigidDynamic).setRigidBodyFlag(PhysX.PxRigidBodyFlag.eKINEMATIC.value, true);
+        (rigidBody as PhysX.RigidDynamic).setRigidBodyFlag(PhysX.PxRigidBodyFlag.eKINEMATIC, true);
       }
-      (rigidBody as any)._type = type;
     }
+    (rigidBody as any)._type = type;
 
     const bodyShapes: PhysX.PxShape[] = [];
     shapes.forEach(({ id: shapeID, shape, transform, options }) => {
@@ -221,19 +162,46 @@ export class PhysXManager {
       this.shapes.set(bodyShape.$$.ptr, shapeID);
     });
 
+    this.bodyShapes.set(id, bodyShapes);
     this.bodies.set(id, rigidBody);
     this.scene.addActor(rigidBody, null);
+
+    delete options.type; // we don't need to set kinematic again
+    this.updateBody({ id, options });
   };
 
   updateBody = async ({ id, options }: { id: number; options: BodyConfig }) => {
     const body = this.bodies.get(id);
-    if (options.type) {
+    const actorFlags = body.getActorFlags();
+    if (!isStaticBody(body)) {
+      if (typeof options.type !== 'undefined') {
+        (body as PhysX.RigidDynamic).setRigidBodyFlag(PhysX.PxRigidBodyFlag.eKINEMATIC.value, options.type === PhysXBodyType.KINEMATIC);
+      }
+      // if (options.mass) {
+      // }
+      // if (options.linearDamping) {
+      // }
+      // if (options.angularDamping) {
+      // }
     }
-    if (options.mass) {
+    if (options.linearVelocity) {
+      const linearVelocity = body.getLinearVelocity();
+      body.setLinearVelocity({ x: options.linearVelocity.x ?? linearVelocity.x, y: options.linearVelocity.y ?? linearVelocity.x, z: options.linearVelocity.z ?? linearVelocity.z }, true);
     }
-    if (options.linearDamping) {
+    if (options.angularVelocity) {
+      const angularVelocity = body.getAngularVelocity();
+      body.setAngularVelocity({ x: options.angularVelocity.x ?? angularVelocity.x, y: options.angularVelocity.y ?? angularVelocity.x, z: options.angularVelocity.z ?? angularVelocity.z }, true);
     }
-    if (options.angularDamping) {
+    if (options.transform) {
+      const transform = body.getGlobalPose();
+      transform.translation.x = options.transform.translation.x ?? transform.translation.x;
+      transform.translation.y = options.transform.translation.y ?? transform.translation.y;
+      transform.translation.z = options.transform.translation.z ?? transform.translation.z;
+      transform.rotation.x = options.transform.rotation.x ?? transform.rotation.x;
+      transform.rotation.y = options.transform.rotation.y ?? transform.rotation.y;
+      transform.rotation.z = options.transform.rotation.z ?? transform.rotation.z;
+      transform.rotation.w = options.transform.rotation.w ?? transform.rotation.w;
+      body.setGlobalPose(transform, true);
     }
   };
 
@@ -272,25 +240,19 @@ const isDynamicBody = (body: PhysX.RigidActor) => {
   return (body as any)._type === PhysXBodyType.DYNAMIC;
 };
 
+const isStaticBody = (body: PhysX.RigidActor) => {
+  return (body as any)._type === PhysXBodyType.STATIC;
+};
+
+const getRigidBodyFlag = (body: PhysX.RigidActor, flag: number) => {
+  return Boolean(flag & (body as PhysX.RigidBody).getRigidBodyFlags());
+};
+
 const getBodyData = (body: PhysX.RigidActor) => {
   const transform = body.getGlobalPose();
   const linVel = body.getLinearVelocity();
   const angVel = body.getAngularVelocity();
-  return [
-    transform.translation.x,
-    transform.translation.y,
-    transform.translation.z,
-    transform.rotation.x,
-    transform.rotation.y,
-    transform.rotation.z,
-    transform.rotation.w,
-    linVel.x,
-    linVel.y,
-    linVel.z,
-    angVel.x,
-    angVel.y,
-    angVel.z,
-  ];
+  return [transform.translation.x, transform.translation.y, transform.translation.z, transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w, linVel.x, linVel.y, linVel.z, angVel.x, angVel.y, angVel.z];
 };
 
 const mat4ToTransform = (matrix: Matrix4): PhysXBodyTransform => {

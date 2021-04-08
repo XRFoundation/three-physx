@@ -1,22 +1,9 @@
 import * as BufferConfig from './BufferConfig';
 import { MessageQueue } from './utils/MessageQueue';
 
-import {
-  PhysXConfig,
-  PhysXBodyType,
-  RigidBodyProxy,
-  Object3DBody,
-  PhysXShapeConfig,
-  PhysXEvents,
-  BodyConfig,
-  ShapeConfig,
-} from './types/ThreePhysX';
+import { PhysXConfig, PhysXBodyType, RigidBodyProxy, Object3DBody, PhysXShapeConfig, PhysXEvents, BodyConfig, ShapeConfig } from './types/ThreePhysX';
 import { Object3D, Quaternion, Scene, Vector3 } from 'three';
-import {
-  createPhysXBody,
-  createPhysXShapes,
-  getTransformFromWorldPos,
-} from './threeToPhysX';
+import { createPhysXBody, createPhysXShapes, getTransformFromWorldPos } from './threeToPhysX';
 import { proxyEventListener } from './utils/proxyEventListener';
 
 let nextAvailableBodyIndex = 0;
@@ -119,31 +106,15 @@ export class PhysXInstance {
   // update kinematic bodies
   update = async () => {
     // TODO: make this rely on kinematicBodies.size instead of bodies.size
-    this.kinematicArray = new Float32Array(
-      new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size),
-    );
+    this.kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
     const kinematicIDs = [];
     this.kinematicBodies.forEach((obj, id) => {
       kinematicIDs.push(id);
       obj.body.transform = getTransformFromWorldPos(obj);
       const transform = obj.body.transform;
-      this.kinematicArray.set(
-        [
-          transform.translation.x,
-          transform.translation.y,
-          transform.translation.z,
-          transform.rotation.x,
-          transform.rotation.y,
-          transform.rotation.z,
-          transform.rotation.w,
-        ],
-        id * BufferConfig.BODY_DATA_SIZE,
-      );
+      this.kinematicArray.set([transform.translation.x, transform.translation.y, transform.translation.z, transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w], id * BufferConfig.BODY_DATA_SIZE);
     });
-    this.physicsProxy.update(
-      [kinematicIDs, this.kinematicArray],
-      [this.kinematicArray.buffer],
-    );
+    this.physicsProxy.update([kinematicIDs, this.kinematicArray], [this.kinematicArray.buffer]);
   };
 
   startPhysX = async (start: boolean) => {
@@ -165,9 +136,7 @@ export class PhysXInstance {
     });
     proxyEventListener((object as Object3DBody).body);
     this.bodies.set(id, (object as Object3DBody).body);
-    if (
-      (object as Object3DBody).body.options.type === PhysXBodyType.KINEMATIC
-    ) {
+    if ((object as Object3DBody).body.options.type === PhysXBodyType.KINEMATIC) {
       this.kinematicBodies.set(id, object as Object3DBody);
     }
     return (object as Object3DBody).body;
@@ -187,13 +156,33 @@ export class PhysXInstance {
     // return;
   };
 
-  updateBody = async (object: Object3D, options: BodyConfig) => {
+  updateBody = async (object: Object3DBody | any, options: BodyConfig) => {
+    // console.log(object)
+    if (typeof object.body === 'undefined') {
+      throw new Error('three-physx! Tried to update a body that does not exist.');
+    }
+    if (object.body.options.type === PhysXBodyType.STATIC && typeof options.type !== 'undefined') {
+      throw new Error('three-physx! Tried to change the type of a static object. This is not allowed, instead remove the body and create a new one.');
+    }
+    console.log(this.kinematicBodies, object.body.options)
+    if (object.body.options.type === PhysXBodyType.DYNAMIC && options.type === PhysXBodyType.KINEMATIC) {
+      this.kinematicBodies.set(object.body.id, object as Object3DBody);
+      object.body.options.type = PhysXBodyType.KINEMATIC;
+      console.log('set to kinematic');
+    } else if (object.body.options.type === PhysXBodyType.KINEMATIC && options.type === PhysXBodyType.DYNAMIC) {
+      this.kinematicBodies.delete(object.body.id);
+      object.body.options.type = PhysXBodyType.DYNAMIC;
+      console.log('set to dynamic');
+    }
     const id = (object as Object3DBody).body.id;
     await this.physicsProxy.updateBody([{ id, options }]);
     return;
   };
 
-  removeBody = async (object: Object3D) => {
+  removeBody = async (object: Object3DBody | any) => {
+    if (typeof object.body === 'undefined') {
+      throw new Error('three-physx! Tried to update a body that does not exist.');
+    }
     const id = (object as Object3DBody).body.id;
     await this.physicsProxy.removeBody([{ id }]);
     this.bodies.delete(id);

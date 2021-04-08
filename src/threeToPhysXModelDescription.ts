@@ -1,11 +1,4 @@
-import {
-  Object3D,
-  Quaternion,
-  Vector3,
-  Matrix4,
-  BufferGeometry,
-  Box3,
-} from 'three';
+import { Object3D, Quaternion, Vector3, Matrix4, BufferGeometry, Box3 } from 'three';
 import { PhysXModelShapes } from './types/ThreePhysX';
 import { quickhull } from './utils/quickhull';
 
@@ -27,10 +20,7 @@ type BodyShape =
       indices?: number[];
     };
 
-export const threeToPhysXModelDescription = (
-  object: Object3D,
-  options: { type?: Shape } = {},
-): BodyShape => {
+export const threeToPhysXModelDescription = (object: Object3D, options: { type?: Shape } = {}): BodyShape => {
   let geometry;
 
   if (options.type === Shape.BOX) {
@@ -45,9 +35,7 @@ export const threeToPhysXModelDescription = (
     geometry = getGeometry(object);
     return geometry ? createTrimeshShape(geometry) : null;
   } else if (options.type) {
-    throw new Error(
-      'Shape: ' + Shape[options.type] + ' is not currently implemented',
-    );
+    throw new Error('Shape: ' + Shape[options.type] + ' is not currently implemented');
   }
 
   geometry = getGeometry(object);
@@ -61,9 +49,7 @@ export const threeToPhysXModelDescription = (
       return createBoxShape(geometry);
     case 'CylinderGeometry':
     case 'CylinderBufferGeometry':
-      throw new Error(
-        'WARNING: threeToPhysX - Cylinder shape not yet implemented',
-      ); // createCylinderShape(geometry);
+      throw new Error('WARNING: threeToPhysX - Cylinder shape not yet implemented'); // createCylinderShape(geometry);
     case 'PlaneGeometry':
     case 'PlaneBufferGeometry':
       return createPlaneShape(geometry);
@@ -75,10 +61,7 @@ export const threeToPhysXModelDescription = (
     case 'BufferGeometry':
       return createBoundingBoxShape(object);
     default:
-      console.warn(
-        'Unrecognized geometry: "%s". Using bounding box as shape.',
-        geometry.type,
-      );
+      console.warn('Unrecognized geometry: "%s". Using bounding box as shape.', geometry.type);
       return createBoxShape(geometry);
   }
 };
@@ -99,11 +82,7 @@ const createBoxShape = (geometry): BodyShape => {
   geometry.computeBoundingBox();
   const box = geometry.boundingBox;
   return {
-    size: [
-      (box.max.x - box.min.x) / 2,
-      (box.max.y - box.min.y) / 2,
-      (box.max.z - box.min.z) / 2,
-    ],
+    size: [(box.max.x - box.min.x) / 2, (box.max.y - box.min.y) / 2, (box.max.z - box.min.z) / 2],
     shape: PhysXModelShapes.Box,
   };
 };
@@ -123,19 +102,13 @@ const createBoundingBoxShape = (object): BodyShape => {
   box.setFromObject(clone);
 
   if (!isFinite(box.min.lengthSq())) return null;
-  const localPosition = box
-    .translate(clone.position.negate())
-    .getCenter(new Vector3());
+  const localPosition = box.translate(clone.position.negate()).getCenter(new Vector3());
   if (localPosition.lengthSq()) {
     box.translate(localPosition);
   }
 
   return {
-    size: [
-      (box.max.x - box.min.x) / 2,
-      (box.max.y - box.min.y) / 2,
-      (box.max.z - box.min.z) / 2,
-    ],
+    size: [(box.max.x - box.min.x) / 2, (box.max.y - box.min.y) / 2, (box.max.z - box.min.z) / 2],
     shape: PhysXModelShapes.Box,
   };
 };
@@ -165,11 +138,7 @@ function createConvexPolyhedron(object): BodyShape {
   const index = hull.getIndex();
 
   for (i = 0; i < verticesIn.count / 3; i++) {
-    vertices[i] = [
-      verticesIn[i * 3],
-      verticesIn[i * 3 + 1],
-      verticesIn[i * 3 + 2],
-    ];
+    vertices[i] = [verticesIn[i * 3], verticesIn[i * 3 + 1], verticesIn[i * 3 + 2]];
   }
 
   // Convert from Face to Array<number>.
@@ -262,11 +231,7 @@ function createPlaneShape(geometry): BodyShape {
   const box = geometry.boundingBox;
   return {
     shape: PhysXModelShapes.Plane,
-    size: [
-      (box.max.x - box.min.x) / 2 || 0.1,
-      (box.max.y - box.min.y) / 2 || 0.1,
-      (box.max.z - box.min.z) / 2 || 0.1,
-    ],
+    size: [(box.max.x - box.min.x) / 2 || 0.1, (box.max.y - box.min.y) / 2 || 0.1, (box.max.z - box.min.z) / 2 || 0.1],
   };
 }
 
@@ -275,9 +240,7 @@ function createPlaneShape(geometry): BodyShape {
  * @return {BodyShape}
  */
 function createSphereShape(geometry): BodyShape {
-  const params = geometry.metadata
-    ? geometry.metadata.parameters
-    : geometry.parameters;
+  const params = geometry.metadata ? geometry.metadata.parameters : geometry.parameters;
 
   return {
     shape: PhysXModelShapes.Sphere,
@@ -345,10 +308,7 @@ export function getGeometry(object) {
       quaternion = new Quaternion(),
       scale = new Vector3();
     if (meshes[0].geometry.isBufferGeometry) {
-      if (
-        meshes[0].geometry.attributes.position &&
-        meshes[0].geometry.attributes.position.itemSize > 2
-      ) {
+      if (meshes[0].geometry.attributes.position && meshes[0].geometry.attributes.position.itemSize > 2) {
         tmp = meshes[0].geometry;
       }
     } else {
@@ -364,10 +324,7 @@ export function getGeometry(object) {
   while ((mesh = meshes.pop())) {
     mesh.updateMatrixWorld();
     if (mesh.geometry.isBufferGeometry) {
-      if (
-        mesh.geometry.attributes.position &&
-        mesh.geometry.attributes.position.itemSize > 2
-      ) {
+      if (mesh.geometry.attributes.position && mesh.geometry.attributes.position.itemSize > 2) {
         const tmpGeom = mesh.geometry;
         combined.merge(tmpGeom, mesh.matrixWorld);
         tmpGeom.dispose();

@@ -1,19 +1,6 @@
-import {
-  Vector3,
-  Matrix4,
-  Mesh,
-  SphereBufferGeometry,
-  Quaternion,
-  Object3D,
-  SphereGeometry,
-} from 'three';
+import { Vector3, Matrix4, Mesh, SphereBufferGeometry, Quaternion, Object3D, SphereGeometry } from 'three';
 import { PhysXInstance } from '.';
-import {
-  PhysXBodyType,
-  PhysXModelShapes,
-  PhysXShapeConfig,
-  RigidBodyProxy,
-} from './types/ThreePhysX';
+import { PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy } from './types/ThreePhysX';
 
 const matrixA = new Matrix4();
 const matrixB = new Matrix4();
@@ -49,10 +36,6 @@ export const createPhysXBody = (object, id, shapes?) => {
     },
     transform,
   };
-  if (body.options.type === PhysXBodyType.DYNAMIC) {
-    body.transform.linearVelocity = { x: 0, y: 0, z: 0 };
-    body.transform.angularVelocity = { x: 0, y: 0, z: 0 };
-  }
   object.body = body;
 };
 
@@ -169,38 +152,39 @@ export const getTransformFromWorldPos = (obj: Object3D) => {
     translation: { x: pos.x, y: pos.y, z: pos.z },
     rotation: { x: rot.x, y: rot.y, z: rot.z, w: rot.w },
     scale: { x: scale.x, y: scale.y, z: scale.z },
+    linearVelocity: { x: 0, y: 0, z: 0 },
+    angularVelocity: { x: 0, y: 0, z: 0 },
   };
 };
 
 const getTransformRelativeToRoot = (mesh: Object3D, root: Object3D) => {
-
   const worldScale = mesh.getWorldScale(scale);
   // no local transformation
-  // if (mesh === root) {
-  //   return {
-  //     translation: { x: 0, y: 0, z: 0 },
-  //     rotation: { x: 0, y: 0, z: 0, w: 1 },
-  //     scale: { x: worldScale.x, y: worldScale.y, z: worldScale.z },
-  //   };
-  // }
+  if (mesh === root) {
+    return {
+      translation: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0, w: 1 },
+      scale: { x: worldScale.x, y: worldScale.y, z: worldScale.z },
+    };
+  }
 
-  // // local transformation
-  // if (mesh.parent === root) {
-  //   return {
-  //     translation: {
-  //       x: mesh.position.x,
-  //       y: mesh.position.y,
-  //       z: mesh.position.z,
-  //     },
-  //     rotation: {
-  //       x: mesh.quaternion.x,
-  //       y: mesh.quaternion.y,
-  //       z: mesh.quaternion.z,
-  //       w: mesh.quaternion.w,
-  //     },
-  //     scale: { x: worldScale.x, y: worldScale.y, z: worldScale.z },
-  //   };
-  // }
+  // local transformation
+  if (mesh.parent === root) {
+    return {
+      translation: {
+        x: mesh.position.x,
+        y: mesh.position.y,
+        z: mesh.position.z,
+      },
+      rotation: {
+        x: mesh.quaternion.x,
+        y: mesh.quaternion.y,
+        z: mesh.quaternion.z,
+        w: mesh.quaternion.w,
+      },
+      scale: { x: worldScale.x, y: worldScale.y, z: worldScale.z },
+    };
+  }
 
   // world transformation
   matrixB.copy(mesh.matrixWorld);

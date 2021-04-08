@@ -34,18 +34,12 @@ export class EventDispatcherProxy {
       delete event.target;
       this.dispatchEvent(event, true);
     });
-    this.messageTypeFunctions.set(
-      MessageType.ADD_EVENT,
-      ({ type }: { type: string }) => {
-        this.eventTarget.addEventListener(type, this.eventListener);
-      },
-    );
-    this.messageTypeFunctions.set(
-      MessageType.REMOVE_EVENT,
-      ({ type }: { type: string }) => {
-        this.eventTarget.removeEventListener(type, this.eventListener);
-      },
-    );
+    this.messageTypeFunctions.set(MessageType.ADD_EVENT, ({ type }: { type: string }) => {
+      this.eventTarget.addEventListener(type, this.eventListener);
+    });
+    this.messageTypeFunctions.set(MessageType.REMOVE_EVENT, ({ type }: { type: string }) => {
+      this.eventTarget.removeEventListener(type, this.eventListener);
+    });
   }
 
   addEventListener(type: string, listener: any) {
@@ -58,10 +52,7 @@ export class EventDispatcherProxy {
   }
 
   hasEventListener(type: string, listener: any) {
-    return (
-      this._listeners[type] !== undefined &&
-      this._listeners[type].indexOf(listener) !== -1
-    );
+    return this._listeners[type] !== undefined && this._listeners[type].indexOf(listener) !== -1;
   }
 
   removeEventListener(type: string, listener: any) {
@@ -173,7 +164,6 @@ export class MessageQueue extends EventDispatcherProxy {
 
 function simplifyObject(object: any): any {
   const messageData = {};
-  for (const prop in object)
-    if (typeof object[prop] !== 'function') messageData[prop] = object[prop];
+  for (const prop in object) if (typeof object[prop] !== 'function') messageData[prop] = object[prop];
   return messageData;
 }
