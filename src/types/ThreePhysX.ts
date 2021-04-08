@@ -52,7 +52,7 @@ export interface PhysXShapeConfig {
   shape: PhysXModelShapes;
   vertices?: number[];
   indices?: number[];
-  matrix?: number[];
+  transform?: PhysXBodyTransform;
   options?: {
     boxExtents?: number[];
     sphereRadius?: number;

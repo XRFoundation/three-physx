@@ -212,8 +212,8 @@ export class PhysXManager {
     }
 
     const bodyShapes: PhysX.PxShape[] = [];
-    shapes.forEach(({ id: shapeID, shape, vertices, indices, matrix, options }) => {
-      const bodyShape = getShape({ shape, vertices, indices, matrix, options });
+    shapes.forEach(({ id: shapeID, shape, vertices, indices, transform, options }) => {
+      const bodyShape = getShape({ shape, vertices, indices, transform, options });
       bodyShape.setContactOffset(0.0000001);
       const filterData = new PhysX.PxFilterData(1, 1, 0, 0);
       bodyShape.setSimulationFilterData(filterData);

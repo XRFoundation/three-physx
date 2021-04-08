@@ -11,21 +11,11 @@ export const getShape = ({
   shape,
   vertices,
   indices,
-  matrix,
+  transform,
   options,
 }): PhysX.PxShape => {
-  const geometry = getGeometry({ shape, vertices, indices, matrix, options });
-
-  pos.set(0,0,0);
-  rot.set(0,0,0,1);
-  scale.set(0,0,0);
-
-  if(matrix) {
-    mat4.fromArray(matrix);
-    mat4.decompose(pos, rot, scale);
-  }
-
-  // TODO: use matrix and worldMatrix to transform child shapes
+  const geometry = getGeometry({ shape, vertices, indices, options });
+  
   const material = PhysXManager.instance.physics.createMaterial(0.2, 0.2, 0.2);
   const flags = new PhysX.PxShapeFlags(
     PhysX.PxShapeFlag.eSCENE_QUERY_SHAPE.value |
@@ -39,17 +29,13 @@ export const getShape = ({
     flags,
   );
   //@ts-ignore
-  newShape.setLocalPose({
-    translation: { x: pos.x, y: pos.y, z: pos.z },
-    rotation: { x: rot.x, y: rot.y, z: rot.z, w: rot.w },
-  } as PhysX.PxTransform)
+  newShape.setLocalPose(transform);
   return newShape;
 };
 
 const getGeometry = ({
   shape,
   vertices,
-  matrix,
   indices,
   options,
 }): PhysX.PxGeometry => {

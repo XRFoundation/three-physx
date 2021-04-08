@@ -13,9 +13,13 @@ import {
   PlaneGeometry,
   Object3D,
   Matrix4,
+  Quaternion,
 } from 'three';
 import { Object3DBody, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy } from '../../src/types/ThreePhysX';
 const mat4 = new Matrix4();
+const pos = new Vector3();
+const rot = new Quaternion();
+const scale = new Vector3();
 export class PhysXDebugRenderer {
 
   private scene: Scene
@@ -73,10 +77,12 @@ export class PhysXDebugRenderer {
           // Copy to meshes
           mesh.position.copy(body.transform.translation);
           mesh.quaternion.copy(body.transform.rotation);
-          if(shape.matrix) {
-            mat4.fromArray(shape.matrix)
-            mesh.applyMatrix4(mat4);
-          }
+          mesh.position.add(pos.set(shape.transform.translation.x, shape.transform.translation.y, shape.transform.translation.z))
+          mesh.quaternion.multiply(rot.set(shape.transform.rotation.x, shape.transform.rotation.y, shape.transform.rotation.z, shape.transform.rotation.w))
+
+          // todo
+          // mat4.fromArray(shape.matrix)
+          // mesh.applyMatrix4(mat4);
         }
 
         meshIndex++;

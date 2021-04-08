@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "es2019",
+    "target": "esnext",
     "lib": [
-      "es2019",
+      "esnext",
       "dom",
       "dom.iterable"
     ],

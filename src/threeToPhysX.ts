@@ -4,6 +4,7 @@ import {
   Mesh,
   SphereBufferGeometry,
   Quaternion,
+  Object3D,
 } from 'three';
 import { PhysXInstance } from '.';
 import {
@@ -20,13 +21,6 @@ const quat = new Quaternion();
 
 //createPhysXBody(entity, id, threeToPhysXModelDescription(entity, { type: threeToPhysXModelDescription.Shape.MESH }), true)
 export const createPhysXShapes = (object: any, id: number) => {
-  object.updateMatrixWorld(true);
-  if (object.parent) {
-    inverse.copy(object.parent.matrixWorld).invert();
-    transform.multiplyMatrices(inverse, object.matrixWorld);
-  } else {
-    transform.copy(object.matrixWorld);
-  }
   const shapes: PhysXShapeConfig[] = [];
   object.updateMatrixWorld(true);
   iterateGeometries(object, { includeInvisible: true }, (data) => {
@@ -36,6 +30,7 @@ export const createPhysXShapes = (object: any, id: number) => {
 };
 
 export const createPhysXBody = (object, id, shapes?) => {
+  console.log(id)
   const rot = object.getWorldQuaternion(quat);
   const pos = object.getWorldPosition(vec3);
   const type = object.userData.physx
@@ -60,17 +55,10 @@ export const createPhysXBody = (object, id, shapes?) => {
   object.body = body;
 };
 
-const createShape = (mesh, root: boolean) => {
-  const transform = new Matrix4();
-  if (mesh === root) {
-    transform.identity();
-  } else {
-    mesh.updateWorldMatrix(true, false);
-    transform.multiplyMatrices(inverse, mesh.matrixWorld);
-  }
+const createShape = (mesh, root) => {
   const shape = getGeometryShape(mesh);
   const vertices = Array.from(mesh.geometry.attributes.position.array);
-  const matrix = transform.elements;
+  const transform = getTransformDifferentFromRoot(mesh, root);
   const indices = Array.from(mesh.geometry.index.array);
   const id = PhysXInstance.instance._getNextAvailableShapeID();
   switch (shape) {
@@ -78,16 +66,16 @@ const createShape = (mesh, root: boolean) => {
       return {
         id,
         shape,
-        matrix,
+        transform,
         options: { boxExtents: getBoxExtents(mesh.geometry) },
       };
     case PhysXModelShapes.Plane:
-      return { id, matrix, shape };
+      return { id, transform, shape };
     case PhysXModelShapes.Sphere:
       return {
         id,
         shape,
-        matrix,
+        transform,
         options: {
           sphereRadius: (mesh.geometry as SphereBufferGeometry).parameters
             .radius,
@@ -95,7 +83,7 @@ const createShape = (mesh, root: boolean) => {
       };
     case PhysXModelShapes.TriangleMesh:
     default:
-      return { id, shape, vertices, matrix, indices };
+      return { id, shape, vertices, transform, indices };
   }
 };
 
@@ -145,3 +133,14 @@ const getBoxExtents = function (geometry) {
     (box.max.z - box.min.z) / 2,
   ];
 };
+
+const getTransformDifferentFromRoot = (mesh: Object3D, root: Object3D) => {
+  const pos = new Vector3().subVectors(mesh.getWorldPosition(new Vector3()), root.getWorldPosition(new Vector3()));
+  const quat2 = root.getWorldQuaternion(quat)
+  const rot = new Quaternion().multiply(mesh.getWorldQuaternion(quat2).invert());
+  console.log(rot, quat2, quat, root.getWorldQuaternion(quat), mesh.getWorldQuaternion(quat))
+  return {
+    translation: { x: pos.x, y: pos.y, z: pos.z },
+    rotation: { x: rot.x, y: rot.y, z: rot.z, w: rot.w }
+  }
+}
