@@ -7,6 +7,9 @@ import {
   PhysXBodyTransform,
   PhysXBodyType,
   PhysXEvents,
+  BodyConfig,
+  PhysXBodyData,
+  RigidBodyProxy,
 } from './types/ThreePhysX';
 import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
@@ -182,8 +185,8 @@ export class PhysXManager {
     }
   };
 
-  addBody = async ({ id, transform, shapes, bodyOptions }) => {
-    const { type, trigger } = bodyOptions;
+  addBody = async ({ id, transform, shapes, options }: RigidBodyProxy) => {
+    const { type } = options;
 
     let rigidBody: PhysX.RigidStatic | PhysX.RigidDynamic;
 
@@ -200,36 +203,38 @@ export class PhysXManager {
         (rigidBody as PhysX.RigidDynamic).setRigidBodyFlags(flags);
         // (rigidBody as PhysX.RigidDynamic).setRigidBodyFlag(PhysX.PxRigidBodyFlag.eKINEMATIC.value, true);
       }
-
       (rigidBody as any)._type = type;
     }
 
-    if (trigger) {
-    }
-
     const bodyShapes: PhysX.PxShape[] = [];
-    shapes.forEach(
-      ({ id: shapeID, shape, transform, options }) => {
-        const bodyShape = getShape({
-          shape,
-          transform,
-          options,
-        });
-        bodyShape.setContactOffset(0.0000001);
-        const filterData = new PhysX.PxFilterData(1, 1, 0, 0);
-        bodyShape.setSimulationFilterData(filterData);
-        bodyShapes.push(bodyShape);
-        rigidBody.attachShape(bodyShape);
-        this.shapes.set(bodyShape.$$.ptr, shapeID);
-      },
-    );
+    shapes.forEach(({ id: shapeID, shape, transform, options }) => {
+      const bodyShape = getShape({
+        shape,
+        transform,
+        options,
+      });
+      bodyShape.setContactOffset(0.0000001);
+      const filterData = new PhysX.PxFilterData(1, 1, 0, 0);
+      bodyShape.setSimulationFilterData(filterData);
+      bodyShapes.push(bodyShape);
+      rigidBody.attachShape(bodyShape);
+      this.shapes.set(bodyShape.$$.ptr, shapeID);
+    });
 
     this.bodies.set(id, rigidBody);
     this.scene.addActor(rigidBody, null);
   };
 
-  updateBody = async ({ options }) => {
-    // todo
+  updateBody = async ({ id, options }: { id: number; options: BodyConfig }) => {
+    const body = this.bodies.get(id);
+    if (options.type) {
+    }
+    if (options.mass) {
+    }
+    if (options.linearDamping) {
+    }
+    if (options.angularDamping) {
+    }
   };
 
   removeBody = async ({ id }) => {

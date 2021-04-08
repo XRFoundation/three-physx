@@ -13,7 +13,7 @@ const load = async () => {
 
   const onUpdate = () => {
     objects.forEach((obj: any, id) => {
-      if((obj.body as RigidBodyProxy).bodyOptions.type === PhysXBodyType.DYNAMIC) {
+      if((obj.body as RigidBodyProxy).options.type === PhysXBodyType.DYNAMIC) {
         const translation = (obj.body as RigidBodyProxy).transform.translation;
         const rotation = (obj.body as RigidBodyProxy).transform.rotation;
         obj.position.set(translation.x, translation.y, translation.z);
@@ -22,7 +22,7 @@ const load = async () => {
     })
   }
   // @ts-ignore
-  new PhysXInstance(new Worker(new URL("../../src/worker.ts", import.meta.url)), onUpdate);
+  new PhysXInstance(new Worker(new URL("../../src/worker.ts", import.meta.url)), onUpdate, renderer.scene);
   await PhysXInstance.instance.initPhysX({ jsPath: '/physx/physx.release.js', wasmPath: '/physx/physx.release.wasm' });
 
   createScene().forEach(async (object) => {
@@ -31,9 +31,10 @@ const load = async () => {
     renderer.addToScene(object);
   })
 
-  const kinematicObject = new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() })).translateY(-2).rotateZ(Math.PI / 2);
-  kinematicObject.scale.set(0.2, 0.2, 0.2)
-  kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateX(1).rotateY(Math.PI / 2));
+  const kinematicObject = new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() })).translateY(-2.5).rotateZ(Math.PI / 2);
+  // kinematicObject.scale.setScalar(2)
+  kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateX(2).rotateY(Math.PI / 2));
+  kinematicObject.children[0].scale.setScalar(2)
   kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
   kinematicObject.userData.physx = { type: PhysXBodyType.KINEMATIC };
   
@@ -67,7 +68,6 @@ const createScene = () => {
     mesh.position.set(Math.random() * 50 - 25, Math.random() * 50, Math.random() * 50 - 25);
     mesh.userData.physx = { 
       type: PhysXBodyType.DYNAMIC,
-
     };
     meshes.push(mesh)
   }

@@ -38,6 +38,7 @@ export interface PhysXBodyTransform {
 export interface PhysXBodyData {
   translation: Vec3;
   rotation: Quat;
+  scale: Vec3;
   linearVelocity?: Vec3;
   angularVelocity?: Vec3;
 }
@@ -52,36 +53,43 @@ export interface PhysXShapeConfig {
   id: number;
   shape: PhysXModelShapes;
   transform: PhysXBodyTransform;
+  config: ShapeConfig;
   options?: {
     vertices?: number[];
     indices?: number[];
     boxExtents?: Vec3;
     sphereRadius?: number;
-    collisionId?: number;
-    collisionMask?: number;
-    staticFriction?: number;
-    dynamicFriction?: number;
-    restitution?: number;
   };
+}
+
+export interface ShapeConfig {
+  id: number;
+  isTrigger: boolean;
+  collisionId?: number;
+  collisionMask?: number;
+  staticFriction?: number;
+  dynamicFriction?: number;
+  restitution?: number;
+}
+
+export interface BodyConfig {
+  type?: PhysXBodyType;
+  mass?: number; // todo
+  linearDamping?: number; // todo
+  angularDamping?: number; // todo
 }
 
 export interface RigidBodyProxy {
   id: number;
   transform: PhysXBodyData;
   shapes: PhysXShapeConfig[];
-  bodyOptions: {
-    type?: PhysXBodyType;
-    trigger?: boolean;
-    immovable?: boolean; // todo
-    mass?: number; // todo
-    angularDamping?: number; // todo
-    // bodyFlags?: boolean; // make individual options maybe?
-  };
+  options: BodyConfig;
   addEventListener?: any;
   removeEventListener?: any;
   hasEventListener?: any;
   dispatchEvent?: any;
 }
+
 export interface PhysXUserData {
   type: PhysXBodyType;
   bodyData: PhysXBodyData;

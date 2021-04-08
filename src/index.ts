@@ -8,8 +8,10 @@ import {
   Object3DBody,
   PhysXShapeConfig,
   PhysXEvents,
+  BodyConfig,
+  ShapeConfig,
 } from './types/ThreePhysX';
-import { Object3D, Quaternion, Vector3 } from 'three';
+import { Object3D, Quaternion, Scene, Vector3 } from 'three';
 import {
   createPhysXBody,
   createPhysXShapes,
@@ -31,9 +33,11 @@ export class PhysXInstance {
   kinematicBodies: Map<number, Object3DBody> = new Map<number, Object3DBody>();
 
   kinematicArray: Float32Array;
+  scene: Scene;
 
-  constructor(worker: Worker, onUpdate: any) {
+  constructor(worker: Worker, onUpdate: any, scene: Scene) {
     PhysXInstance.instance = this;
+    this.scene = scene;
     this.worker = worker;
     this.onUpdate = onUpdate;
   }
@@ -48,7 +52,7 @@ export class PhysXInstance {
     messageQueue.addEventListener('data', (ev) => {
       const array: Float32Array = ev.detail;
       this.bodies.forEach((rigidBody, id) => {
-        if (rigidBody.bodyOptions.type === PhysXBodyType.DYNAMIC) {
+        if (rigidBody.options.type === PhysXBodyType.DYNAMIC) {
           const offset = id * BufferConfig.BODY_DATA_SIZE;
           rigidBody.transform.translation.x = array[offset];
           rigidBody.transform.translation.y = array[offset + 1];
@@ -57,7 +61,7 @@ export class PhysXInstance {
           rigidBody.transform.rotation.y = array[offset + 4];
           rigidBody.transform.rotation.z = array[offset + 5];
           rigidBody.transform.rotation.w = array[offset + 6];
-          if (rigidBody.bodyOptions.type === PhysXBodyType.DYNAMIC) {
+          if (rigidBody.options.type === PhysXBodyType.DYNAMIC) {
             rigidBody.transform.linearVelocity.x = array[offset + 7];
             rigidBody.transform.linearVelocity.y = array[offset + 8];
             rigidBody.transform.linearVelocity.z = array[offset + 9];
@@ -162,7 +166,7 @@ export class PhysXInstance {
     proxyEventListener((object as Object3DBody).body);
     this.bodies.set(id, (object as Object3DBody).body);
     if (
-      (object as Object3DBody).body.bodyOptions.type === PhysXBodyType.KINEMATIC
+      (object as Object3DBody).body.options.type === PhysXBodyType.KINEMATIC
     ) {
       this.kinematicBodies.set(id, object as Object3DBody);
     }
@@ -177,9 +181,13 @@ export class PhysXInstance {
     return shapes;
   };
 
-  createShape = () => {};
+  updateShape = async (shapeID: number, options: ShapeConfig) => {
+    // const id = (object as Object3DBody).body.id;
+    // await this.physicsProxy.updateBody([{ id, options }]);
+    // return;
+  };
 
-  updateBody = async (object: Object3D, options: any) => {
+  updateBody = async (object: Object3D, options: BodyConfig) => {
     const id = (object as Object3DBody).body.id;
     await this.physicsProxy.updateBody([{ id, options }]);
     return;

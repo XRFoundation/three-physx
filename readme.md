@@ -11,6 +11,7 @@ Progress:
 - [x] return transforms
 - [x] kinematic
 - [x] collision events
+- [ ] fix root object scaling bug
 - [ ] fail adding shapes and bodies automatically if no mesh exists
 - [ ] update bodies
 - [ ] character & vehicle

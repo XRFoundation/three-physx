@@ -2,11 +2,7 @@ import { Matrix4, Quaternion, Vector3 } from 'three';
 import { PhysXBodyTransform, PhysXModelShapes } from './types/ThreePhysX';
 import { PhysXManager } from './worker';
 
-export const getShape = ({
-  shape,
-  transform,
-  options,
-}): PhysX.PxShape => {
+export const getShape = ({ shape, transform, options }): PhysX.PxShape => {
   const geometry = getGeometry({ shape, transform, options });
 
   const material = PhysXManager.instance.physics.createMaterial(0.2, 0.2, 0.2);
@@ -26,11 +22,7 @@ export const getShape = ({
   return newShape;
 };
 
-const getGeometry = ({
-  shape,
-  transform,
-  options,
-}): PhysX.PxGeometry => {
+const getGeometry = ({ shape, transform, options }): PhysX.PxGeometry => {
   const { boxExtents, sphereRadius, vertices, indices } = options || {};
   let geometry: PhysX.PxGeometry;
   if (shape === PhysXModelShapes.Box) {
@@ -89,6 +81,7 @@ const createTrimesh = (
 
   const meshScale = new PhysX.PxMeshScale(
     { x: transform.scale.x, y: transform.scale.y, z: transform.scale.z },
+    // { x: 1, y: 1, z: 1 },
     { x: 0, y: 0, z: 0, w: 1 },
   );
   const geometry = new PhysX.PxTriangleMeshGeometry(

@@ -75,7 +75,7 @@ export class PhysXDebugRenderer {
 
       body.shapes.forEach((shape: PhysXShapeConfig) => {
 
-        this._updateMesh(meshIndex, body, shape)
+        this._updateMesh(object as Object3DBody, meshIndex, body, shape)
 
         const mesh = meshes[meshIndex]
 
@@ -106,7 +106,7 @@ export class PhysXDebugRenderer {
     meshes.length = meshIndex
   }
 
-  private _updateMesh(index: number, body: RigidBodyProxy, shape: PhysXShapeConfig) {
+  private _updateMesh(root: Object3DBody, index: number, body: RigidBodyProxy, shape: PhysXShapeConfig) {
     let mesh = this._meshes[index]
     if (!this._typeMatch(mesh, shape)) {
       if (mesh) {
@@ -114,7 +114,7 @@ export class PhysXDebugRenderer {
       }
       mesh = this._meshes[index] = this._createMesh(shape)
     }
-    this._scaleMesh(mesh, shape)
+    this._scaleMesh(root, mesh, shape)
   }
 
   private _typeMatch(mesh: Mesh | Points, shape: PhysXShapeConfig): Boolean {
@@ -244,19 +244,22 @@ export class PhysXDebugRenderer {
     return mesh;
   }
 
-  private _scaleMesh(mesh: Mesh | Points, shape: PhysXShapeConfig) {
+  private _scaleMesh(root: Object3DBody, mesh: Mesh | Points, shape: PhysXShapeConfig) {
+    const scale = shape.transform.scale as Vector3
     switch (shape.shape) {
 
       case PhysXModelShapes.Sphere:
         const radius = shape.options.sphereRadius
-        mesh.scale.set(radius, radius, radius)
+        mesh.scale.multiplyScalar(radius);
         break
 
       case PhysXModelShapes.Box:
         const { x, y, z } = shape.options.boxExtents
-        mesh.scale.copy(new Vector3(x, y, z))
-        mesh.scale.multiplyScalar(2)
-        // if((mesh as any).body) mesh.scale.multiply((mesh as any).body.transform.scale)
+        mesh.scale.set(x, y, z).multiplyScalar(2)
+        break;
+      
+      default:
+        mesh.scale.copy(scale)
         break;
     }
   }
