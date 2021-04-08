@@ -46,10 +46,6 @@ export class PhysXManager {
   matrices: Map<number, Matrix4> = new Map<number, Matrix4>();
   indices: Map<number, number> = new Map<number, number>();
 
-  bodyIDByShape: Map<PhysX.PxShape, number> = new Map<PhysX.PxShape, number>();
-
-  objectArray: Float32Array;
-
   // constraints: // TODO
 
   initPhysX = async (config: PhysXConfig): Promise<void> => {
@@ -143,18 +139,21 @@ export class PhysXManager {
     const delta = now - lastTick;
     this.scene.simulate(delta / 1000, true);
     this.scene.fetchResults(true);
-    this.objectArray = new Float32Array(
+    const bodyArray = new Float32Array(
+      new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size),
+    );
+    const shapeArray = new Float32Array(
       new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size),
     );
     this.bodies.forEach((body: PhysX.RigidActor, id: number) => {
       if (isDynamicBody(body)) {
-        this.objectArray.set(
+        bodyArray.set(
           getBodyData(body),
           id * BufferConfig.BODY_DATA_SIZE,
         );
       }
     });
-    this.onUpdate(this.objectArray);
+    this.onUpdate(bodyArray, shapeArray);
     lastTick = now;
   };
 
@@ -219,7 +218,6 @@ export class PhysXManager {
       bodyShape.setSimulationFilterData(filterData);
       bodyShapes.push(bodyShape);
       rigidBody.attachShape(bodyShape);
-      this.bodyIDByShape.set(bodyShape, id);
       this.shapes.set(bodyShape.$$.ptr, shapeID);
     });
 

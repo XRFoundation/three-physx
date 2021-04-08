@@ -14,10 +14,11 @@ import {
   RigidBodyProxy,
 } from './types/ThreePhysX';
 
-const transform = new Matrix4();
-const inverse = new Matrix4();
-const vec3 = new Vector3();
-const quat = new Quaternion();
+const matrixA = new Matrix4();
+const matrixB = new Matrix4();
+const pos = new Vector3();
+const rot = new Quaternion();
+const scale = new Vector3(1, 1, 1);
 
 //createPhysXBody(entity, id, threeToPhysXModelDescription(entity, { type: threeToPhysXModelDescription.Shape.MESH }), true)
 export const createPhysXShapes = (object: any, id: number) => {
@@ -30,8 +31,7 @@ export const createPhysXShapes = (object: any, id: number) => {
 };
 
 export const createPhysXBody = (object, id, shapes?) => {
-  const rot = object.getWorldQuaternion(quat);
-  const pos = object.getWorldPosition(vec3);
+  const transform = getTransformFromWorldPos(object);
   const type = object.userData.physx
     ? object.userData.physx.type
     : PhysXBodyType.STATIC;
@@ -42,10 +42,7 @@ export const createPhysXBody = (object, id, shapes?) => {
     bodyOptions: {
       type,
     },
-    transform: {
-      translation: { x: pos.x, y: pos.y, z: pos.z },
-      rotation: { x: rot.x, y: rot.y, z: rot.z, w: rot.w },
-    },
+    transform,
   };
   if (body.bodyOptions.type === PhysXBodyType.DYNAMIC) {
     body.transform.linearVelocity = { x: 0, y: 0, z: 0 };
@@ -57,7 +54,8 @@ export const createPhysXBody = (object, id, shapes?) => {
 const createShape = (mesh, root) => {
   const shape = getGeometryShape(mesh);
   const vertices = Array.from(mesh.geometry.attributes.position.array);
-  const transform = getTransformDifferentFromRoot(mesh, root);
+  const transform = getTransformRelativeToRoot(mesh, root);
+  if(mesh !== root) console.log(transform, mesh, root)
   const indices = Array.from(mesh.geometry.index.array);
   const id = PhysXInstance.instance._getNextAvailableShapeID();
   switch (shape) {
@@ -89,9 +87,6 @@ const createShape = (mesh, root) => {
 // from three-to-ammo
 export const iterateGeometries = (function () {
   return function (root, options, cb) {
-    inverse.copy(root.matrixWorld).invert();
-    const scale = new Vector3();
-    scale.setFromMatrixScale(root.matrixWorld);
     root.traverse((mesh: Mesh) => {
       if (
         mesh.isMesh &&
@@ -133,10 +128,40 @@ const getBoxExtents = function (geometry) {
   ];
 };
 
-const getTransformDifferentFromRoot = (mesh: Object3D, root: Object3D) => {
-  const pos = new Vector3().subVectors(mesh.getWorldPosition(new Vector3()), root.getWorldPosition(new Vector3()));
-  const quat2 = root.getWorldQuaternion(quat)
-  const rot = new Quaternion().multiply(mesh.getWorldQuaternion(quat2).invert());
+export const getTransformFromWorldPos = (obj: Object3D) => {
+  obj.getWorldPosition(pos);
+  obj.getWorldQuaternion(rot);
+  return {
+    translation: { x: pos.x, y: pos.y, z: pos.z },
+    rotation: { x: rot.x, y: rot.y, z: rot.z, w: rot.w }
+  }
+}
+
+const getTransformRelativeToRoot = (mesh: Object3D, root: Object3D) => {
+
+  // no local transformation
+  if(mesh === root) {
+    return {
+      translation: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0, w: 1 }
+    }
+  }
+
+  // local transformation
+  if(mesh.parent === root) {
+    return {
+      translation: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+      rotation: { x: mesh.quaternion.x, y: mesh.quaternion.y, z: mesh.quaternion.z, w: mesh.quaternion.w }
+    }
+  }
+
+  // world transformation
+  matrixB.copy(mesh.matrixWorld)
+  matrixA.copy(root.matrixWorld).invert()
+  matrixB.premultiply(matrixA)
+  
+  matrixB.decompose(pos, rot, scale)
+
   return {
     translation: { x: pos.x, y: pos.y, z: pos.z },
     rotation: { x: rot.x, y: rot.y, z: rot.z, w: rot.w }

@@ -9,8 +9,8 @@ import {
   PhysXShapeConfig,
   PhysXEvents,
 } from './types/ThreePhysX';
-import { Object3D } from 'three';
-import { createPhysXBody, createPhysXShapes } from './threeToPhysX';
+import { Object3D, Quaternion, Vector3 } from 'three';
+import { createPhysXBody, createPhysXShapes, getTransformFromWorldPos } from './threeToPhysX';
 import { proxyEventListener } from './utils/proxyEventListener';
 
 let nextAvailableBodyIndex = 0;
@@ -105,13 +105,7 @@ export class PhysXInstance {
     const kinematicIDs = [];
     this.kinematicBodies.forEach((obj, id) => {
       kinematicIDs.push(id);
-      obj.body.transform.translation.x = obj.position.x;
-      obj.body.transform.translation.y = obj.position.y;
-      obj.body.transform.translation.z = obj.position.z;
-      obj.body.transform.rotation.x = obj.quaternion.x;
-      obj.body.transform.rotation.y = obj.quaternion.y;
-      obj.body.transform.rotation.z = obj.quaternion.z;
-      obj.body.transform.rotation.w = obj.quaternion.w;
+      obj.body.transform = getTransformFromWorldPos(obj);
       const transform = obj.body.transform;
       this.kinematicArray.set(
         [

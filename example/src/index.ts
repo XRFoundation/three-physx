@@ -31,16 +31,16 @@ const load = async () => {
     renderer.addToScene(object);
   })
 
-  const kinematicObject = new Group()//new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() }));
-  kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateX(-4).rotateY(Math.PI / 2));
-  // kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateZ(-3).rotateX(Math.PI / 2));
+  const kinematicObject = new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() })).translateY(-2).rotateZ(Math.PI / 2);
+  kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateX(1).rotateY(Math.PI / 2));
+  kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
   kinematicObject.userData.physx = { type: PhysXBodyType.KINEMATIC };
   
   const body = await PhysXInstance.instance.addBody(kinematicObject)//, [{ id: undefined, shape: PhysXModelShapes.Sphere, options: { sphereRadius: 2 }}]);
   objects.set(body.id, kinematicObject)
   renderer.addToScene(kinematicObject);
   body.addEventListener(PhysXEvents.COLLISION_START, ({ bodySelf, bodyOther, shapeSelf, shapeOther }) => {
-    // console.log('COLLISION DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
+    console.log('COLLISION DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
   })
 
   const debug = new PhysXDebugRenderer(renderer.scene)

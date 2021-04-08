@@ -10,10 +10,10 @@ Progress:
 - [x] three-to-physx shape converter
 - [x] return transforms
 - [x] kinematic
+- [x] collision events
 - [ ] update bodies
 - [ ] character & vehicle
 - [ ] implement all API functions
-- [x] collision events
 - [ ] raycasts
 
 ## Example
