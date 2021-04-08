@@ -9,7 +9,7 @@ declare namespace PhysX {
     static eSCENE_QUERY_SHAPE: { value: number };
     static eTRIGGER_SHAPE: { value: number };
     static eVISUALIZATION: { value: number };
-    static ePARTICLE_DRAIN: { value: number };
+    // static ePARTICLE_DRAIN: { value: number };
   }
 
   class PxRigidBodyFlag {
@@ -39,6 +39,15 @@ declare namespace PhysX {
     static eENABLE_GPU_DYNAMICS: { value: number };
     static eENABLE_ENHANCED_DETERMINISM: { value: number };
     static eENABLE_FRICTION_EVERY_ITERATION: { value: number };
+  }
+
+  class PxRigidDynamicLockFlag {
+    static eLOCK_LINEAR_X: { value: number };
+    static eLOCK_LINEAR_Y: { value: number };
+    static eLOCK_LINEAR_Z: { value: number };
+    static eLOCK_ANGULAR_X: { value: number };
+    static eLOCK_ANGULAR_Y: { value: number };
+    static eLOCK_ANGULAR_Z: { value: number };
   }
 
   // class PxActorFlags {
@@ -205,12 +214,12 @@ declare namespace PhysX {
     setSimulationFilterData(filterData: PxFilterData): void;
     setName(value: string): void;
     getName(): string;
-    setFlag(flag: number): void;
+    // setFlag(flag: number, value: boolean): void;
   }
 
   class Actor extends Base {
-    setActorFlag(flag: number, value: boolean): void;
-    setActorFlags(flags: PxActorFlags): void;
+    // setActorFlag(flag: number, value: boolean): void;
+    setActorFlags(flags: PxActorFlag): void;
     getActorFlags(): number;
     getGlobalPose(): PxTransform;
     setGlobalPose(transform: PxTransform, autoAwake: boolean): void;
@@ -227,7 +236,6 @@ declare namespace PhysX {
   }
   enum PxForceMode {}
   class RigidBody extends RigidActor {
-    setRigidBodyFlag(flag: PxRigidBodyFlags, value: boolean): void;
     setRigidBodyFlags(flags: PxRigidBodyFlags): void;
     getRigidBodyFlags(): number;
 
@@ -254,7 +262,7 @@ declare namespace PhysX {
     setSleepThreshold(value: number): void; //, &PxRigidDynamic::setSleepThreshold)
     getSleepThreshold(): number; //, &PxRigidDynamic::getSleepThreshold)
     setKinematicTarget(transform: PxTransform): void; //, &PxRigidDynamic::setKinematicTarget)
-    setRigidDynamicLockFlags(): void; //, &PxRigidDynamic::setRigidDynamicLockFlags);
+    setRigidDynamicLockFlags(flags: PxRigidDynamicLockFlag): void; //, &PxRigidDynamic::setRigidDynamicLockFlags);
     setSolverIterationCounts(minPositionIters: number, minVelocityIters: number): void;
   }
   class PxVec3 {

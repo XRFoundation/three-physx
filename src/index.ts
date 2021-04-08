@@ -164,15 +164,12 @@ export class PhysXInstance {
     if (object.body.options.type === PhysXBodyType.STATIC && typeof options.type !== 'undefined') {
       throw new Error('three-physx! Tried to change the type of a static object. This is not allowed, instead remove the body and create a new one.');
     }
-    console.log(this.kinematicBodies, object.body.options)
     if (object.body.options.type === PhysXBodyType.DYNAMIC && options.type === PhysXBodyType.KINEMATIC) {
       this.kinematicBodies.set(object.body.id, object as Object3DBody);
       object.body.options.type = PhysXBodyType.KINEMATIC;
-      console.log('set to kinematic');
     } else if (object.body.options.type === PhysXBodyType.KINEMATIC && options.type === PhysXBodyType.DYNAMIC) {
       this.kinematicBodies.delete(object.body.id);
       object.body.options.type = PhysXBodyType.DYNAMIC;
-      console.log('set to dynamic');
     }
     const id = (object as Object3DBody).body.id;
     await this.physicsProxy.updateBody([{ id, options }]);

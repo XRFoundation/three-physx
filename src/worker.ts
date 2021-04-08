@@ -141,9 +141,6 @@ export class PhysXManager {
       rigidBody = this.physics.createRigidStatic(transform);
     } else {
       rigidBody = this.physics.createRigidDynamic(transform) as PhysX.RigidDynamic;
-      if (type === PhysXBodyType.KINEMATIC) {
-        (rigidBody as PhysX.RigidDynamic).setRigidBodyFlag(PhysX.PxRigidBodyFlag.eKINEMATIC, true);
-      }
     }
     (rigidBody as any)._type = type;
 
@@ -175,7 +172,13 @@ export class PhysXManager {
     const actorFlags = body.getActorFlags();
     if (!isStaticBody(body)) {
       if (typeof options.type !== 'undefined') {
-        (body as PhysX.RigidDynamic).setRigidBodyFlag(PhysX.PxRigidBodyFlag.eKINEMATIC.value, options.type === PhysXBodyType.KINEMATIC);
+        let flags = (body as PhysX.RigidDynamic).getRigidBodyFlags()
+        if(options.type === PhysXBodyType.KINEMATIC) {
+          flags |= PhysX.PxRigidBodyFlag.eKINEMATIC.value;
+        } else {
+          flags &= ~PhysX.PxRigidBodyFlag.eKINEMATIC.value;
+        }
+        (body as PhysX.RigidDynamic).setRigidBodyFlags(new PhysX.PxRigidBodyFlags(flags));
       }
       // if (options.mass) {
       // }
@@ -231,7 +234,9 @@ export class PhysXManager {
     // todo
   };
 }
-
+function dec2bin(dec) {
+  return (dec >>> 0).toString(2);
+}
 const isKinematicBody = (body: PhysX.RigidActor) => {
   return (body as any)._type === PhysXBodyType.KINEMATIC;
 };
