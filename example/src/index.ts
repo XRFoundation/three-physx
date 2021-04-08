@@ -32,6 +32,7 @@ const load = async () => {
   })
 
   const kinematicObject = new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() })).translateY(-2).rotateZ(Math.PI / 2);
+  kinematicObject.scale.set(0.2, 0.2, 0.2)
   kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateX(1).rotateY(Math.PI / 2));
   kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
   kinematicObject.userData.physx = { type: PhysXBodyType.KINEMATIC };
@@ -40,7 +41,7 @@ const load = async () => {
   objects.set(body.id, kinematicObject)
   renderer.addToScene(kinematicObject);
   body.addEventListener(PhysXEvents.COLLISION_START, ({ bodySelf, bodyOther, shapeSelf, shapeOther }) => {
-    console.log('COLLISION DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
+    // console.log('COLLISION DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
   })
 
   const debug = new PhysXDebugRenderer(renderer.scene)
@@ -64,7 +65,10 @@ const createScene = () => {
   for(let i = 0; i < 1000; i++){
     const mesh = new Mesh(geoms[i%2], new MeshBasicMaterial({ color: randomColor() }))
     mesh.position.set(Math.random() * 50 - 25, Math.random() * 50, Math.random() * 50 - 25);
-    mesh.userData.physx = { type: PhysXBodyType.DYNAMIC };
+    mesh.userData.physx = { 
+      type: PhysXBodyType.DYNAMIC,
+
+    };
     meshes.push(mesh)
   }
   const floor = new Mesh(new BoxBufferGeometry(100, 1, 100), new MeshBasicMaterial({ color: randomColor(), side: DoubleSide })).translateY(-2);

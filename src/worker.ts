@@ -147,10 +147,7 @@ export class PhysXManager {
     );
     this.bodies.forEach((body: PhysX.RigidActor, id: number) => {
       if (isDynamicBody(body)) {
-        bodyArray.set(
-          getBodyData(body),
-          id * BufferConfig.BODY_DATA_SIZE,
-        );
+        bodyArray.set(getBodyData(body), id * BufferConfig.BODY_DATA_SIZE);
       }
     });
     this.onUpdate(bodyArray, shapeArray);
@@ -211,15 +208,21 @@ export class PhysXManager {
     }
 
     const bodyShapes: PhysX.PxShape[] = [];
-    shapes.forEach(({ id: shapeID, shape, vertices, indices, transform, options }) => {
-      const bodyShape = getShape({ shape, vertices, indices, transform, options });
-      bodyShape.setContactOffset(0.0000001);
-      const filterData = new PhysX.PxFilterData(1, 1, 0, 0);
-      bodyShape.setSimulationFilterData(filterData);
-      bodyShapes.push(bodyShape);
-      rigidBody.attachShape(bodyShape);
-      this.shapes.set(bodyShape.$$.ptr, shapeID);
-    });
+    shapes.forEach(
+      ({ id: shapeID, shape, transform, options }) => {
+        const bodyShape = getShape({
+          shape,
+          transform,
+          options,
+        });
+        bodyShape.setContactOffset(0.0000001);
+        const filterData = new PhysX.PxFilterData(1, 1, 0, 0);
+        bodyShape.setSimulationFilterData(filterData);
+        bodyShapes.push(bodyShape);
+        rigidBody.attachShape(bodyShape);
+        this.shapes.set(bodyShape.$$.ptr, shapeID);
+      },
+    );
 
     this.bodies.set(id, rigidBody);
     this.scene.addActor(rigidBody, null);
@@ -298,6 +301,11 @@ const mat4ToTransform = (matrix: Matrix4): PhysXBodyTransform => {
       y: quat.y,
       z: quat.z,
       w: quat.w,
+    },
+    scale: {
+      x: scale.x,
+      y: scale.y,
+      z: scale.z,
     },
   };
 };

@@ -123,9 +123,9 @@ export class PhysXDebugRenderer {
     }
     const geo: BufferGeometry = mesh.geometry
     return (
-      (geo instanceof SphereGeometry && shape.shape === PhysXModelShapes.Sphere) ||
-      (geo instanceof BoxGeometry && shape.shape === PhysXModelShapes.Box) ||
-      (geo instanceof PlaneGeometry && shape.shape === PhysXModelShapes.Plane) ||
+      (shape.shape === PhysXModelShapes.Sphere) ||
+      (shape.shape === PhysXModelShapes.Box) ||
+      (shape.shape === PhysXModelShapes.Plane) ||
       (shape.shape === PhysXModelShapes.ConvexMesh) ||
       (shape.shape === PhysXModelShapes.TriangleMesh) ||
       (shape.shape === PhysXModelShapes.HeightField)
@@ -155,8 +155,8 @@ export class PhysXDebugRenderer {
       case PhysXModelShapes.ConvexMesh:
         geometry = new BufferGeometry()
         points = []
-        for (let i = 0; i < shape.vertices.length; i += 3) {
-          const [x, y, z] = [shape.vertices[i], shape.vertices[i+1], shape.vertices[i+2]]
+        for (let i = 0; i < shape.options.vertices.length; i += 3) {
+          const [x, y, z] = [shape.options.vertices[i], shape.options.vertices[i+1], shape.options.vertices[i+2]]
           points.push(new Vector3(x, y, z));
         }
         geometry.setFromPoints(points)
@@ -190,14 +190,14 @@ export class PhysXDebugRenderer {
       case PhysXModelShapes.TriangleMesh:
         geometry = new BufferGeometry();
         points = []
-        for (let i = 0; i < shape.vertices.length; i += 3) {
+        for (let i = 0; i < shape.options.vertices.length; i += 3) {
           points.push(new Vector3(
-            shape.vertices[i],
-            shape.vertices[i + 1],
-            shape.vertices[i + 2]));
+            shape.options.vertices[i],
+            shape.options.vertices[i + 1],
+            shape.options.vertices[i + 2]));
         }
         geometry.setFromPoints(points)
-        geometry.setIndex(Array.from(shape.indices))
+        geometry.setIndex(Array.from(shape.options.indices))
         mesh = new Mesh(geometry, material);
         break;
 
@@ -253,9 +253,10 @@ export class PhysXDebugRenderer {
         break
 
       case PhysXModelShapes.Box:
-        const [x, y, z] = shape.options.boxExtents
+        const { x, y, z } = shape.options.boxExtents
         mesh.scale.copy(new Vector3(x, y, z))
         mesh.scale.multiplyScalar(2)
+        // if((mesh as any).body) mesh.scale.multiply((mesh as any).body.transform.scale)
         break;
     }
   }

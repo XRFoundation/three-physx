@@ -10,7 +10,11 @@ import {
   PhysXEvents,
 } from './types/ThreePhysX';
 import { Object3D, Quaternion, Vector3 } from 'three';
-import { createPhysXBody, createPhysXShapes, getTransformFromWorldPos } from './threeToPhysX';
+import {
+  createPhysXBody,
+  createPhysXShapes,
+  getTransformFromWorldPos,
+} from './threeToPhysX';
 import { proxyEventListener } from './utils/proxyEventListener';
 
 let nextAvailableBodyIndex = 0;
@@ -71,9 +75,21 @@ export class PhysXInstance {
       const shapeB = this.shapes.get(idB);
       const bodyA = (shapeA as any).body;
       const bodyB = (shapeB as any).body;
-      if(!bodyA || !bodyB) return; // TODO this is a hack
-      bodyA.dispatchEvent({ type: event, bodySelf: bodyA, bodyOther: bodyB, shapeSelf: shapeA, shapeOther: shapeB });
-      bodyB.dispatchEvent({ type: event, bodySelf: bodyB, bodyOther: bodyA, shapeSelf: shapeB, shapeOther: shapeA });
+      if (!bodyA || !bodyB) return; // TODO this is a hack
+      bodyA.dispatchEvent({
+        type: event,
+        bodySelf: bodyA,
+        bodyOther: bodyB,
+        shapeSelf: shapeA,
+        shapeOther: shapeB,
+      });
+      bodyB.dispatchEvent({
+        type: event,
+        bodySelf: bodyB,
+        bodyOther: bodyA,
+        shapeSelf: shapeB,
+        shapeOther: shapeA,
+      });
     });
 
     this.physicsProxy = {
@@ -181,6 +197,18 @@ export class PhysXInstance {
   };
 
   removeConstraint = async () => {
+    // todo
+  };
+
+  addController = async () => {
+    // todo
+  };
+
+  updateController = async () => {
+    // todo
+  };
+
+  removeController = async () => {
     // todo
   };
 

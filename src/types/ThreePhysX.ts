@@ -32,6 +32,7 @@ interface Quat {
 export interface PhysXBodyTransform {
   translation: Vec3;
   rotation: Quat;
+  scale: Vec3;
 }
 
 export interface PhysXBodyData {
@@ -50,12 +51,17 @@ export enum PhysXBodyType {
 export interface PhysXShapeConfig {
   id: number;
   shape: PhysXModelShapes;
-  vertices?: number[];
-  indices?: number[];
-  transform?: PhysXBodyTransform;
+  transform: PhysXBodyTransform;
   options?: {
-    boxExtents?: number[];
+    vertices?: number[];
+    indices?: number[];
+    boxExtents?: Vec3;
     sphereRadius?: number;
+    collisionId?: number;
+    collisionMask?: number;
+    staticFriction?: number;
+    dynamicFriction?: number;
+    restitution?: number;
   };
 }
 
@@ -66,11 +72,15 @@ export interface RigidBodyProxy {
   bodyOptions: {
     type?: PhysXBodyType;
     trigger?: boolean;
+    immovable?: boolean; // todo
+    mass?: number; // todo
+    angularDamping?: number; // todo
+    // bodyFlags?: boolean; // make individual options maybe?
   };
-  addEventListener?: any
-  removeEventListener?: any
-  hasEventListener?: any
-  dispatchEvent?: any
+  addEventListener?: any;
+  removeEventListener?: any;
+  hasEventListener?: any;
+  dispatchEvent?: any;
 }
 export interface PhysXUserData {
   type: PhysXBodyType;

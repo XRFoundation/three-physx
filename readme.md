@@ -11,6 +11,7 @@ Progress:
 - [x] return transforms
 - [x] kinematic
 - [x] collision events
+- [ ] fail adding shapes and bodies automatically if no mesh exists
 - [ ] update bodies
 - [ ] character & vehicle
 - [ ] implement all API functions
@@ -29,7 +30,7 @@ https://three-physx.netlify.app/
 
 This multithreaded PhysX API uses a singleton approach. This way the PhysX interface is accessible globally once instantiated.
 
-```javascript
+```typescript
 
 // create the interface
 new PhysXInstance(worker: Worker, onUpdate: () => void);
@@ -43,9 +44,23 @@ await PhysXInstance.instance.addBody(object: Object3D);
 
 Body parameters are read from `object.userData`. This allows externally loaded models to be given physx bodies in their respective editors.
 
-```javascript
+```typescript
 object.userData.physx = {
   type: PhysXBodyType,
-  // todo
+  shapes: [
+    {
+      type: PhysXShapeType.Box,
+      halfExtents: { x: 1, y: 1, z: 1 }
+    },
+    {
+      type: PhysXShapeType.Sphere,
+      sphereRadius: 1
+    },
+    {
+      type: PhysXShapeType.Trimesh,
+    },
+  ]
 }
 ```
+
+

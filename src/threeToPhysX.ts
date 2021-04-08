@@ -5,6 +5,7 @@ import {
   SphereBufferGeometry,
   Quaternion,
   Object3D,
+  SphereGeometry,
 } from 'three';
 import { PhysXInstance } from '.';
 import {
@@ -20,21 +21,25 @@ const pos = new Vector3();
 const rot = new Quaternion();
 const scale = new Vector3(1, 1, 1);
 
-//createPhysXBody(entity, id, threeToPhysXModelDescription(entity, { type: threeToPhysXModelDescription.Shape.MESH }), true)
+// TODO: set root to the scene in case objects are parented already
+
 export const createPhysXShapes = (object: any, id: number) => {
   const shapes: PhysXShapeConfig[] = [];
   object.updateMatrixWorld(true);
   iterateGeometries(object, { includeInvisible: true }, (data) => {
-    shapes.push(data);
+    shapes.push(...data);
   });
   return shapes;
 };
 
 export const createPhysXBody = (object, id, shapes?) => {
   const transform = getTransformFromWorldPos(object);
-  const type = object.userData.physx
-    ? object.userData.physx.type
-    : PhysXBodyType.STATIC;
+  if (!object.userData.physx) {
+    object.userData.physx = {
+      type: PhysXBodyType.STATIC
+    }
+  }
+  const type = object.userData.physx.type;
 
   const body: RigidBodyProxy = {
     id,
@@ -51,81 +56,96 @@ export const createPhysXBody = (object, id, shapes?) => {
   object.body = body;
 };
 
-const createShape = (mesh, root) => {
-  const shape = getGeometryShape(mesh);
-  const vertices = Array.from(mesh.geometry.attributes.position.array);
-  const transform = getTransformRelativeToRoot(mesh, root);
-  if(mesh !== root) console.log(transform, mesh, root)
-  const indices = Array.from(mesh.geometry.index.array);
-  const id = PhysXInstance.instance._getNextAvailableShapeID();
-  switch (shape) {
-    case PhysXModelShapes.Box:
-      return {
-        id,
-        shape,
-        transform,
-        options: { boxExtents: getBoxExtents(mesh.geometry) },
-      };
-    case PhysXModelShapes.Plane:
-      return { id, transform, shape };
-    case PhysXModelShapes.Sphere:
-      return {
-        id,
-        shape,
-        transform,
-        options: {
-          sphereRadius: (mesh.geometry as SphereBufferGeometry).parameters
-            .radius,
-        },
-      };
-    case PhysXModelShapes.TriangleMesh:
-    default:
-      return { id, shape, vertices, transform, indices };
+const createShapes = (mesh, root) => {
+  if (!mesh.userData.physx) {
+    mesh.userData.physx = {}
   }
+  const shapes = [];
+  if (mesh.userData.physx.shapes) {
+    const relativeTransform = getTransformRelativeToRoot(mesh, root);
+    mesh.userData.physx.shapes.forEach((shape) => {
+      const data = getShapeData(mesh, shape)
+      const transform = shape.transform || relativeTransform;
+      const id = PhysXInstance.instance._getNextAvailableShapeID();
+      data.id = id;
+      data.transform = transform;
+      shapes.push(data)
+    })
+  } else {
+    const data = getGeometryShape(mesh);
+    const transform = getTransformRelativeToRoot(mesh, root);
+    const id = PhysXInstance.instance._getNextAvailableShapeID();
+    data.id = id;
+    data.transform = transform;
+    shapes.push(data)
+  }
+  console.log(shapes)
+  return shapes;
 };
 
 // from three-to-ammo
 export const iterateGeometries = (function () {
   return function (root, options, cb) {
     root.traverse((mesh: Mesh) => {
-      if (
-        mesh.isMesh &&
-        mesh.name !== 'Sky' &&
-        (options.includeInvisible || mesh.visible)
-      ) {
-        cb(createShape(mesh, root));
+      if (mesh.isMesh && (options.includeInvisible || mesh.visible)) {
+        cb(createShapes(mesh, root));
       }
     });
   };
 })();
 
-const getGeometryShape = (mesh): PhysXModelShapes => {
+const getShapeData = (mesh, shape): any => {
+  switch (shape.type) {
+    case PhysXModelShapes.Box:
+      return { shape: shape.type, options: { boxExtents: shape.boxExtents || getBoxExtents(mesh) } };
+    // case PhysXModelShapes.Plane:
+    //   return ;
+    case PhysXModelShapes.Sphere:
+      return { shape: shape.type, options: { sphereRadius: shape.sphereRadius || getSphereRadius(mesh) } };
+    case PhysXModelShapes.TriangleMesh:
+    default:
+      const vertices = Array.from(mesh.geometry.attributes.position.array);
+      const indices = Array.from(mesh.geometry.index.array);
+      return { shape: shape.type, options: { vertices, indices } };
+  }
+}
+
+const getGeometryShape = (mesh): any => {
   switch (mesh.geometry.type) {
     case 'BoxGeometry':
     case 'BoxBufferGeometry':
-      return PhysXModelShapes.Box;
+      return { shape: PhysXModelShapes.Box, options: { boxExtents: getBoxExtents(mesh) } };
     // case 'CylinderGeometry':
     // case 'CylinderBufferGeometry':
-    //   throw new Error('three-physx: Cylinder shape not yet implemented');// createCylinderShape(geometry);
-    case 'PlaneGeometry':
-    case 'PlaneBufferGeometry':
-      return PhysXModelShapes.Plane;
+    //   throw new Error('three-physx: Cylinder shape not yet implemented'); // createCylinderShape(geometry);
+    // case 'PlaneGeometry':
+    // case 'PlaneBufferGeometry':
+    //   return ;
     case 'SphereGeometry':
     case 'SphereBufferGeometry':
-      return PhysXModelShapes.Sphere;
+      return { shape: PhysXModelShapes.Sphere, options: { sphereRadius: getSphereRadius(mesh) } };
     default:
-      return PhysXModelShapes.TriangleMesh;
+      const vertices = Array.from(mesh.geometry.attributes.position.array);
+      const indices = Array.from(mesh.geometry.index.array);
+      return { shape: PhysXModelShapes.TriangleMesh, options: { vertices, indices } };
   }
 };
 
-const getBoxExtents = function (geometry) {
-  geometry.computeBoundingBox();
-  const box = geometry.boundingBox;
-  return [
-    (box.max.x - box.min.x) / 2,
-    (box.max.y - box.min.y) / 2,
-    (box.max.z - box.min.z) / 2,
-  ];
+const getSphereRadius = function (mesh: Mesh) {
+  const scale = mesh.getWorldScale(pos).lengthSq() / 3;
+  console.log(scale)
+  return ((mesh.geometry as SphereGeometry)?.parameters?.radius || 1) * scale; 
+};
+
+const getBoxExtents = function (mesh: Mesh) {
+  const worldScale = mesh.getWorldScale(scale);
+  mesh.geometry.computeBoundingBox();
+  const box = mesh.geometry.boundingBox;
+  return {
+    x: ((box.max.x - box.min.x) / 2) * worldScale.x,
+    y: ((box.max.y - box.min.y) / 2) * worldScale.y,
+    z: ((box.max.z - box.min.z) / 2) * worldScale.z,
+  };
 };
 
 export const getTransformFromWorldPos = (obj: Object3D) => {
@@ -133,37 +153,49 @@ export const getTransformFromWorldPos = (obj: Object3D) => {
   obj.getWorldQuaternion(rot);
   return {
     translation: { x: pos.x, y: pos.y, z: pos.z },
-    rotation: { x: rot.x, y: rot.y, z: rot.z, w: rot.w }
-  }
-}
+    rotation: { x: rot.x, y: rot.y, z: rot.z, w: rot.w },
+  };
+};
 
 const getTransformRelativeToRoot = (mesh: Object3D, root: Object3D) => {
-
+  const worldScale = mesh.getWorldScale(scale);
   // no local transformation
-  if(mesh === root) {
+  if (mesh === root) {
     return {
       translation: { x: 0, y: 0, z: 0 },
-      rotation: { x: 0, y: 0, z: 0, w: 1 }
-    }
+      rotation: { x: 0, y: 0, z: 0, w: 1 },
+      scale: { x: worldScale.x, y: worldScale.y, z: worldScale.z },
+    };
   }
 
   // local transformation
-  if(mesh.parent === root) {
+  if (mesh.parent === root) {
     return {
-      translation: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
-      rotation: { x: mesh.quaternion.x, y: mesh.quaternion.y, z: mesh.quaternion.z, w: mesh.quaternion.w }
-    }
+      translation: {
+        x: mesh.position.x,
+        y: mesh.position.y,
+        z: mesh.position.z,
+      },
+      rotation: {
+        x: mesh.quaternion.x,
+        y: mesh.quaternion.y,
+        z: mesh.quaternion.z,
+        w: mesh.quaternion.w,
+      },
+      scale: { x: worldScale.x, y: worldScale.y, z: worldScale.z }
+    };
   }
 
   // world transformation
-  matrixB.copy(mesh.matrixWorld)
-  matrixA.copy(root.matrixWorld).invert()
-  matrixB.premultiply(matrixA)
-  
-  matrixB.decompose(pos, rot, scale)
+  matrixB.copy(mesh.matrixWorld);
+  matrixA.copy(root.matrixWorld).invert();
+  matrixB.premultiply(matrixA);
+
+  matrixB.decompose(pos, rot, scale);
 
   return {
     translation: { x: pos.x, y: pos.y, z: pos.z },
-    rotation: { x: rot.x, y: rot.y, z: rot.z, w: rot.w }
-  }
-}
+    rotation: { x: rot.x, y: rot.y, z: rot.z, w: rot.w },
+    scale: { x: worldScale.x, y: worldScale.y, z: worldScale.z }
+  };
+};

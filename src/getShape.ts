@@ -1,21 +1,14 @@
 import { Matrix4, Quaternion, Vector3 } from 'three';
-import { PhysXModelShapes } from './types/ThreePhysX';
+import { PhysXBodyTransform, PhysXModelShapes } from './types/ThreePhysX';
 import { PhysXManager } from './worker';
-
-const mat4 = new Matrix4();
-const pos = new Vector3();
-const rot = new Quaternion();
-const scale = new Vector3();
 
 export const getShape = ({
   shape,
-  vertices,
-  indices,
   transform,
   options,
 }): PhysX.PxShape => {
-  const geometry = getGeometry({ shape, vertices, indices, options });
-  
+  const geometry = getGeometry({ shape, transform, options });
+
   const material = PhysXManager.instance.physics.createMaterial(0.2, 0.2, 0.2);
   const flags = new PhysX.PxShapeFlags(
     PhysX.PxShapeFlag.eSCENE_QUERY_SHAPE.value |
@@ -35,20 +28,24 @@ export const getShape = ({
 
 const getGeometry = ({
   shape,
-  vertices,
-  indices,
+  transform,
   options,
 }): PhysX.PxGeometry => {
-  const { boxExtents, sphereRadius } = options || {};
+  const { boxExtents, sphereRadius, vertices, indices } = options || {};
   let geometry: PhysX.PxGeometry;
   if (shape === PhysXModelShapes.Box) {
-    geometry = new PhysX.PxBoxGeometry(boxExtents[0], boxExtents[1], boxExtents[2]);
+    geometry = new PhysX.PxBoxGeometry(
+      boxExtents.x,
+      boxExtents.y,
+      boxExtents.z,
+    );
   } else if (shape === PhysXModelShapes.Sphere) {
     geometry = new PhysX.PxSphereGeometry(sphereRadius);
   } else if (shape === PhysXModelShapes.Plane) {
     geometry = new PhysX.PxPlaneGeometry();
   } else if (shape === PhysXModelShapes.TriangleMesh) {
     geometry = createTrimesh(
+      transform,
       PhysXManager.instance.cooking,
       PhysXManager.instance.physics,
       vertices,
@@ -59,6 +56,7 @@ const getGeometry = ({
 };
 
 const createTrimesh = (
+  transform: PhysXBodyTransform,
   cooking: PhysX.PxCooking,
   physics: PhysX.PxPhysics,
   vertices: ArrayLike<number>,
@@ -90,7 +88,7 @@ const createTrimesh = (
   );
 
   const meshScale = new PhysX.PxMeshScale(
-    { x: 1, y: 1, z: 1 },
+    { x: transform.scale.x, y: transform.scale.y, z: transform.scale.z },
     { x: 0, y: 0, z: 0, w: 1 },
   );
   const geometry = new PhysX.PxTriangleMeshGeometry(
