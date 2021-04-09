@@ -43,6 +43,11 @@ export class PhysXInstance {
           rigidBody.transform.translation.x = array[offset];
           rigidBody.transform.translation.y = array[offset + 1];
           rigidBody.transform.translation.z = array[offset + 2];
+          rigidBody.controller.collisions = { 
+            down: Boolean(array[offset + 3]),
+            sides: Boolean(array[offset + 4]),
+            up: Boolean(array[offset + 5])
+          }
         } else if (rigidBody.options.type === PhysXBodyType.DYNAMIC) {
           rigidBody.transform.translation.x = array[offset];
           rigidBody.transform.translation.y = array[offset + 1];
@@ -64,26 +69,48 @@ export class PhysXInstance {
       this.onUpdate();
     });
     messageQueue.addEventListener('colliderEvent', ({ detail }) => {
-      const { event, idA, idB } = detail;
-      const shapeA = this.shapes.get(idA);
-      const shapeB = this.shapes.get(idB);
-      const bodyA = (shapeA as any).body;
-      const bodyB = (shapeB as any).body;
-      if (!bodyA || !bodyB) return; // TODO this is a hack
-      bodyA.dispatchEvent({
-        type: event,
-        bodySelf: bodyA,
-        bodyOther: bodyB,
-        shapeSelf: shapeA,
-        shapeOther: shapeB,
-      });
-      bodyB.dispatchEvent({
-        type: event,
-        bodySelf: bodyB,
-        bodyOther: bodyA,
-        shapeSelf: shapeB,
-        shapeOther: shapeA,
-      });
+      switch(detail.event) {
+        case PhysXEvents.COLLISION_START: 
+        case PhysXEvents.COLLISION_PERSIST: 
+        case PhysXEvents.COLLISION_END: 
+        case PhysXEvents.TRIGGER_START: 
+        case PhysXEvents.TRIGGER_END: {
+            const { event, idA, idB } = detail;
+            const shapeA = this.shapes.get(idA);
+            const shapeB = this.shapes.get(idB);
+            const bodyA = (shapeA as any).body;
+            const bodyB = (shapeB as any).body;
+            if (!bodyA || !bodyB) return; // TODO this is a hack
+            bodyA.dispatchEvent({
+              type: event,
+              bodySelf: bodyA,
+              bodyOther: bodyB,
+              shapeSelf: shapeA,
+              shapeOther: shapeB,
+            });
+            bodyB.dispatchEvent({
+              type: event,
+              bodySelf: bodyB,
+              bodyOther: bodyA,
+              shapeSelf: shapeB,
+              shapeOther: shapeA,
+            });
+          }
+        break;
+        case PhysXEvents.CONTROLLER_SHAPE_HIT: 
+        case PhysXEvents.CONTROLLER_COLLIDER_HIT: 
+        case PhysXEvents.CONTROLLER_OBSTACLE_HIT: {
+          const { event, id, position, normal, length } = detail;
+          const controllerBody: RigidBodyProxy = this.controllerBodies.get(id).body;
+          controllerBody.dispatchEvent({
+            type: event,
+            position,
+            normal,
+            length
+          })
+        }
+        break;
+      }
     });
 
     this.physicsProxy = {
@@ -194,7 +221,11 @@ export class PhysXInstance {
     const id = this._getNextAvailableBodyID();
     createPhysXBody(object, id, []);
     await this.physicsProxy.addController([(object as Object3DBody).body]);
-    (object as Object3DBody).body.controller = { delta: { x: 0, y: 0, z: 0} };
+    (object as Object3DBody).body.controller = { 
+      collisions: { down: false, sides: false, up: false },
+      delta: { x: 0, y: 0, z: 0 },
+      velocity: { x: 0, y: 0, z: 0 },
+    };
     (object as Object3DBody).body.options.type = PhysXBodyType.CONTROLLER
     this.controllerBodies.set(id, object as Object3DBody);
     proxyEventListener((object as Object3DBody).body);

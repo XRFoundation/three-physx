@@ -68,19 +68,39 @@ export class PhysXManager {
 
     const triggerCallback = {
       onContactBegin: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        this.onEvent(PhysXEvents.COLLISION_START, this.shapeIDByPointer.get(shapeA.$$.ptr), this.shapeIDByPointer.get(shapeB.$$.ptr));
+        this.onEvent({ 
+          event: PhysXEvents.COLLISION_START, 
+          idA: this.shapeIDByPointer.get(shapeA.$$.ptr), 
+          idB: this.shapeIDByPointer.get(shapeB.$$.ptr)
+        });
       },
       onContactEnd: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        this.onEvent(PhysXEvents.COLLISION_END, this.shapeIDByPointer.get(shapeA.$$.ptr), this.shapeIDByPointer.get(shapeB.$$.ptr));
+        this.onEvent({ 
+          event: PhysXEvents.COLLISION_END, 
+          idA: this.shapeIDByPointer.get(shapeA.$$.ptr), 
+          idB: this.shapeIDByPointer.get(shapeB.$$.ptr) 
+        });
       },
       onContactPersist: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        this.onEvent(PhysXEvents.COLLISION_PERSIST, this.shapeIDByPointer.get(shapeA.$$.ptr), this.shapeIDByPointer.get(shapeB.$$.ptr));
+        this.onEvent({ 
+          event: PhysXEvents.COLLISION_PERSIST, 
+          idA: this.shapeIDByPointer.get(shapeA.$$.ptr), 
+          idB: this.shapeIDByPointer.get(shapeB.$$.ptr)
+        });
       },
       onTriggerBegin: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        this.onEvent(PhysXEvents.TRIGGER_START, this.shapeIDByPointer.get(shapeA.$$.ptr), this.shapeIDByPointer.get(shapeB.$$.ptr));
+        this.onEvent({ 
+          event: PhysXEvents.TRIGGER_START, 
+          idA: this.shapeIDByPointer.get(shapeA.$$.ptr), 
+          idB: this.shapeIDByPointer.get(shapeB.$$.ptr)
+        });
       },
       onTriggerEnd: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        this.onEvent(PhysXEvents.TRIGGER_END, this.shapeIDByPointer.get(shapeA.$$.ptr), this.shapeIDByPointer.get(shapeB.$$.ptr));
+        this.onEvent({ 
+          event: PhysXEvents.TRIGGER_END, 
+          idA: this.shapeIDByPointer.get(shapeA.$$.ptr), 
+          idB: this.shapeIDByPointer.get(shapeB.$$.ptr)
+        });
       },
     };
 
@@ -109,6 +129,7 @@ export class PhysXManager {
     this.controllers.forEach((controller: PhysX.PxController, id: number) => {
       const { x, y, z } = controller.getPosition();
       bodyArray.set([x, y, z], id * BufferConfig.BODY_DATA_SIZE);
+      bodyArray.set((controller as any)._collisions, id * BufferConfig.BODY_DATA_SIZE + 3);
     });
     this.onUpdate(bodyArray, shapeArray);
     lastTick = now;
@@ -139,16 +160,17 @@ export class PhysXManager {
         z: kinematicBodiesArray[offset + 2]
       };
       const deltaTime = kinematicBodiesArray[offset + 3];
-      const filterData = new PhysX.PxFilterData(1, 1, 1, 1);
-      const queryCallback = PhysX.PxQueryFilterCallback.implement({ preFilter: console.log, postFilter: console.log })
+      // TODO
+      // const filterData = new PhysX.PxFilterData(1, 1, 1, 1);
+      // const queryCallback = PhysX.PxQueryFilterCallback.implement({ preFilter: console.log, postFilter: console.log })
       const filters = new PhysX.PxControllerFilters(null, null, null)
       const collisionFlags = controller.move(deltaPos, 0.01, deltaTime, filters, null);
       const collisions = { 
         down: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_DOWN),
         sides: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_SIDES),
         up: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_UP),
-      }
-      console.log(collisions)
+      };
+      (controller as any)._collisions = [collisions.down, collisions.sides, collisions.up];
     });
   };
 
@@ -265,30 +287,33 @@ export class PhysXManager {
     controllerDesc.stepOffset = 0.1;
     controllerDesc.contactOffset = 0.1;
     controllerDesc.slopeLimit = Math.cos(45 * Math.PI / 180);
-
     controllerDesc.setReportCallback(
       PhysX.PxUserControllerHitReport.implement({
-        onShapeHit: event => {
-          console.log(event)
+        onShapeHit: shape => {
+          // TODO: make, get and return shape ID
+          const position = shape.getWorldPos();
+          const normal = shape.getWorldNormal();
+          const length = shape.getLength();
+          this.onEvent(PhysXEvents.CONTROLLER_SHAPE_HIT, { id, position, normal, length });
         },
-        onControllerHit: event => {
-          console.log(event)
+        onControllerHit: shape => {
+          // TODO
+          console.warn('three-physx: onControllerHit event not implemented')
         },
-        onObstacleHit: event => {
-          console.log(event)
+        onObstacleHit: shape => {
+          // TODO
+          console.warn('three-physx: onObstacleHit event not implemented')
         }
       })
     );
-
     controllerDesc.setMaterial(this.physics.createMaterial(0.5, 0.5, 0.5));
-
     if (!controllerDesc.isValid()) {
       console.warn('[WARN] Controller Description invalid!');
     }
     const controller = this.controllerManager.createController(controllerDesc);
-    console.log(controller)
     this.controllers.set(id, controller);
-    this.bodies.set(id, controller as any)// PhysX.RigidBody);
+    this.bodies.set(id, controller as any);
+    (controller as any)._collisions = [];
 
     // todo
   };
@@ -379,8 +404,8 @@ export const receiveWorker = async (): Promise<void> => {
   PhysXManager.instance.onUpdate = (data: Uint8Array) => {
     messageQueue.sendEvent('data', data, [data.buffer]);
   };
-  PhysXManager.instance.onEvent = (event: string, idA: any, idB: any) => {
-    messageQueue.sendEvent('colliderEvent', { event, idA, idB });
+  PhysXManager.instance.onEvent = (data) => {
+    messageQueue.sendEvent('colliderEvent', data);
   };
   const addFunctionListener = (eventLabel) => {
     messageQueue.addEventListener(eventLabel, async ({ detail }) => {

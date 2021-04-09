@@ -31,66 +31,85 @@ const load = async () => {
     objects.set(body.id, object);
     renderer.addToScene(object);
   });
-/*
+
   const kinematicObject = new Group(); //new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() })).translateY(-2.5).rotateZ(Math.PI / 2);
   // kinematicObject.scale.setScalar(2)
   kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateX(2).rotateY(Math.PI / 2));
   kinematicObject.children[0].scale.setScalar(2);
   kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
-  kinematicObject.userData.physx = { type: PhysXBodyType.DYNAMIC };
-
+  kinematicObject.userData.physx = { type: PhysXBodyType.KINEMATIC };
+                   
   const kinematicBody = await PhysXInstance.instance.addBody(kinematicObject); //, [{ id: undefined, shape: PhysXModelShapes.Sphere, options: { sphereRadius: 2 }}]);
   let isKinematic = false;
-  setInterval(() => {
-    PhysXInstance.instance.updateBody(kinematicObject, { angularVelocity: { x: 0, y: 0, z: 0 }, linearVelocity: { x: 0, y: 0, z: 0 }, type: isKinematic ? PhysXBodyType.KINEMATIC : PhysXBodyType.DYNAMIC });
-    isKinematic = !isKinematic;
-  }, 2000);
+  // setInterval(() => {
+  //   PhysXInstance.instance.updateBody(kinematicObject, { angularVelocity: { x: 0, y: 0, z: 0 }, linearVelocity: { x: 0, y: 0, z: 0 }, type: isKinematic ? PhysXBodyType.KINEMATIC : PhysXBodyType.DYNAMIC });
+  //   isKinematic = !isKinematic;
+  // }, 2000);
   objects.set(kinematicBody.id, kinematicObject);
   renderer.addToScene(kinematicObject);
   kinematicBody.addEventListener(PhysXEvents.COLLISION_START, ({ bodySelf, bodyOther, shapeSelf, shapeOther }) => {
-    // console.log('COLLISION DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
-  });*/
+    console.log('COLLISION DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
+  });
 
   const character = new Group();
   character.add(new Mesh(new BoxBufferGeometry(0.25, 2, 0.25), new MeshBasicMaterial({ color: randomColor() })));
   character.add(new Mesh(new SphereBufferGeometry(0.4), new MeshBasicMaterial({ color: randomColor() })).translateY(1));
   const characterBody = await PhysXInstance.instance.addController(character);
-  console.log(characterBody)
   objects.set(characterBody.id, character);
-  console.log(objects)
 
   renderer.addToScene(character);
+  const keys = {}
 
-  document.addEventListener('keypress', (ev) => {
-    if (ev.key === 'w') {
-      (character as any).body.controller.delta.x += 0.2;
-    }
-    if (ev.key === 's') {
-      (character as any).body.controller.delta.x -= 0.2;
-    }
-    if (ev.key === 'a') {
-      (character as any).body.controller.delta.z -= 0.2;
-    }
-    if (ev.key === 'd') {
-      (character as any).body.controller.delta.z += 0.2;
-    }
-    if (ev.code === 'Space') {
-      (character as any).body.controller.delta.y += 2;
-    }
+  document.addEventListener('keydown', (ev) => {
+    keys[ev.code] = true;
+  });
+  document.addEventListener('keyup', (ev) => {
+    delete keys[ev.code];
   });
 
   const debug = new PhysXDebugRenderer(renderer.scene);
   debug.setEnabled(true);
+  let lastTime = Date.now() - (1/60);
+  let lastDelta = 1/60;
 
   const update = () => {
-    const time = Date.now() / 1000;
-    // if ((kinematicObject as any).body.options.type === PhysXBodyType.KINEMATIC) {
-    //   kinematicObject.position.set(Math.sin(time) * 10, 0, Math.cos(time) * 10);
-    //   kinematicObject.lookAt(0, 0, 0);
-    // }
+    const time = Date.now();
+    const timeSecs = time / 1000;
+    const delta = time - lastTime;
+    
+    if ((kinematicObject as any).body.options.type === PhysXBodyType.KINEMATIC) {
+      kinematicObject.position.set(Math.sin(timeSecs) * 10, 0, Math.cos(timeSecs) * 10);
+      kinematicObject.lookAt(0, 0, 0);
+    }
+    if(characterBody.controller.collisions.down) {
+      if(characterBody.controller.velocity.y < 0)
+      characterBody.controller.velocity.y = 0;
+    } else {
+      characterBody.controller.velocity.y -= (0.2 / delta);
+    }
+    Object.entries(keys).forEach(([key, value]) => {
+      if (key === 'KeyW') {
+        characterBody.controller.delta.z -= 0.2;
+      }
+      if (key === 'KeyS') {
+        characterBody.controller.delta.z += 0.2;
+      }
+      if (key === 'KeyA') {
+        characterBody.controller.delta.x -= 0.2;
+      }
+      if (key === 'KeyD') {
+        characterBody.controller.delta.x += 0.2;
+      }
+      if (key === 'Space' && characterBody.controller.collisions.down) {
+        characterBody.controller.velocity.y += 2 / lastDelta;
+      }
+    })
+    characterBody.controller.delta.y += characterBody.controller.velocity.y;
     PhysXInstance.instance.update();
     debug.update(objects);
     renderer.update();
+    lastDelta = delta;
+    lastTime = time;
     requestAnimationFrame(update);
   };
   update();

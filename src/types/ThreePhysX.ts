@@ -89,7 +89,11 @@ export interface RigidBodyProxy {
   transform: PhysXBodyData;
   shapes: PhysXShapeConfig[];
   options: BodyConfig;
-  controller?: any;
+  controller?: {
+    collisions: { down: boolean, sides: boolean, up: boolean };
+    delta: { x: number, y: number, z: number };
+    velocity: { x: number, y: number, z: number };
+  };
   addEventListener?: any;
   removeEventListener?: any;
   hasEventListener?: any;
@@ -108,6 +112,10 @@ export enum PhysXEvents {
   COLLISION_START = 'COLLISION_START',
   COLLISION_PERSIST = 'COLLISION_PERSIST',
   COLLISION_END = 'COLLISION_END',
+
+  CONTROLLER_SHAPE_HIT = 'CONTROLLER_SHAPE_HIT',
+  CONTROLLER_COLLIDER_HIT = 'CONTROLLER_COLLIDER_HIT',
+  CONTROLLER_OBSTACLE_HIT = 'CONTROLLER_OBSTACLE_HIT',
 
   TRIGGER_START = 'TRIGGER_START',
   TRIGGER_END = 'TRIGGER_END',
