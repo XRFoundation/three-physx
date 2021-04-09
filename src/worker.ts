@@ -6,7 +6,7 @@ import { PhysXConfig, PhysXBodyTransform, PhysXBodyType, PhysXEvents, BodyConfig
 import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
 
-const noop = () => { };
+const noop = () => {};
 
 const mat4 = new Matrix4();
 const pos = new Vector3();
@@ -28,6 +28,8 @@ export class PhysXManager {
   scale: PhysX.PxTolerancesScale;
   sceneDesc: PhysX.PxSceneDesc;
   scene: PhysX.PxScene;
+  controllerManager: PhysX.PxControllerManager;
+
 
   updateInterval: any;
   tps: number = 60;
@@ -42,7 +44,7 @@ export class PhysXManager {
   bodyShapes: Map<number, PhysX.PxShape[]> = new Map<number, PhysX.PxShape[]>();
   matrices: Map<number, Matrix4> = new Map<number, Matrix4>();
   indices: Map<number, number> = new Map<number, number>();
-
+  controllers: Map<number, PhysX.PxController> = new Map<number, PhysX.PxController>();
   // constraints: // TODO
 
   initPhysX = async (config: PhysXConfig): Promise<void> => {
@@ -87,6 +89,7 @@ export class PhysXManager {
     this.sceneDesc.bounceThresholdVelocity = 0.001;
 
     this.scene = this.physics.createScene(this.sceneDesc);
+    this.controllerManager = PhysX.PxCreateControllerManager(this.scene, false);
 
     this.startPhysX(true);
   };
@@ -102,12 +105,16 @@ export class PhysXManager {
       if (isDynamicBody(body)) {
         bodyArray.set(getBodyData(body), id * BufferConfig.BODY_DATA_SIZE);
       }
+    });    
+    this.controllers.forEach((controller: PhysX.PxController, id: number) => {
+      const { x, y, z } = controller.getPosition();
+      bodyArray.set([x, y, z], id * BufferConfig.BODY_DATA_SIZE);
     });
     this.onUpdate(bodyArray, shapeArray);
     lastTick = now;
   };
 
-  update = async (kinematicIDs: number[], kinematicBodiesArray: Float32Array) => {
+  update = async (kinematicIDs: number[], controllerIds: number[], kinematicBodiesArray: Float32Array) => {
     kinematicIDs.forEach((id) => {
       const body = this.bodies.get(id) as PhysX.RigidDynamic;
       const offset = id * BufferConfig.BODY_DATA_SIZE;
@@ -121,6 +128,27 @@ export class PhysXManager {
       currentPose.rotation.w = kinematicBodiesArray[offset + 6];
       body.setKinematicTarget(currentPose);
       body.setGlobalPose(currentPose, true);
+    });
+    controllerIds.forEach((id) => {
+      const controller = this.controllers.get(id) as PhysX.PxController;
+      const offset = id * BufferConfig.BODY_DATA_SIZE;
+      // const position = controller.getPosition();
+      const deltaPos = {
+        x: kinematicBodiesArray[offset],
+        y: kinematicBodiesArray[offset + 1],
+        z: kinematicBodiesArray[offset + 2]
+      };
+      const deltaTime = kinematicBodiesArray[offset + 3];
+      const filterData = new PhysX.PxFilterData(1, 1, 1, 1);
+      const queryCallback = PhysX.PxQueryFilterCallback.implement({ preFilter: console.log, postFilter: console.log })
+      const filters = new PhysX.PxControllerFilters(null, null, null)
+      const collisionFlags = controller.move(deltaPos, 0.01, deltaTime, filters, null);
+      const collisions = { 
+        down: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_DOWN),
+        sides: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_SIDES),
+        up: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_UP),
+      }
+      console.log(collisions)
     });
   };
 
@@ -159,7 +187,7 @@ export class PhysXManager {
       rigidBody.attachShape(bodyShape);
       this.shapeIDByPointer.set(bodyShape.$$.ptr, shapeID);
       this.shapes.set(shapeID, bodyShape);
-      this._updateShape(config)
+      this._updateShape(config);
     });
 
     this.bodyShapes.set(id, bodyShapes);
@@ -175,8 +203,8 @@ export class PhysXManager {
     const actorFlags = body.getActorFlags();
     if (!isStaticBody(body)) {
       if (typeof options.type !== 'undefined') {
-        let flags = (body as PhysX.RigidDynamic).getRigidBodyFlags()
-        if(options.type === PhysXBodyType.KINEMATIC) {
+        let flags = (body as PhysX.RigidDynamic).getRigidBodyFlags();
+        if (options.type === PhysXBodyType.KINEMATIC) {
           flags |= PhysX.PxRigidBodyFlag.eKINEMATIC.value;
         } else {
           flags &= ~PhysX.PxRigidBodyFlag.eKINEMATIC.value;
@@ -212,20 +240,65 @@ export class PhysXManager {
       transform.rotation.w = options.transform.rotation.w ?? transform.rotation.w;
       body.setGlobalPose(transform, true);
     }
-    options.shapes?.forEach(this._updateShape)
+    options.shapes?.forEach(this._updateShape);
   };
 
   _updateShape({ id, isTrigger, collisionId, collisionMask, staticFriction, dynamicFriction, restitution }: ShapeConfig) {
     const shape = this.shapes.get(id);
-    if(!shape) return;
-    const filterData = new PhysX.PxFilterData(collisionId, collisionMask, 0, 0);
+    if (!shape) return;
+    const filterData = new PhysX.PxFilterData(collisionId, collisionMask, 1, 1);
     shape.setSimulationFilterData(filterData);
+    if (typeof staticFriction !== 'undefined' || typeof dynamicFriction !== 'undefined' || typeof restitution !== 'undefined') {
+    }
   }
 
   removeBody = async ({ id }) => {
     const body = this.bodies.get(id);
     this.scene.removeActor(body, false);
     this.bodies.delete(id);
+  };
+
+  addController = async ({ id }) => {
+    const controllerDesc = new PhysX.PxCapsuleControllerDesc();
+    controllerDesc.height = 1;
+    controllerDesc.radius = 0.5;
+    controllerDesc.stepOffset = 0.1;
+    controllerDesc.contactOffset = 0.1;
+    controllerDesc.slopeLimit = Math.cos(45 * Math.PI / 180);
+
+    controllerDesc.setReportCallback(
+      PhysX.PxUserControllerHitReport.implement({
+        onShapeHit: event => {
+          console.log(event)
+        },
+        onControllerHit: event => {
+          console.log(event)
+        },
+        onObstacleHit: event => {
+          console.log(event)
+        }
+      })
+    );
+
+    controllerDesc.setMaterial(this.physics.createMaterial(0.5, 0.5, 0.5));
+
+    if (!controllerDesc.isValid()) {
+      console.warn('[WARN] Controller Description invalid!');
+    }
+    const controller = this.controllerManager.createController(controllerDesc);
+    console.log(controller)
+    this.controllers.set(id, controller);
+    this.bodies.set(id, controller as any)// PhysX.RigidBody);
+
+    // todo
+  };
+
+  updateController = async () => {
+    // todo
+  };
+
+  removeController = async () => {
+    // todo
   };
 
   addConstraint = async () => {
@@ -253,6 +326,10 @@ function dec2bin(dec) {
 }
 const isKinematicBody = (body: PhysX.RigidActor) => {
   return (body as any)._type === PhysXBodyType.KINEMATIC;
+};
+
+const isControllerBody = (body: PhysX.RigidActor) => {
+  return (body as any)._type === PhysXBodyType.CONTROLLER;
 };
 
 const isDynamicBody = (body: PhysX.RigidActor) => {

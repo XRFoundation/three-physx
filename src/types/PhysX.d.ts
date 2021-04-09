@@ -363,9 +363,9 @@ declare namespace PhysX {
   const HEAPU16: Uint16Array;
   const HEAPU32: Uint32Array;
 
-  function PxCreateControllerManager(scene: PxScene, lockingEnabled: boolean): PxCreateControllerManager;
+  function PxCreateControllerManager(scene: PxScene, lockingEnabled: boolean): PxControllerManager;
 
-  class PxCreateControllerManager {
+  class PxControllerManager {
     createController(desc: PxControllerDesc): PxController;
   }
 

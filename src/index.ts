@@ -1,7 +1,7 @@
 import * as BufferConfig from './BufferConfig';
 import { MessageQueue } from './utils/MessageQueue';
 
-import { PhysXConfig, PhysXBodyType, RigidBodyProxy, Object3DBody, PhysXShapeConfig, PhysXEvents, BodyConfig, ShapeConfig } from './types/ThreePhysX';
+import { PhysXConfig, PhysXBodyType, RigidBodyProxy, Object3DBody, PhysXShapeConfig, PhysXEvents, BodyConfig, ShapeConfig, ControllerConfig } from './types/ThreePhysX';
 import { Object3D, Quaternion, Scene, Vector3 } from 'three';
 import { createPhysXBody, createPhysXShapes, getTransformFromWorldPos } from './threeToPhysX';
 import { proxyEventListener } from './utils/proxyEventListener';
@@ -18,8 +18,7 @@ export class PhysXInstance {
   bodies: Map<number, RigidBodyProxy> = new Map<number, RigidBodyProxy>();
   shapes: Map<number, PhysXShapeConfig> = new Map<number, PhysXShapeConfig>();
   kinematicBodies: Map<number, Object3DBody> = new Map<number, Object3DBody>();
-
-  kinematicArray: Float32Array;
+  controllerBodies: Map<number, any> = new Map<number, any>();
   scene: Scene;
 
   constructor(worker: Worker, onUpdate: any, scene: Scene) {
@@ -39,8 +38,12 @@ export class PhysXInstance {
     messageQueue.addEventListener('data', (ev) => {
       const array: Float32Array = ev.detail;
       this.bodies.forEach((rigidBody, id) => {
-        if (rigidBody.options.type === PhysXBodyType.DYNAMIC) {
-          const offset = id * BufferConfig.BODY_DATA_SIZE;
+        const offset = id * BufferConfig.BODY_DATA_SIZE;
+        if(rigidBody.options.type === PhysXBodyType.CONTROLLER) {
+          rigidBody.transform.translation.x = array[offset];
+          rigidBody.transform.translation.y = array[offset + 1];
+          rigidBody.transform.translation.z = array[offset + 2];
+        } else if (rigidBody.options.type === PhysXBodyType.DYNAMIC) {
           rigidBody.transform.translation.x = array[offset];
           rigidBody.transform.translation.y = array[offset + 1];
           rigidBody.transform.translation.z = array[offset + 2];
@@ -90,6 +93,9 @@ export class PhysXInstance {
       addBody: pipeRemoteFunction(messageQueue, 'addBody'),
       updateBody: pipeRemoteFunction(messageQueue, 'updateBody'),
       removeBody: pipeRemoteFunction(messageQueue, 'removeBody'),
+      addController: pipeRemoteFunction(messageQueue, 'addController'),
+      updateController: pipeRemoteFunction(messageQueue, 'updateController'),
+      removeController: pipeRemoteFunction(messageQueue, 'removeController'),
       addConstraint: pipeRemoteFunction(messageQueue, 'addConstraint'),
       removeConstraint: pipeRemoteFunction(messageQueue, 'removeConstraint'),
       enableDebug: pipeRemoteFunction(messageQueue, 'enableDebug'),
@@ -99,22 +105,26 @@ export class PhysXInstance {
 
     await this.physicsProxy.initPhysX([config]);
   };
-  getBuffer() {
-    return this.kinematicArray.buffer;
-  }
 
   // update kinematic bodies
   update = async () => {
     // TODO: make this rely on kinematicBodies.size instead of bodies.size
-    this.kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
+    const kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
     const kinematicIDs = [];
     this.kinematicBodies.forEach((obj, id) => {
       kinematicIDs.push(id);
       obj.body.transform = getTransformFromWorldPos(obj);
       const transform = obj.body.transform;
-      this.kinematicArray.set([transform.translation.x, transform.translation.y, transform.translation.z, transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w], id * BufferConfig.BODY_DATA_SIZE);
+      kinematicArray.set([transform.translation.x, transform.translation.y, transform.translation.z, transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w], id * BufferConfig.BODY_DATA_SIZE);
     });
-    this.physicsProxy.update([kinematicIDs, this.kinematicArray], [this.kinematicArray.buffer]);
+    const controllerIDs = [];
+    this.controllerBodies.forEach((obj, id) => {
+      controllerIDs.push(id);
+      const { x, y, z } = obj.body.controller.delta;
+      kinematicArray.set([x, y, z, 1/60], id * BufferConfig.BODY_DATA_SIZE);
+      obj.body.controller.delta = {x:0,y:0,z:0}
+    });
+    this.physicsProxy.update([kinematicIDs, controllerIDs, kinematicArray], [kinematicArray.buffer]);
   };
 
   startPhysX = async (start: boolean) => {
@@ -150,12 +160,6 @@ export class PhysXInstance {
     return shapes;
   };
 
-  updateShape = async (shapeID: number, options: ShapeConfig) => {
-    // const id = (object as Object3DBody).body.id;
-    // await this.physicsProxy.updateBody([{ id, options }]);
-    // return;
-  };
-
   updateBody = async (object: Object3DBody | any, options: BodyConfig) => {
     // console.log(object)
     if (typeof object.body === 'undefined') {
@@ -186,16 +190,16 @@ export class PhysXInstance {
     return;
   };
 
-  addConstraint = async () => {
-    // todo
-  };
-
-  removeConstraint = async () => {
-    // todo
-  };
-
-  addController = async () => {
-    // todo
+  addController = async (object: Object3D, options?: ControllerConfig) => {
+    const id = this._getNextAvailableBodyID();
+    createPhysXBody(object, id, []);
+    await this.physicsProxy.addController([(object as Object3DBody).body]);
+    (object as Object3DBody).body.controller = { delta: { x: 0, y: 0, z: 0} };
+    (object as Object3DBody).body.options.type = PhysXBodyType.CONTROLLER
+    this.controllerBodies.set(id, object as Object3DBody);
+    proxyEventListener((object as Object3DBody).body);
+    this.bodies.set(id, (object as Object3DBody).body);
+    return (object as Object3DBody).body;
   };
 
   updateController = async () => {
@@ -203,6 +207,14 @@ export class PhysXInstance {
   };
 
   removeController = async () => {
+    // todo
+  };
+
+  addConstraint = async () => {
+    // todo
+  };
+
+  removeConstraint = async () => {
     // todo
   };
 

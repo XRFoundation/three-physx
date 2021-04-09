@@ -7,8 +7,6 @@
     "start": "npx webpack serve --config webpack.dev.js",
     "build": "webpack --config webpack.prod.js",
     "test": "echo \"This template does not include a test runner by default.\" && exit 1",
-    "format": "prettier --write \"src/**/*.{ts,js}\" \"example/**/*.{ts,js}\"",
-    "lint": "prettier --check \"src/**/*.{ts,js}\" \"example/**/*.{ts,js}\"",
     "dist": "tsc"
   },
   "repository": {

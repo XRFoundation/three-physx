@@ -87,9 +87,9 @@ const getShapeConfig = (data) => {
     collisionMask: data.collisionMask ?? 1,
     staticFriction: data.staticFriction ?? 0.2,
     dynamicFriction: data.dynamicFriction ?? 0.2,
-    restitution: data.restitution ?? 0.2
-  }
-}
+    restitution: data.restitution ?? 0.2,
+  };
+};
 
 const getShapeData = (mesh, shape): any => {
   switch (shape.type) {

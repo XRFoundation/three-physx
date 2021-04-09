@@ -47,6 +47,7 @@ export enum PhysXBodyType {
   STATIC,
   DYNAMIC,
   KINEMATIC,
+  CONTROLLER,
 }
 
 export interface PhysXShapeConfig {
@@ -88,15 +89,14 @@ export interface RigidBodyProxy {
   transform: PhysXBodyData;
   shapes: PhysXShapeConfig[];
   options: BodyConfig;
+  controller?: any;
   addEventListener?: any;
   removeEventListener?: any;
   hasEventListener?: any;
   dispatchEvent?: any;
 }
 
-export interface PhysXUserData {
-  type: PhysXBodyType;
-  bodyData: PhysXBodyData;
+export interface ControllerConfig {
   id: number;
 }
 
