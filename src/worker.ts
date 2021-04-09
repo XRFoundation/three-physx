@@ -2,7 +2,7 @@
 
 import { Matrix4, Vector3, Quaternion, Matrix } from 'three';
 import { getShape } from './getShape';
-import { PhysXConfig, PhysXBodyTransform, PhysXBodyType, PhysXEvents, BodyConfig, PhysXBodyData, RigidBodyProxy } from './types/ThreePhysX';
+import { PhysXConfig, PhysXBodyTransform, PhysXBodyType, PhysXEvents, BodyConfig, PhysXBodyData, RigidBodyProxy, ShapeConfig, PhysXShapeConfig } from './types/ThreePhysX';
 import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
 
@@ -37,7 +37,8 @@ export class PhysXManager {
 
   bodies: Map<number, PhysX.RigidActor> = new Map<number, PhysX.RigidActor>();
   dynamic: Map<number, PhysX.RigidActor> = new Map<number, PhysX.RigidActor>();
-  shapes: Map<number, number> = new Map<number, number>();
+  shapes: Map<number, PhysX.PxShape> = new Map<number, PhysX.PxShape>();
+  shapeIDByPointer: Map<number, number> = new Map<number, number>();
   bodyShapes: Map<number, PhysX.PxShape[]> = new Map<number, PhysX.PxShape[]>();
   matrices: Map<number, Matrix4> = new Map<number, Matrix4>();
   indices: Map<number, number> = new Map<number, number>();
@@ -65,19 +66,19 @@ export class PhysXManager {
 
     const triggerCallback = {
       onContactBegin: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        this.onEvent(PhysXEvents.COLLISION_START, this.shapes.get(shapeA.$$.ptr), this.shapes.get(shapeB.$$.ptr));
+        this.onEvent(PhysXEvents.COLLISION_START, this.shapeIDByPointer.get(shapeA.$$.ptr), this.shapeIDByPointer.get(shapeB.$$.ptr));
       },
       onContactEnd: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        this.onEvent(PhysXEvents.COLLISION_END, this.shapes.get(shapeA.$$.ptr), this.shapes.get(shapeB.$$.ptr));
+        this.onEvent(PhysXEvents.COLLISION_END, this.shapeIDByPointer.get(shapeA.$$.ptr), this.shapeIDByPointer.get(shapeB.$$.ptr));
       },
       onContactPersist: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        this.onEvent(PhysXEvents.COLLISION_PERSIST, this.shapes.get(shapeA.$$.ptr), this.shapes.get(shapeB.$$.ptr));
+        this.onEvent(PhysXEvents.COLLISION_PERSIST, this.shapeIDByPointer.get(shapeA.$$.ptr), this.shapeIDByPointer.get(shapeB.$$.ptr));
       },
       onTriggerBegin: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        this.onEvent(PhysXEvents.TRIGGER_START, this.shapes.get(shapeA.$$.ptr), this.shapes.get(shapeB.$$.ptr));
+        this.onEvent(PhysXEvents.TRIGGER_START, this.shapeIDByPointer.get(shapeA.$$.ptr), this.shapeIDByPointer.get(shapeB.$$.ptr));
       },
       onTriggerEnd: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        this.onEvent(PhysXEvents.TRIGGER_END, this.shapes.get(shapeA.$$.ptr), this.shapes.get(shapeB.$$.ptr));
+        this.onEvent(PhysXEvents.TRIGGER_END, this.shapeIDByPointer.get(shapeA.$$.ptr), this.shapeIDByPointer.get(shapeB.$$.ptr));
       },
     };
 
@@ -145,18 +146,20 @@ export class PhysXManager {
     (rigidBody as any)._type = type;
 
     const bodyShapes: PhysX.PxShape[] = [];
-    shapes.forEach(({ id: shapeID, shape, transform, options }) => {
+    shapes.forEach(({ id: shapeID, shape, transform, options, config }: PhysXShapeConfig) => {
       const bodyShape = getShape({
         shape,
         transform,
         options,
       });
       bodyShape.setContactOffset(0.0000001);
-      const filterData = new PhysX.PxFilterData(1, 1, 0, 0);
-      bodyShape.setSimulationFilterData(filterData);
+      // const filterData = new PhysX.PxFilterData(1, 1, 0, 0);
+      // bodyShape.setSimulationFilterData(filterData);
       bodyShapes.push(bodyShape);
       rigidBody.attachShape(bodyShape);
-      this.shapes.set(bodyShape.$$.ptr, shapeID);
+      this.shapeIDByPointer.set(bodyShape.$$.ptr, shapeID);
+      this.shapes.set(shapeID, bodyShape);
+      this._updateShape(config)
     });
 
     this.bodyShapes.set(id, bodyShapes);
@@ -180,12 +183,15 @@ export class PhysXManager {
         }
         (body as PhysX.RigidDynamic).setRigidBodyFlags(new PhysX.PxRigidBodyFlags(flags));
       }
-      // if (options.mass) {
-      // }
-      // if (options.linearDamping) {
-      // }
-      // if (options.angularDamping) {
-      // }
+      if (options.mass) {
+        (body as PhysX.RigidDynamic).setMass(options.mass);
+      }
+      if (options.linearDamping) {
+        (body as PhysX.RigidDynamic).setLinearDamping(options.linearDamping);
+      }
+      if (options.angularDamping) {
+        (body as PhysX.RigidDynamic).setAngularDamping(options.angularDamping);
+      }
     }
     if (options.linearVelocity) {
       const linearVelocity = body.getLinearVelocity();
@@ -206,7 +212,15 @@ export class PhysXManager {
       transform.rotation.w = options.transform.rotation.w ?? transform.rotation.w;
       body.setGlobalPose(transform, true);
     }
+    options.shapes?.forEach(this._updateShape)
   };
+
+  _updateShape({ id, isTrigger, collisionId, collisionMask, staticFriction, dynamicFriction, restitution }: ShapeConfig) {
+    const shape = this.shapes.get(id);
+    if(!shape) return;
+    const filterData = new PhysX.PxFilterData(collisionId, collisionMask, 0, 0);
+    shape.setSimulationFilterData(filterData);
+  }
 
   removeBody = async ({ id }) => {
     const body = this.bodies.get(id);

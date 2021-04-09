@@ -64,7 +64,7 @@ export interface PhysXShapeConfig {
 
 export interface ShapeConfig {
   id: number;
-  isTrigger: boolean;
+  isTrigger?: boolean;
   collisionId?: number;
   collisionMask?: number;
   staticFriction?: number;
@@ -80,6 +80,7 @@ export interface BodyConfig {
   linearVelocity?: Vec3;
   angularVelocity?: Vec3;
   transform?: PhysXBodyData;
+  shapes?: ShapeConfig[]; // only use in updates, initial is set from PhysXShapeConfig
 }
 
 export interface RigidBodyProxy {

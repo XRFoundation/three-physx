@@ -1,6 +1,6 @@
 import { Vector3, Matrix4, Mesh, SphereBufferGeometry, Quaternion, Object3D, SphereGeometry } from 'three';
 import { PhysXInstance } from '.';
-import { PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy } from './types/ThreePhysX';
+import { PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy, ShapeConfig } from './types/ThreePhysX';
 
 const matrixA = new Matrix4();
 const matrixB = new Matrix4();
@@ -31,10 +31,10 @@ export const createPhysXBody = (object, id, shapes?) => {
   const body: RigidBodyProxy = {
     id,
     shapes,
+    transform,
     options: {
       type,
     },
-    transform,
   };
   object.body = body;
 };
@@ -52,6 +52,8 @@ const createShapes = (mesh, root): PhysXShapeConfig[] => {
       const id = PhysXInstance.instance._getNextAvailableShapeID();
       data.id = id;
       data.transform = transform;
+      data.config = getShapeConfig(shape.config);
+      data.config.id = id;
       shapes.push(data);
     });
   } else {
@@ -60,6 +62,8 @@ const createShapes = (mesh, root): PhysXShapeConfig[] => {
     const id = PhysXInstance.instance._getNextAvailableShapeID();
     data.id = id;
     data.transform = transform;
+    data.config = getShapeConfig({});
+    data.config.id = id;
     shapes.push(data);
   }
   return shapes;
@@ -75,6 +79,17 @@ export const iterateGeometries = (function () {
     });
   };
 })();
+
+const getShapeConfig = (data) => {
+  return {
+    isTrigger: data.isTrigger ?? false,
+    collisionId: data.collisionId ?? 1,
+    collisionMask: data.collisionMask ?? 1,
+    staticFriction: data.staticFriction ?? 0.2,
+    dynamicFriction: data.dynamicFriction ?? 0.2,
+    restitution: data.restitution ?? 0.2
+  }
+}
 
 const getShapeData = (mesh, shape): any => {
   switch (shape.type) {
