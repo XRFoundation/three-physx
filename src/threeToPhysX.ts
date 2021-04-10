@@ -98,12 +98,17 @@ const getShapeData = (mesh, shape): any => {
         shape: shape.type,
         options: { boxExtents: shape.boxExtents || getBoxExtents(mesh) },
       };
-    // case PhysXModelShapes.Plane:
-    //   return ;
+    case PhysXModelShapes.Capsule:
+      console.log(shape)
+      return { 
+        shape: shape.type,
+        halfHeight: shape.halfHeight ?? 1,
+        radius: shape.radius ?? shape.radiusTop ?? 0.5
+      };
     case PhysXModelShapes.Sphere:
       return {
         shape: shape.type,
-        options: { sphereRadius: shape.sphereRadius || getSphereRadius(mesh) },
+        options: { radius: shape.sphereRadius || getSphereRadius(mesh) },
       };
     case PhysXModelShapes.TriangleMesh:
     default:
@@ -121,9 +126,12 @@ const getGeometryShape = (mesh): any => {
         shape: PhysXModelShapes.Box,
         options: { boxExtents: getBoxExtents(mesh) },
       };
-    // case 'CylinderGeometry':
-    // case 'CylinderBufferGeometry':
-    //   throw new Error('three-physx: Cylinder shape not yet implemented'); // createCylinderShape(geometry);
+    case 'CapsuleBufferGeometry': // https://github.com/maximeq/three-js-capsule-geometry
+    console.log(mesh.geometry)
+      return {
+        shape: PhysXModelShapes.Capsule,
+        options: { halfHeight: mesh.geometry._halfHeight ?? 1, radius: mesh.geometry.radius ?? mesh.geometry.radiusTop ?? 0.5 }
+      }
     // case 'PlaneGeometry':
     // case 'PlaneBufferGeometry':
     //   return ;
@@ -131,7 +139,7 @@ const getGeometryShape = (mesh): any => {
     case 'SphereBufferGeometry':
       return {
         shape: PhysXModelShapes.Sphere,
-        options: { sphereRadius: getSphereRadius(mesh) },
+        options: { radius: getSphereRadius(mesh) },
       };
     default:
       const vertices = Array.from(mesh.geometry.attributes.position.array);

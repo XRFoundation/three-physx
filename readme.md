@@ -12,13 +12,13 @@ Progress:
 - [x] kinematic
 - [x] collision events
 - [x] update bodies
-- [ ] fix root object scaling bug
 - [ ] capsule, cylinder and convex colliders
 - [ ] character & vehicle
 - [ ] implement all API functions
 - [ ] raycasts
 - [ ] put body ids on arraybuffers for more efficient data transfer
 - [ ] new build with more bindings
+- [ ] fix root object scaling bug
 
 ## Example
 
@@ -57,7 +57,7 @@ object.userData.physx = {
     },
     {
       type: PhysXShapeType.Sphere,
-      sphereRadius: 1
+      radius: 1
     },
     {
       type: PhysXShapeType.Trimesh,

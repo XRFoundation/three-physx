@@ -200,6 +200,9 @@ declare namespace PhysX {
   class PxSphereGeometry extends PxGeometry {
     constructor(r: number);
   }
+  class PxCapsuleGeometry extends PxGeometry {
+    constructor(r: number, h: number);
+  }
   class PxPlaneGeometry extends PxGeometry {
     constructor();
   }

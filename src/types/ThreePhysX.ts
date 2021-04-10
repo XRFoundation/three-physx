@@ -59,9 +59,8 @@ export interface PhysXShapeConfig {
     vertices?: number[];
     indices?: number[];
     boxExtents?: Vec3;
-    sphereRadius?: number;
-    capsuleRadius?: number;
-    capsuleHeight?: number;
+    radius?: number;
+    halfHeight?: number;
   };
 }
 

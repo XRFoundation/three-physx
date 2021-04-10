@@ -329,15 +329,16 @@ export class PhysXManager {
 
   updateController = async ({ id, config }: { id: number; config: ControllerConfig }) => {
     const controller = this.controllers.get(id) as PhysX.PxCapsuleController;
-    if (typeof config.height !== 'undefined') {
-      controller.setHeight(config.height);
-    }
-    if (typeof config.radius !== 'undefined') {
-      controller.setRadius(config.radius);
-    }
-    if (typeof config.height !== 'undefined') {
-      controller.setClimbingMode(config.climbingMode);
-    }
+    // console.log(controller, id, config)
+    // if (typeof config.height !== 'undefined') {
+    //   controller.setHeight(config.height);
+    // }
+    // if (typeof config.radius !== 'undefined') {
+    //   controller.setRadius(config.radius);
+    // }
+    // if (typeof config.height !== 'undefined') {
+    //   controller.setClimbingMode(config.climbingMode);
+    // }
     // todo
   };
 

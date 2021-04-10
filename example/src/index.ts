@@ -1,5 +1,5 @@
 import { PhysXInstance } from '../../src';
-import { Mesh, TorusKnotBufferGeometry, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial } from 'three';
+import { Mesh, TorusKnotBufferGeometry, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, CylinderBufferGeometry, Vector3 } from 'three';
 import { Object3DBody, PhysXBodyType, PhysXEvents, PhysXModelShapes, RigidBodyProxy } from '../../src/types/ThreePhysX';
 import { PhysXDebugRenderer } from './PhysXDebugRenderer';
 import { CapsuleBufferGeometry } from './CapsuleBufferGeometry';
@@ -11,7 +11,7 @@ const load = async () => {
   (globalThis as any).objects = objects;
 
   const onUpdate = () => {
-    objects.forEach((obj: any, id) => {
+    objects.forEach((obj: Object3DBody, id) => {
       if ((obj.body as RigidBodyProxy).options.type === PhysXBodyType.DYNAMIC) {
         const translation = (obj.body as RigidBodyProxy).transform.translation;
         const rotation = (obj.body as RigidBodyProxy).transform.rotation;
@@ -26,6 +26,7 @@ const load = async () => {
   // @ts-ignore
   new PhysXInstance(new Worker(new URL('../../src/worker.ts', import.meta.url)), onUpdate, renderer.scene);
   await PhysXInstance.instance.initPhysX({ jsPath: '/physx/physx.release.js', wasmPath: '/physx/physx.release.wasm' });
+  // await PhysXInstance.instance.initPhysX({ jsPath: '/physx/physx-js-webidl.wasm.js', wasmPath: '/physx/physx-js-webidl.wasm.wasm' });
 
   createScene().forEach(async (object) => {
     const body = await PhysXInstance.instance.addBody(object);
@@ -65,13 +66,13 @@ const load = async () => {
     if (ev.code === 'Backquote') {
       debug.setEnabled(!debug.enabled)
     }
-    if (ev.code === 'Shift') {
+    if (ev.code === 'ShiftLeft') {
       PhysXInstance.instance.updateController(character, { height: 0.5 });
     }
   });
   document.addEventListener('keyup', (ev) => {
     delete keys[ev.code];
-    if (ev.code === 'Shift') {
+    if (ev.code === 'ShiftLeft') {
       PhysXInstance.instance.updateController(character, { height: 1 });
     }
   });
@@ -102,19 +103,19 @@ const load = async () => {
     }
     Object.entries(keys).forEach(([key, value]) => {
       if (key === 'KeyW') {
-        characterBody.controller.delta.z -= 2 / lastDelta;
+        characterBody.controller.delta.z -= 2 / delta;
       }
       if (key === 'KeyS') {
-        characterBody.controller.delta.z += 2 / lastDelta;
+        characterBody.controller.delta.z += 2 / delta;
       }
       if (key === 'KeyA') {
-        characterBody.controller.delta.x -= 2 / lastDelta;
+        characterBody.controller.delta.x -= 2 / delta;
       }
       if (key === 'KeyD') {
-        characterBody.controller.delta.x += 2 / lastDelta;
+        characterBody.controller.delta.x += 5 / delta;
       }
       if (key === 'Space' && characterBody.controller.collisions.down) {
-        characterBody.controller.velocity.y += 2 / lastDelta;
+        characterBody.controller.velocity.y += 2 / delta;
       }
     })
     characterBody.controller.delta.y += characterBody.controller.velocity.y;
@@ -131,8 +132,9 @@ const load = async () => {
 const createScene = () => {
   const geoms = [new BoxBufferGeometry(), new SphereBufferGeometry(1)];
   const meshes = [];
-  for (let i = 0; i < 1000; i++) {
-    const mesh = new Mesh(geoms[i % 2], new MeshStandardMaterial({ color: randomColor() }));
+  for (let i = 0; i < 10; i++) {
+    // const mesh = new Mesh(geoms[i % 2], new MeshStandardMaterial({ color: randomColor() }));
+    const mesh = new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshStandardMaterial({ color: randomColor() }));
     mesh.position.set(Math.random() * 100 - 50, Math.random() * 50, Math.random() * 100 - 50);
     mesh.userData.physx = {
       type: PhysXBodyType.DYNAMIC,

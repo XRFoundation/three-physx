@@ -2,6 +2,12 @@ import { Matrix4, Quaternion, Vector3 } from 'three';
 import { PhysXBodyTransform, PhysXModelShapes } from './types/ThreePhysX';
 import { PhysXManager } from './worker';
 
+const quat1 = new Quaternion();
+const quat2 = new Quaternion();
+const vec3 = new Vector3();
+const zVec = new Vector3(0, 0, 1)
+const halfPI = Math.PI / 2
+
 export const getShape = ({ shape, transform, options }): PhysX.PxShape => {
   const geometry = getGeometry({ shape, transform, options });
 
@@ -9,18 +15,32 @@ export const getShape = ({ shape, transform, options }): PhysX.PxShape => {
   const flags = new PhysX.PxShapeFlags(PhysX.PxShapeFlag.eSCENE_QUERY_SHAPE.value | PhysX.PxShapeFlag.eSIMULATION_SHAPE.value);
 
   const newShape = PhysXManager.instance.physics.createShape(geometry, material, false, flags);
+  // rotate 90 degrees on Z axis as PhysX capsule extend along X axis not the Y axis
+  if(shape === PhysXModelShapes.Capsule) {
+    quat1.setFromAxisAngle(zVec, halfPI)
+    quat2.set(transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w)
+    quat2.multiply(quat1);
+    transform.rotation = {
+      x: quat2.x,
+      y: quat2.y,
+      z: quat2.z,
+      w: quat2.w,
+    }
+  }
   //@ts-ignore
   newShape.setLocalPose(transform);
   return newShape;
 };
 
 const getGeometry = ({ shape, transform, options }): PhysX.PxGeometry => {
-  const { boxExtents, sphereRadius, vertices, indices } = options || {};
+  const { boxExtents, radius, vertices, indices, halfHeight } = options || {};
   let geometry: PhysX.PxGeometry;
   if (shape === PhysXModelShapes.Box) {
     geometry = new PhysX.PxBoxGeometry(boxExtents.x, boxExtents.y, boxExtents.z);
   } else if (shape === PhysXModelShapes.Sphere) {
-    geometry = new PhysX.PxSphereGeometry(sphereRadius);
+    geometry = new PhysX.PxSphereGeometry(radius);
+  } else if (shape === PhysXModelShapes.Capsule) {
+    geometry = new PhysX.PxCapsuleGeometry(radius, halfHeight);
   } else if (shape === PhysXModelShapes.Plane) {
     geometry = new PhysX.PxPlaneGeometry();
   } else if (shape === PhysXModelShapes.TriangleMesh) {
