@@ -158,11 +158,12 @@ const getBoxExtents = function (mesh: Mesh) {
     z: ((box.max.z - box.min.z) / 2) * worldScale.z,
   };
 };
-
+const matrix = new Matrix4();
 export const getTransformFromWorldPos = (obj: Object3D) => {
-  obj.getWorldPosition(pos);
-  obj.getWorldQuaternion(rot);
-  obj.getWorldScale(scale);
+  obj.matrixWorld.decompose(pos, rot, scale);
+  // obj.getWorldPosition(pos);
+  // obj.getWorldQuaternion(rot);
+  // obj.getWorldScale(scale);
   return {
     translation: { x: pos.x, y: pos.y, z: pos.z },
     rotation: { x: rot.x, y: rot.y, z: rot.z, w: rot.w },

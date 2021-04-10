@@ -69,50 +69,52 @@ export class PhysXInstance {
       this.onUpdate();
     });
     messageQueue.addEventListener('colliderEvent', ({ detail }) => {
-      switch (detail.event) {
-        case PhysXEvents.COLLISION_START:
-        case PhysXEvents.COLLISION_PERSIST:
-        case PhysXEvents.COLLISION_END:
-        case PhysXEvents.TRIGGER_START:
-        case PhysXEvents.TRIGGER_END:
-          {
-            const { event, idA, idB } = detail;
-            const shapeA = this.shapes.get(idA);
-            const shapeB = this.shapes.get(idB);
-            const bodyA = (shapeA as any).body;
-            const bodyB = (shapeB as any).body;
-            if (!bodyA || !bodyB) return; // TODO this is a hack
-            bodyA.dispatchEvent({
-              type: event,
-              bodySelf: bodyA,
-              bodyOther: bodyB,
-              shapeSelf: shapeA,
-              shapeOther: shapeB,
-            });
-            bodyB.dispatchEvent({
-              type: event,
-              bodySelf: bodyB,
-              bodyOther: bodyA,
-              shapeSelf: shapeB,
-              shapeOther: shapeA,
-            });
-          }
+      detail.forEach((collision) => {
+        switch (collision.event) {
+          case PhysXEvents.COLLISION_START:
+          case PhysXEvents.COLLISION_PERSIST:
+          case PhysXEvents.COLLISION_END:
+          case PhysXEvents.TRIGGER_START:
+          case PhysXEvents.TRIGGER_END:
+            {
+              const { event, idA, idB } = collision;
+              const shapeA = this.shapes.get(idA);
+              const shapeB = this.shapes.get(idB);
+              const bodyA = (shapeA as any).body;
+              const bodyB = (shapeB as any).body;
+              if (!bodyA || !bodyB) return; // TODO this is a hack
+              bodyA.dispatchEvent({
+                type: event,
+                bodySelf: bodyA,
+                bodyOther: bodyB,
+                shapeSelf: shapeA,
+                shapeOther: shapeB,
+              });
+              bodyB.dispatchEvent({
+                type: event,
+                bodySelf: bodyB,
+                bodyOther: bodyA,
+                shapeSelf: shapeB,
+                shapeOther: shapeA,
+              });
+            }
           break;
-        case PhysXEvents.CONTROLLER_SHAPE_HIT:
-        case PhysXEvents.CONTROLLER_COLLIDER_HIT:
-        case PhysXEvents.CONTROLLER_OBSTACLE_HIT:
-          {
-            const { event, id, position, normal, length } = detail;
-            const controllerBody: RigidBodyProxy = this.controllerBodies.get(id).body;
-            controllerBody.dispatchEvent({
-              type: event,
-              position,
-              normal,
-              length,
-            });
-          }
+          case PhysXEvents.CONTROLLER_SHAPE_HIT:
+          case PhysXEvents.CONTROLLER_COLLIDER_HIT:
+          case PhysXEvents.CONTROLLER_OBSTACLE_HIT:
+            {
+              const { event, id, position, normal, length } = collision;
+              const controllerBody: RigidBodyProxy = this.controllerBodies.get(id).body;
+              controllerBody.dispatchEvent({
+                type: event,
+                position,
+                normal,
+                length,
+              });
+            }
           break;
-      }
+        }
+      })
     });
 
     this.physicsProxy = {
@@ -136,7 +138,7 @@ export class PhysXInstance {
   };
 
   // update kinematic bodies
-  update = async () => {
+  update = async (delta: number) => {
     // TODO: make this rely on kinematicBodies.size instead of bodies.size
     const kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
     const kinematicIDs = [];
@@ -150,7 +152,7 @@ export class PhysXInstance {
     this.controllerBodies.forEach((obj, id) => {
       controllerIDs.push(id);
       const { x, y, z } = obj.body.controller.delta;
-      kinematicArray.set([x, y, z, 1 / 60], id * BufferConfig.BODY_DATA_SIZE);
+      kinematicArray.set([x, y, z, delta], id * BufferConfig.BODY_DATA_SIZE);
       obj.body.controller.delta = { x: 0, y: 0, z: 0 };
     });
     this.physicsProxy.update([kinematicIDs, controllerIDs, kinematicArray], [kinematicArray.buffer]);

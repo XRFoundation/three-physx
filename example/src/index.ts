@@ -105,7 +105,7 @@ const load = async () => {
       }
     })
     characterBody.controller.delta.y += characterBody.controller.velocity.y;
-    PhysXInstance.instance.update();
+    PhysXInstance.instance.update(delta);
     debug.update(objects);
     renderer.update(character);
     lastDelta = delta;

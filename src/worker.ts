@@ -119,7 +119,7 @@ export class PhysXManager {
     this.scene.simulate(delta / 1000, true);
     this.scene.fetchResults(true);
     const bodyArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
-    const shapeArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
+    // const shapeArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
     this.bodies.forEach((body: PhysX.RigidActor, id: number) => {
       if (isDynamicBody(body)) {
         bodyArray.set(getBodyData(body), id * BufferConfig.BODY_DATA_SIZE);
@@ -130,7 +130,7 @@ export class PhysXManager {
       bodyArray.set([x, y, z], id * BufferConfig.BODY_DATA_SIZE);
       bodyArray.set((controller as any)._collisions, id * BufferConfig.BODY_DATA_SIZE + 3);
     });
-    this.onUpdate(bodyArray, shapeArray);
+    this.onUpdate(bodyArray)//, shapeArray);
     lastTick = now;
   };
 
@@ -296,7 +296,7 @@ export class PhysXManager {
           const position = shape.getWorldPos();
           const normal = shape.getWorldNormal();
           const length = shape.getLength();
-          this.onEvent(PhysXEvents.CONTROLLER_SHAPE_HIT, { id, position, normal, length });
+          this.onEvent({ event: PhysXEvents.CONTROLLER_SHAPE_HIT, id, position, normal, length });
         },
         onControllerHit: (shape) => {
           // TODO
@@ -402,12 +402,15 @@ const mat4ToTransform = (matrix: Matrix4): PhysXBodyTransform => {
 
 export const receiveWorker = async (): Promise<void> => {
   const messageQueue = new MessageQueue(globalThis as any);
+  let latestCollisions = [];
   PhysXManager.instance = new PhysXManager();
   PhysXManager.instance.onUpdate = (data: Uint8Array) => {
     messageQueue.sendEvent('data', data, [data.buffer]);
+    messageQueue.sendEvent('colliderEvent', [...latestCollisions]);
+    latestCollisions = []
   };
   PhysXManager.instance.onEvent = (data) => {
-    messageQueue.sendEvent('colliderEvent', data);
+    latestCollisions.push(data)
   };
   const addFunctionListener = (eventLabel) => {
     messageQueue.addEventListener(eventLabel, async ({ detail }) => {

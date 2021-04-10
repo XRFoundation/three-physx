@@ -82,20 +82,21 @@ export class MessageQueue extends EventDispatcherProxy {
   queue: Message[];
   interval: any;
   eventTarget: EventTarget = new EventTarget();
+  toTransfer: Transferable[] = [];
 
   constructor(messagePort: any) {
     super();
     this.messagePort = messagePort;
     this.queue = [];
 
-    this.messagePort.onmessage = (message: any) => {
-      this.receiveQueue(message.data as object[]);
-    };
+    this.messagePort.onmessage = this.receiveQueue.bind(this);
+    //   message.data as object[]);
+    // };
     this.interval = setInterval(() => {
       this.sendQueue();
     }, 1000 / 60);
   }
-  sendEvent(type: string, detail: any, transferables?: Transferable[]) {
+  sendEvent(type: string, detail: any, transferables: Transferable[] = []) {
     this.queue.push({
       messageType: MessageType.EVENT,
       message: {
@@ -108,15 +109,13 @@ export class MessageQueue extends EventDispatcherProxy {
   sendQueue() {
     if (!this.queue?.length) return;
     const messages: object[] = [];
+    const transferables: Transferable[] = [];
     this.queue.forEach((message: Message) => {
       messages.push({
         messageType: message.messageType,
         message: message.message,
       });
-    });
-    const transferables: Transferable[] = [];
-    this.queue.forEach((message: Message) => {
-      message.transferables && transferables.push(...message.transferables);
+      transferables.push(...message.transferables);
     });
     try {
       this.messagePort.postMessage(messages, transferables);
@@ -126,8 +125,8 @@ export class MessageQueue extends EventDispatcherProxy {
     this.queue = [];
   }
 
-  receiveQueue(queue: object[]) {
-    queue.forEach((element: Message) => {
+  receiveQueue(message) {
+    message.data.forEach((element: Message) => {
       const { messageType, message } = element;
       if (this.messageTypeFunctions.has(messageType)) {
         this.messageTypeFunctions.get(messageType)(message);
@@ -139,6 +138,7 @@ export class MessageQueue extends EventDispatcherProxy {
     this.queue.push({
       messageType: MessageType.ADD_EVENT,
       message: { type },
+      transferables: []
     } as Message);
     super.addEventListener(type, listener);
   }
@@ -147,6 +147,7 @@ export class MessageQueue extends EventDispatcherProxy {
     this.queue.push({
       messageType: MessageType.REMOVE_EVENT,
       message: { type },
+      transferables: []
     } as Message);
     super.removeEventListener(type, listener);
   }
@@ -156,6 +157,7 @@ export class MessageQueue extends EventDispatcherProxy {
       this.queue.push({
         messageType: MessageType.EVENT,
         message: simplifyObject(ev),
+        transferables: []
       } as Message);
     }
     super.dispatchEvent(ev);
