@@ -16,7 +16,7 @@ export class PhysXDebugRenderer {
   private _boxGeometry: BoxBufferGeometry;
   private _planeGeometry: PlaneBufferGeometry;
 
-  private enabled: boolean;
+  public enabled: boolean;
 
   constructor(scene: Scene) {
     this.scene = scene;
@@ -37,8 +37,11 @@ export class PhysXDebugRenderer {
 
   public setEnabled(enabled) {
     this.enabled = enabled;
-    for (const mesh of this._meshes) {
-      mesh.visible = this.enabled;
+    if(!enabled) {
+      this._meshes.forEach((mesh) => {
+        this.scene.remove(mesh);
+      })
+      this._meshes = [];
     }
   }
 
@@ -50,7 +53,6 @@ export class PhysXDebugRenderer {
     const meshes: Mesh[] | Points[] = this._meshes;
 
     let meshIndex = 0;
-
     objects.forEach((object, id) => {
       //@ts-ignore
       const body = object.body as RigidBodyProxy;
@@ -91,7 +93,6 @@ export class PhysXDebugRenderer {
         this.scene.remove(mesh);
       }
     }
-
     meshes.length = meshIndex;
   }
 

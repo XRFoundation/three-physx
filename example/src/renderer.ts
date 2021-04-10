@@ -42,7 +42,6 @@ controls.maxDistance = 500;
 // controls.maxPolarAngle = Math.PI / 2
 
 container.appendChild(renderer.domElement);
-// scene.add(new Mesh(new PlaneBufferGeometry(10, 10), new MeshNormalMaterial({ flatShading: true, side: DoubleSide })).translateY(-4).rotateX(Math.PI / 2))
 
 export const addToScene = (entity: Object3D) => {
   entity.castShadow = true;
@@ -50,10 +49,7 @@ export const addToScene = (entity: Object3D) => {
   scene.add(entity);
 };
 
-export const update = (cameraTarget) => {
-  // controls.target = cameraTarget.position;
-  // camera.position.x = cameraTarget.position.x;
-  // camera.position.z = cameraTarget.position.z + 20;
+export const update = () => {
   controls.update();
   renderer.render(scene, camera);
 };

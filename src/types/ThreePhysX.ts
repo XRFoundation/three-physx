@@ -112,6 +112,7 @@ export interface ControllerConfig {
   stepOffset?: number;
   contactOffset?: number;
   slopeLimit?: number;
+  maxJumpHeight?: number;
   invisibleWallHeight?: number;
 }
 

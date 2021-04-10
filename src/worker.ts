@@ -2,7 +2,7 @@
 
 import { Matrix4, Vector3, Quaternion, Matrix } from 'three';
 import { getShape } from './getShape';
-import { PhysXConfig, PhysXBodyTransform, PhysXBodyType, PhysXEvents, BodyConfig, PhysXBodyData, RigidBodyProxy, ShapeConfig, PhysXShapeConfig } from './types/ThreePhysX';
+import { PhysXConfig, PhysXBodyTransform, PhysXBodyType, PhysXEvents, BodyConfig, PhysXBodyData, RigidBodyProxy, ShapeConfig, PhysXShapeConfig, ControllerConfig } from './types/ThreePhysX';
 import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
 
@@ -119,58 +119,65 @@ export class PhysXManager {
     this.scene.simulate(delta / 1000, true);
     this.scene.fetchResults(true);
     const bodyArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
-    // const shapeArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
+    let offset = 0;
     this.bodies.forEach((body: PhysX.RigidActor, id: number) => {
       if (isDynamicBody(body)) {
-        bodyArray.set(getBodyData(body), id * BufferConfig.BODY_DATA_SIZE);
+        bodyArray.set([id, ...getBodyData(body)], offset);
+      } else if(isControllerBody(body)) {  
+        const controller = this.controllers.get(id);
+        const { x, y, z } = controller.getPosition();
+        bodyArray.set([id, x, y, z, ...(controller as any)._collisions], offset);
       }
-    });
-    this.controllers.forEach((controller: PhysX.PxController, id: number) => {
-      const { x, y, z } = controller.getPosition();
-      bodyArray.set([x, y, z], id * BufferConfig.BODY_DATA_SIZE);
-      bodyArray.set((controller as any)._collisions, id * BufferConfig.BODY_DATA_SIZE + 3);
+      offset += BufferConfig.BODY_DATA_SIZE;
     });
     this.onUpdate(bodyArray)//, shapeArray);
     lastTick = now;
   };
 
-  update = async (kinematicIDs: number[], controllerIds: number[], kinematicBodiesArray: Float32Array) => {
-    kinematicIDs.forEach((id) => {
+  update = async (kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array) => {
+    let offset = 0;
+    while(offset < kinematicBodiesArray.length) {
+      const id = kinematicBodiesArray[offset]
       const body = this.bodies.get(id) as PhysX.RigidDynamic;
-      const offset = id * BufferConfig.BODY_DATA_SIZE;
+      if(!body) return;
+
       const currentPose = body.getGlobalPose();
-      currentPose.translation.x = kinematicBodiesArray[offset];
-      currentPose.translation.y = kinematicBodiesArray[offset + 1];
-      currentPose.translation.z = kinematicBodiesArray[offset + 2];
-      currentPose.rotation.x = kinematicBodiesArray[offset + 3];
-      currentPose.rotation.y = kinematicBodiesArray[offset + 4];
-      currentPose.rotation.z = kinematicBodiesArray[offset + 5];
-      currentPose.rotation.w = kinematicBodiesArray[offset + 6];
+      currentPose.translation.x = kinematicBodiesArray[offset + 1];
+      currentPose.translation.y = kinematicBodiesArray[offset + 2];
+      currentPose.translation.z = kinematicBodiesArray[offset + 3];
+      currentPose.rotation.x = kinematicBodiesArray[offset + 4];
+      currentPose.rotation.y = kinematicBodiesArray[offset + 5];
+      currentPose.rotation.z = kinematicBodiesArray[offset + 6];
+      currentPose.rotation.w = kinematicBodiesArray[offset + 7];
       body.setKinematicTarget(currentPose);
       body.setGlobalPose(currentPose, true);
-    });
-    controllerIds.forEach((id) => {
+      offset += BufferConfig.KINEMATIC_DATA_SIZE;
+    };
+    offset = 0;
+    while(offset < controllerBodiesArray.length) {
+      const id = controllerBodiesArray[offset];
       const controller = this.controllers.get(id) as PhysX.PxController;
-      const offset = id * BufferConfig.BODY_DATA_SIZE;
+      if(!controller) return;
       // const position = controller.getPosition();
       const deltaPos = {
-        x: kinematicBodiesArray[offset],
-        y: kinematicBodiesArray[offset + 1],
-        z: kinematicBodiesArray[offset + 2],
+        x: controllerBodiesArray[offset + 1],
+        y: controllerBodiesArray[offset + 2],
+        z: controllerBodiesArray[offset + 3],
       };
-      const deltaTime = kinematicBodiesArray[offset + 3];
+      const deltaTime = controllerBodiesArray[offset + 4];
       // TODO
       // const filterData = new PhysX.PxFilterData(1, 1, 1, 1);
       // const queryCallback = PhysX.PxQueryFilterCallback.implement({ preFilter: console.log, postFilter: console.log })
       const filters = new PhysX.PxControllerFilters(null, null, null);
       const collisionFlags = controller.move(deltaPos, 0.01, deltaTime, filters, null);
       const collisions = {
-        down: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_DOWN),
-        sides: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_SIDES),
-        up: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_UP),
+        down: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_DOWN) ? 1 : 0,
+        sides: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_SIDES) ? 1 : 0,
+        up: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_UP) ? 1 : 0,
       };
       (controller as any)._collisions = [collisions.down, collisions.sides, collisions.up];
-    });
+      offset += BufferConfig.CONTROLLER_DATA_SIZE;
+    };
   };
 
   startPhysX = async (start: boolean = true) => {
@@ -215,7 +222,7 @@ export class PhysXManager {
     this.bodies.set(id, rigidBody);
     this.scene.addActor(rigidBody, null);
 
-    delete options.type; // we don't need to set kinematic again
+    delete options.type;
     this.updateBody({ id, options });
   };
 
@@ -279,16 +286,16 @@ export class PhysXManager {
     this.bodies.delete(id);
   };
 
-  addController = async ({ id, config }) => {
+  addController = async ({ id, config }: { id: number, config: ControllerConfig }) => {
     const controllerDesc = new PhysX.PxCapsuleControllerDesc();
-    controllerDesc.position = { x: 0, y: 0, z: 0 };
-    controllerDesc.height = 1;
-    controllerDesc.radius = 0.25;
-    controllerDesc.stepOffset = 0.1;
-    controllerDesc.maxJumpHeight = 0.1;
-    controllerDesc.contactOffset = 0.01;
-    controllerDesc.invisibleWallHeight = 0;
-    controllerDesc.slopeLimit = Math.cos((45 * Math.PI) / 180);
+    controllerDesc.position = config.position ?? { x: 0, y: 0, z: 0 };
+    controllerDesc.height = config.height ?? 1;
+    controllerDesc.radius = config.radius ?? 0.25;
+    controllerDesc.stepOffset = config.stepOffset ?? 0.1;
+    controllerDesc.maxJumpHeight = config.maxJumpHeight ?? 0.1;
+    controllerDesc.contactOffset = config.contactOffset ?? 0.01;
+    controllerDesc.invisibleWallHeight = config.invisibleWallHeight ?? 0;
+    controllerDesc.slopeLimit = config.slopeLimit ?? Math.cos((45 * Math.PI) / 180);
     controllerDesc.setReportCallback(
       PhysX.PxUserControllerHitReport.implement({
         onShapeHit: (shape) => {
@@ -316,6 +323,7 @@ export class PhysXManager {
     this.controllers.set(id, controller);
     this.bodies.set(id, controller as any);
     (controller as any)._collisions = [];
+    (controller as any)._type = PhysXBodyType.CONTROLLER;
 
     // todo
   };

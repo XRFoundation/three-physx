@@ -375,10 +375,13 @@ declare namespace PhysX {
   }
 
   class PxCapsuleControllerDesc extends PxControllerDesc {
+    position: PxVec3;
     radius: number;
     height: number;
     stepOffset: number;
     contactOffset: number;
+    maxJumpHeight: number;
+    invisibleWallHeight: number;
     slopeLimit: number;
     setReportCallback(callbackImp: any): any;
   }

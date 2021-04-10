@@ -37,35 +37,40 @@ export class PhysXInstance {
     });
     messageQueue.addEventListener('data', (ev) => {
       const array: Float32Array = ev.detail;
-      this.bodies.forEach((rigidBody, id) => {
-        const offset = id * BufferConfig.BODY_DATA_SIZE;
-        if (rigidBody.options.type === PhysXBodyType.CONTROLLER) {
-          rigidBody.transform.translation.x = array[offset];
-          rigidBody.transform.translation.y = array[offset + 1];
-          rigidBody.transform.translation.z = array[offset + 2];
-          rigidBody.controller.collisions = {
-            down: Boolean(array[offset + 3]),
-            sides: Boolean(array[offset + 4]),
-            up: Boolean(array[offset + 5]),
-          };
-        } else if (rigidBody.options.type === PhysXBodyType.DYNAMIC) {
-          rigidBody.transform.translation.x = array[offset];
-          rigidBody.transform.translation.y = array[offset + 1];
-          rigidBody.transform.translation.z = array[offset + 2];
-          rigidBody.transform.rotation.x = array[offset + 3];
-          rigidBody.transform.rotation.y = array[offset + 4];
-          rigidBody.transform.rotation.z = array[offset + 5];
-          rigidBody.transform.rotation.w = array[offset + 6];
-          if (rigidBody.options.type === PhysXBodyType.DYNAMIC) {
-            rigidBody.transform.linearVelocity.x = array[offset + 7];
-            rigidBody.transform.linearVelocity.y = array[offset + 8];
-            rigidBody.transform.linearVelocity.z = array[offset + 9];
-            rigidBody.transform.angularVelocity.x = array[offset + 10];
-            rigidBody.transform.angularVelocity.y = array[offset + 11];
-            rigidBody.transform.angularVelocity.z = array[offset + 12];
+      let offset = 0;
+      while(offset < array.length) {
+        const id = array[offset];
+        const body = this.bodies.get(id);
+        if(body) {
+          if (body.options.type === PhysXBodyType.CONTROLLER) {
+            body.transform.translation.x = array[offset + 1];
+            body.transform.translation.y = array[offset + 2];
+            body.transform.translation.z = array[offset + 3];
+            body.controller.collisions = {
+              down: Boolean(array[offset + 4]),
+              sides: Boolean(array[offset + 5]),
+              up: Boolean(array[offset + 6]),
+            };
+          } else if (body.options.type === PhysXBodyType.DYNAMIC) {
+            body.transform.translation.x = array[offset + 1];
+            body.transform.translation.y = array[offset + 2];
+            body.transform.translation.z = array[offset + 3];
+            body.transform.rotation.x = array[offset + 4];
+            body.transform.rotation.y = array[offset + 5];
+            body.transform.rotation.z = array[offset + 6];
+            body.transform.rotation.w = array[offset + 7];
+            if (body.options.type === PhysXBodyType.DYNAMIC) {
+              body.transform.linearVelocity.x = array[offset + 8];
+              body.transform.linearVelocity.y = array[offset + 9];
+              body.transform.linearVelocity.z = array[offset + 10];
+              body.transform.angularVelocity.x = array[offset + 11];
+              body.transform.angularVelocity.y = array[offset + 12];
+              body.transform.angularVelocity.z = array[offset + 13];
+            }
           }
         }
-      });
+        offset += BufferConfig.BODY_DATA_SIZE;
+      };
       this.onUpdate();
     });
     messageQueue.addEventListener('colliderEvent', ({ detail }) => {
@@ -140,22 +145,31 @@ export class PhysXInstance {
   // update kinematic bodies
   update = async (delta: number) => {
     // TODO: make this rely on kinematicBodies.size instead of bodies.size
-    const kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
+    let offset = 0;
+    const kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.KINEMATIC_DATA_SIZE * this.kinematicBodies.size));
     const kinematicIDs = [];
     this.kinematicBodies.forEach((obj, id) => {
       kinematicIDs.push(id);
       obj.body.transform = getTransformFromWorldPos(obj);
       const transform = obj.body.transform;
-      kinematicArray.set([transform.translation.x, transform.translation.y, transform.translation.z, transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w], id * BufferConfig.BODY_DATA_SIZE);
+      kinematicArray.set([
+        id,
+        transform.translation.x, transform.translation.y, transform.translation.z, 
+        transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w
+      ], offset);
+      offset += BufferConfig.KINEMATIC_DATA_SIZE;
     });
+    offset = 0;
+    const controllerArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.CONTROLLER_DATA_SIZE * this.controllerBodies.size));
     const controllerIDs = [];
     this.controllerBodies.forEach((obj, id) => {
       controllerIDs.push(id);
       const { x, y, z } = obj.body.controller.delta;
-      kinematicArray.set([x, y, z, delta], id * BufferConfig.BODY_DATA_SIZE);
+      controllerArray.set([id, x, y, z, delta], offset);
       obj.body.controller.delta = { x: 0, y: 0, z: 0 };
+      offset += BufferConfig.CONTROLLER_DATA_SIZE;
     });
-    this.physicsProxy.update([kinematicIDs, controllerIDs, kinematicArray], [kinematicArray.buffer]);
+    this.physicsProxy.update([kinematicArray, controllerArray], [kinematicArray.buffer, controllerArray.buffer]);
   };
 
   startPhysX = async (start: boolean) => {
@@ -230,7 +244,10 @@ export class PhysXInstance {
       delta: { x: 0, y: 0, z: 0 },
       velocity: { x: 0, y: 0, z: 0 },
     };
-    await this.physicsProxy.addController([(object as Object3DBody).body]);
+    await this.physicsProxy.addController([{
+      id: (object as Object3DBody).body.id,
+      config: (object as Object3DBody).body.controller.config,
+    }]);
     (object as Object3DBody).body.options.type = PhysXBodyType.CONTROLLER;
     this.controllerBodies.set(id, object as Object3DBody);
     proxyEventListener((object as Object3DBody).body);

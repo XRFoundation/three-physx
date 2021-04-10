@@ -1,5 +1,5 @@
 import { PhysXInstance } from '../../src';
-import { Mesh, TorusKnotBufferGeometry, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group } from 'three';
+import { Mesh, TorusKnotBufferGeometry, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial } from 'three';
 import { Object3DBody, PhysXBodyType, PhysXEvents, PhysXModelShapes, RigidBodyProxy } from '../../src/types/ThreePhysX';
 import { PhysXDebugRenderer } from './PhysXDebugRenderer';
 import { CapsuleBufferGeometry } from './CapsuleBufferGeometry';
@@ -33,15 +33,15 @@ const load = async () => {
     renderer.addToScene(object);
   });
 
-  const kinematicObject = new Group(); //new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() })).translateY(-2.5).rotateZ(Math.PI / 2);
+  const kinematicObject = new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() })).translateY(-2.5).rotateZ(Math.PI / 2);
   // kinematicObject.scale.setScalar(2)
-  kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateX(2).rotateY(Math.PI / 2));
+  kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateX(2).rotateY(Math.PI / 2));
   kinematicObject.children[0].scale.setScalar(2);
-  kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshBasicMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
+  kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
   kinematicObject.userData.physx = { type: PhysXBodyType.KINEMATIC };
                    
   const kinematicBody = await PhysXInstance.instance.addBody(kinematicObject); //, [{ id: undefined, shape: PhysXModelShapes.Sphere, options: { sphereRadius: 2 }}]);
-  let isKinematic = false;
+  // let isKinematic = false;
   // setInterval(() => {
   //   PhysXInstance.instance.updateBody(kinematicObject, { angularVelocity: { x: 0, y: 0, z: 0 }, linearVelocity: { x: 0, y: 0, z: 0 }, type: isKinematic ? PhysXBodyType.KINEMATIC : PhysXBodyType.DYNAMIC });
   //   isKinematic = !isKinematic;
@@ -62,6 +62,9 @@ const load = async () => {
 
   document.addEventListener('keydown', (ev) => {
     keys[ev.code] = true;
+    if (ev.code === 'Backquote') {
+      debug.setEnabled(!debug.enabled)
+    }
   });
   document.addEventListener('keyup', (ev) => {
     delete keys[ev.code];
@@ -71,6 +74,10 @@ const load = async () => {
   debug.setEnabled(true);
   let lastTime = Date.now() - (1/60);
   let lastDelta = 1/60;
+
+  setTimeout(() => {
+    // PhysXInstance.instance.removeBody(objects.get(0));
+  }, 2000)
 
   const update = () => {
     const time = Date.now();
@@ -89,16 +96,16 @@ const load = async () => {
     }
     Object.entries(keys).forEach(([key, value]) => {
       if (key === 'KeyW') {
-        characterBody.controller.delta.z -= 0.2;
+        characterBody.controller.delta.z -= 2 / lastDelta;
       }
       if (key === 'KeyS') {
-        characterBody.controller.delta.z += 0.2;
+        characterBody.controller.delta.z += 2 / lastDelta;
       }
       if (key === 'KeyA') {
-        characterBody.controller.delta.x -= 0.2;
+        characterBody.controller.delta.x -= 2 / lastDelta;
       }
       if (key === 'KeyD') {
-        characterBody.controller.delta.x += 0.2;
+        characterBody.controller.delta.x += 2 / lastDelta;
       }
       if (key === 'Space' && characterBody.controller.collisions.down) {
         characterBody.controller.velocity.y += 2 / lastDelta;
@@ -107,7 +114,7 @@ const load = async () => {
     characterBody.controller.delta.y += characterBody.controller.velocity.y;
     PhysXInstance.instance.update(delta);
     debug.update(objects);
-    renderer.update(character);
+    renderer.update();
     lastDelta = delta;
     lastTime = time;
     requestAnimationFrame(update);
@@ -119,17 +126,16 @@ const createScene = () => {
   const geoms = [new BoxBufferGeometry(), new SphereBufferGeometry(1)];
   const meshes = [];
   for (let i = 0; i < 1000; i++) {
-    const mesh = new Mesh(geoms[i % 2], new MeshBasicMaterial({ color: randomColor() }));
+    const mesh = new Mesh(geoms[i % 2], new MeshStandardMaterial({ color: randomColor() }));
     mesh.position.set(Math.random() * 100 - 50, Math.random() * 50, Math.random() * 100 - 50);
     mesh.userData.physx = {
       type: PhysXBodyType.DYNAMIC,
     };
     meshes.push(mesh);
   }
-  const floor = new Mesh(new BoxBufferGeometry(100, 1, 100), new MeshBasicMaterial({ color: randomColor(), side: DoubleSide })).translateY(-2);
+  const floor = new Mesh(new BoxBufferGeometry(100, 1, 100), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide })).translateY(-2);
   floor.userData.physx = { type: PhysXBodyType.STATIC };
 
-  // return [floor];
   return [...meshes, floor];
 };
 

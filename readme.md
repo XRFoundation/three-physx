@@ -13,7 +13,7 @@ Progress:
 - [x] collision events
 - [x] update bodies
 - [ ] fix root object scaling bug
-- [ ] fail adding shapes and bodies automatically if no mesh exists
+- [ ] capsule, cylinder and convex colliders
 - [ ] character & vehicle
 - [ ] implement all API functions
 - [ ] raycasts
