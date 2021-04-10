@@ -114,6 +114,7 @@ export interface ControllerConfig {
   slopeLimit?: number;
   maxJumpHeight?: number;
   invisibleWallHeight?: number;
+  climbingMode?: PhysX.PxCapsuleClimbingMode;
 }
 
 export const DefaultControllerConfig = {
@@ -123,8 +124,7 @@ export const DefaultControllerConfig = {
   contactOffset: 0.01,
   slopeLimit: 1,
   invisibleWallHeight: 1,
-}
-
+};
 
 export interface Object3DBody extends Object3D {
   body: RigidBodyProxy;

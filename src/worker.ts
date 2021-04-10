@@ -1,12 +1,10 @@
 ///<reference path="./types/PhysX.d.ts"/>
 
-import { Matrix4, Vector3, Quaternion, Matrix } from 'three';
+import { Matrix4, Vector3, Quaternion } from 'three';
 import { getShape } from './getShape';
 import { PhysXConfig, PhysXBodyTransform, PhysXBodyType, PhysXEvents, BodyConfig, PhysXBodyData, RigidBodyProxy, ShapeConfig, PhysXShapeConfig, ControllerConfig } from './types/ThreePhysX';
 import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
-
-const noop = () => {};
 
 const mat4 = new Matrix4();
 const pos = new Vector3();
@@ -123,23 +121,23 @@ export class PhysXManager {
     this.bodies.forEach((body: PhysX.RigidActor, id: number) => {
       if (isDynamicBody(body)) {
         bodyArray.set([id, ...getBodyData(body)], offset);
-      } else if(isControllerBody(body)) {  
+      } else if (isControllerBody(body)) {
         const controller = this.controllers.get(id);
         const { x, y, z } = controller.getPosition();
         bodyArray.set([id, x, y, z, ...(controller as any)._collisions], offset);
       }
       offset += BufferConfig.BODY_DATA_SIZE;
     });
-    this.onUpdate(bodyArray)//, shapeArray);
+    this.onUpdate(bodyArray); //, shapeArray);
     lastTick = now;
   };
 
   update = async (kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array) => {
     let offset = 0;
-    while(offset < kinematicBodiesArray.length) {
-      const id = kinematicBodiesArray[offset]
+    while (offset < kinematicBodiesArray.length) {
+      const id = kinematicBodiesArray[offset];
       const body = this.bodies.get(id) as PhysX.RigidDynamic;
-      if(!body) return;
+      if (!body) return;
 
       const currentPose = body.getGlobalPose();
       currentPose.translation.x = kinematicBodiesArray[offset + 1];
@@ -152,12 +150,12 @@ export class PhysXManager {
       body.setKinematicTarget(currentPose);
       body.setGlobalPose(currentPose, true);
       offset += BufferConfig.KINEMATIC_DATA_SIZE;
-    };
+    }
     offset = 0;
-    while(offset < controllerBodiesArray.length) {
+    while (offset < controllerBodiesArray.length) {
       const id = controllerBodiesArray[offset];
       const controller = this.controllers.get(id) as PhysX.PxController;
-      if(!controller) return;
+      if (!controller) return;
       // const position = controller.getPosition();
       const deltaPos = {
         x: controllerBodiesArray[offset + 1],
@@ -177,7 +175,7 @@ export class PhysXManager {
       };
       (controller as any)._collisions = [collisions.down, collisions.sides, collisions.up];
       offset += BufferConfig.CONTROLLER_DATA_SIZE;
-    };
+    }
   };
 
   startPhysX = async (start: boolean = true) => {
@@ -286,7 +284,7 @@ export class PhysXManager {
     this.bodies.delete(id);
   };
 
-  addController = async ({ id, config }: { id: number, config: ControllerConfig }) => {
+  addController = async ({ id, config }: { id: number; config: ControllerConfig }) => {
     const controllerDesc = new PhysX.PxCapsuleControllerDesc();
     controllerDesc.position = config.position ?? { x: 0, y: 0, z: 0 };
     controllerDesc.height = config.height ?? 1;
@@ -296,6 +294,7 @@ export class PhysXManager {
     controllerDesc.contactOffset = config.contactOffset ?? 0.01;
     controllerDesc.invisibleWallHeight = config.invisibleWallHeight ?? 0;
     controllerDesc.slopeLimit = config.slopeLimit ?? Math.cos((45 * Math.PI) / 180);
+    controllerDesc.climbingMode = config.climbingMode ?? PhysX.PxCapsuleClimbingMode.eEASY;
     controllerDesc.setReportCallback(
       PhysX.PxUserControllerHitReport.implement({
         onShapeHit: (shape) => {
@@ -328,7 +327,17 @@ export class PhysXManager {
     // todo
   };
 
-  updateController = async () => {
+  updateController = async ({ id, config }: { id: number; config: ControllerConfig }) => {
+    const controller = this.controllers.get(id) as PhysX.PxCapsuleController;
+    if (typeof config.height !== 'undefined') {
+      controller.setHeight(config.height);
+    }
+    if (typeof config.radius !== 'undefined') {
+      controller.setRadius(config.radius);
+    }
+    if (typeof config.height !== 'undefined') {
+      controller.setClimbingMode(config.climbingMode);
+    }
     // todo
   };
 
@@ -415,10 +424,10 @@ export const receiveWorker = async (): Promise<void> => {
   PhysXManager.instance.onUpdate = (data: Uint8Array) => {
     messageQueue.sendEvent('data', data, [data.buffer]);
     messageQueue.sendEvent('colliderEvent', [...latestCollisions]);
-    latestCollisions = []
+    latestCollisions = [];
   };
   PhysXManager.instance.onEvent = (data) => {
-    latestCollisions.push(data)
+    latestCollisions.push(data);
   };
   const addFunctionListener = (eventLabel) => {
     messageQueue.addEventListener(eventLabel, async ({ detail }) => {

@@ -38,10 +38,10 @@ export class PhysXInstance {
     messageQueue.addEventListener('data', (ev) => {
       const array: Float32Array = ev.detail;
       let offset = 0;
-      while(offset < array.length) {
+      while (offset < array.length) {
         const id = array[offset];
         const body = this.bodies.get(id);
-        if(body) {
+        if (body) {
           if (body.options.type === PhysXBodyType.CONTROLLER) {
             body.transform.translation.x = array[offset + 1];
             body.transform.translation.y = array[offset + 2];
@@ -70,7 +70,7 @@ export class PhysXInstance {
           }
         }
         offset += BufferConfig.BODY_DATA_SIZE;
-      };
+      }
       this.onUpdate();
     });
     messageQueue.addEventListener('colliderEvent', ({ detail }) => {
@@ -103,7 +103,7 @@ export class PhysXInstance {
                 shapeOther: shapeA,
               });
             }
-          break;
+            break;
           case PhysXEvents.CONTROLLER_SHAPE_HIT:
           case PhysXEvents.CONTROLLER_COLLIDER_HIT:
           case PhysXEvents.CONTROLLER_OBSTACLE_HIT:
@@ -117,9 +117,9 @@ export class PhysXInstance {
                 length,
               });
             }
-          break;
+            break;
         }
-      })
+      });
     });
 
     this.physicsProxy = {
@@ -152,11 +152,7 @@ export class PhysXInstance {
       kinematicIDs.push(id);
       obj.body.transform = getTransformFromWorldPos(obj);
       const transform = obj.body.transform;
-      kinematicArray.set([
-        id,
-        transform.translation.x, transform.translation.y, transform.translation.z, 
-        transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w
-      ], offset);
+      kinematicArray.set([id, transform.translation.x, transform.translation.y, transform.translation.z, transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w], offset);
       offset += BufferConfig.KINEMATIC_DATA_SIZE;
     });
     offset = 0;
@@ -244,10 +240,12 @@ export class PhysXInstance {
       delta: { x: 0, y: 0, z: 0 },
       velocity: { x: 0, y: 0, z: 0 },
     };
-    await this.physicsProxy.addController([{
-      id: (object as Object3DBody).body.id,
-      config: (object as Object3DBody).body.controller.config,
-    }]);
+    await this.physicsProxy.addController([
+      {
+        id: (object as Object3DBody).body.id,
+        config: (object as Object3DBody).body.controller.config,
+      },
+    ]);
     (object as Object3DBody).body.options.type = PhysXBodyType.CONTROLLER;
     this.controllerBodies.set(id, object as Object3DBody);
     proxyEventListener((object as Object3DBody).body);
@@ -255,8 +253,16 @@ export class PhysXInstance {
     return (object as Object3DBody).body;
   };
 
-  updateController = async () => {
-    // todo
+  updateController = async (controller: any, config: ControllerConfig) => {
+    if (typeof controller?.body?.id === 'undefined') return;
+    if (!this.controllerBodies.has(controller.body.id)) return;
+
+    await this.physicsProxy.updateController([
+      {
+        id: (controller as Object3DBody).body.id,
+        config,
+      },
+    ]);
   };
 
   removeController = async () => {
@@ -285,7 +291,6 @@ export class PhysXInstance {
 
   private _getNextAvailableBodyID = () => {
     // todo, make this good
-    indexOfSmallest(Object.keys(this.bodies));
     return nextAvailableBodyIndex++;
   };
 
@@ -294,14 +299,6 @@ export class PhysXInstance {
     return nextAvailablShapeID++;
   };
 }
-
-const indexOfSmallest = (a) => {
-  var lowest = 0;
-  for (var i = 1; i < a.length; i++) {
-    if (a[i] < a[lowest]) lowest = i;
-  }
-  return lowest;
-};
 
 const pipeRemoteFunction = (messageQueue: MessageQueue, id: string) => {
   return (args, transferables) => {

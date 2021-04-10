@@ -94,7 +94,7 @@ export class MessageQueue extends EventDispatcherProxy {
     // };
     this.interval = setInterval(() => {
       this.sendQueue();
-    }, 1000 / 60);
+    }, 1000 / 120);
   }
   sendEvent(type: string, detail: any, transferables: Transferable[] = []) {
     this.queue.push({
@@ -138,7 +138,7 @@ export class MessageQueue extends EventDispatcherProxy {
     this.queue.push({
       messageType: MessageType.ADD_EVENT,
       message: { type },
-      transferables: []
+      transferables: [],
     } as Message);
     super.addEventListener(type, listener);
   }
@@ -147,7 +147,7 @@ export class MessageQueue extends EventDispatcherProxy {
     this.queue.push({
       messageType: MessageType.REMOVE_EVENT,
       message: { type },
-      transferables: []
+      transferables: [],
     } as Message);
     super.removeEventListener(type, listener);
   }
@@ -157,7 +157,7 @@ export class MessageQueue extends EventDispatcherProxy {
       this.queue.push({
         messageType: MessageType.EVENT,
         message: simplifyObject(ev),
-        transferables: []
+        transferables: [],
       } as Message);
     }
     super.dispatchEvent(ev);

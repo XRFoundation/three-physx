@@ -383,7 +383,14 @@ declare namespace PhysX {
     maxJumpHeight: number;
     invisibleWallHeight: number;
     slopeLimit: number;
+    climbingMode: PxCapsuleClimbingMode;
     setReportCallback(callbackImp: any): any;
+  }
+
+  enum PxCapsuleClimbingMode {
+    eEASY,
+    eCONSTRAINED,
+    eLAST,
   }
 
   class PxFilterData {
@@ -414,6 +421,12 @@ declare namespace PhysX {
     move(displacement: PxVec3, minDistance: number, elapsedTime: number, filters: PxControllerFilters, obstacles?: PxObstacleContext): PxControllerCollisionFlags;
     setPosition(pos: PxVec3): any;
     getPosition(): PxVec3;
+  }
+
+  class PxCapsuleController extends PxController {
+    setHeight(height: number): void;
+    setRadius(radius: number): void;
+    setClimbingMode(climbingMode: PxCapsuleClimbingMode): void;
   }
 
   class PxUserControllerHitReport {

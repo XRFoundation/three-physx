@@ -65,9 +65,15 @@ const load = async () => {
     if (ev.code === 'Backquote') {
       debug.setEnabled(!debug.enabled)
     }
+    if (ev.code === 'Shift') {
+      PhysXInstance.instance.updateController(character, { height: 0.5 });
+    }
   });
   document.addEventListener('keyup', (ev) => {
     delete keys[ev.code];
+    if (ev.code === 'Shift') {
+      PhysXInstance.instance.updateController(character, { height: 1 });
+    }
   });
 
   const debug = new PhysXDebugRenderer(renderer.scene);
