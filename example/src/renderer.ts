@@ -38,6 +38,7 @@ controls.dampingFactor = 0.05;
 controls.screenSpacePanning = false;
 controls.minDistance = 1;
 controls.maxDistance = 500;
+// controls.enableRotate = false;
 // controls.maxPolarAngle = Math.PI / 2
 
 container.appendChild(renderer.domElement);
@@ -49,7 +50,10 @@ export const addToScene = (entity: Object3D) => {
   scene.add(entity);
 };
 
-export const update = () => {
+export const update = (cameraTarget) => {
+  // controls.target = cameraTarget.position;
+  // camera.position.x = cameraTarget.position.x;
+  // camera.position.z = cameraTarget.position.z + 20;
   controls.update();
   renderer.render(scene, camera);
 };

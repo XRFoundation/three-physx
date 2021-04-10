@@ -18,6 +18,7 @@ Progress:
 - [ ] implement all API functions
 - [ ] raycasts
 - [ ] put body ids on arraybuffers for more efficient data transfer
+- [ ] new build with more bindings
 
 ## Example
 

@@ -9,7 +9,7 @@ export interface PhysXConfig {
 export enum PhysXModelShapes {
   Sphere,
   Plane,
-  // Capsule,
+  Capsule,
   Box,
   ConvexMesh,
   TriangleMesh,
@@ -60,6 +60,8 @@ export interface PhysXShapeConfig {
     indices?: number[];
     boxExtents?: Vec3;
     sphereRadius?: number;
+    capsuleRadius?: number;
+    capsuleHeight?: number;
   };
 }
 
@@ -90,9 +92,10 @@ export interface RigidBodyProxy {
   shapes: PhysXShapeConfig[];
   options: BodyConfig;
   controller?: {
-    collisions: { down: boolean, sides: boolean, up: boolean };
-    delta: { x: number, y: number, z: number };
-    velocity: { x: number, y: number, z: number };
+    config: ControllerConfig;
+    collisions: { down: boolean; sides: boolean; up: boolean };
+    delta: { x: number; y: number; z: number };
+    velocity: { x: number; y: number; z: number };
   };
   addEventListener?: any;
   removeEventListener?: any;
@@ -101,8 +104,26 @@ export interface RigidBodyProxy {
 }
 
 export interface ControllerConfig {
-  id: number;
+  id?: number;
+  position?: Vec3;
+  // isCapsule?: boolean;
+  height?: number;
+  radius?: number;
+  stepOffset?: number;
+  contactOffset?: number;
+  slopeLimit?: number;
+  invisibleWallHeight?: number;
 }
+
+export const DefaultControllerConfig = {
+  height: 1,
+  radius: 0.25,
+  stepOffset: 0.1,
+  contactOffset: 0.01,
+  slopeLimit: 1,
+  invisibleWallHeight: 1,
+}
+
 
 export interface Object3DBody extends Object3D {
   body: RigidBodyProxy;

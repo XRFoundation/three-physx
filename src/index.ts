@@ -39,15 +39,15 @@ export class PhysXInstance {
       const array: Float32Array = ev.detail;
       this.bodies.forEach((rigidBody, id) => {
         const offset = id * BufferConfig.BODY_DATA_SIZE;
-        if(rigidBody.options.type === PhysXBodyType.CONTROLLER) {
+        if (rigidBody.options.type === PhysXBodyType.CONTROLLER) {
           rigidBody.transform.translation.x = array[offset];
           rigidBody.transform.translation.y = array[offset + 1];
           rigidBody.transform.translation.z = array[offset + 2];
-          rigidBody.controller.collisions = { 
+          rigidBody.controller.collisions = {
             down: Boolean(array[offset + 3]),
             sides: Boolean(array[offset + 4]),
-            up: Boolean(array[offset + 5])
-          }
+            up: Boolean(array[offset + 5]),
+          };
         } else if (rigidBody.options.type === PhysXBodyType.DYNAMIC) {
           rigidBody.transform.translation.x = array[offset];
           rigidBody.transform.translation.y = array[offset + 1];
@@ -69,12 +69,13 @@ export class PhysXInstance {
       this.onUpdate();
     });
     messageQueue.addEventListener('colliderEvent', ({ detail }) => {
-      switch(detail.event) {
-        case PhysXEvents.COLLISION_START: 
-        case PhysXEvents.COLLISION_PERSIST: 
-        case PhysXEvents.COLLISION_END: 
-        case PhysXEvents.TRIGGER_START: 
-        case PhysXEvents.TRIGGER_END: {
+      switch (detail.event) {
+        case PhysXEvents.COLLISION_START:
+        case PhysXEvents.COLLISION_PERSIST:
+        case PhysXEvents.COLLISION_END:
+        case PhysXEvents.TRIGGER_START:
+        case PhysXEvents.TRIGGER_END:
+          {
             const { event, idA, idB } = detail;
             const shapeA = this.shapes.get(idA);
             const shapeB = this.shapes.get(idB);
@@ -96,20 +97,21 @@ export class PhysXInstance {
               shapeOther: shapeA,
             });
           }
-        break;
-        case PhysXEvents.CONTROLLER_SHAPE_HIT: 
-        case PhysXEvents.CONTROLLER_COLLIDER_HIT: 
-        case PhysXEvents.CONTROLLER_OBSTACLE_HIT: {
-          const { event, id, position, normal, length } = detail;
-          const controllerBody: RigidBodyProxy = this.controllerBodies.get(id).body;
-          controllerBody.dispatchEvent({
-            type: event,
-            position,
-            normal,
-            length
-          })
-        }
-        break;
+          break;
+        case PhysXEvents.CONTROLLER_SHAPE_HIT:
+        case PhysXEvents.CONTROLLER_COLLIDER_HIT:
+        case PhysXEvents.CONTROLLER_OBSTACLE_HIT:
+          {
+            const { event, id, position, normal, length } = detail;
+            const controllerBody: RigidBodyProxy = this.controllerBodies.get(id).body;
+            controllerBody.dispatchEvent({
+              type: event,
+              position,
+              normal,
+              length,
+            });
+          }
+          break;
       }
     });
 
@@ -148,8 +150,8 @@ export class PhysXInstance {
     this.controllerBodies.forEach((obj, id) => {
       controllerIDs.push(id);
       const { x, y, z } = obj.body.controller.delta;
-      kinematicArray.set([x, y, z, 1/60], id * BufferConfig.BODY_DATA_SIZE);
-      obj.body.controller.delta = {x:0,y:0,z:0}
+      kinematicArray.set([x, y, z, 1 / 60], id * BufferConfig.BODY_DATA_SIZE);
+      obj.body.controller.delta = { x: 0, y: 0, z: 0 };
     });
     this.physicsProxy.update([kinematicIDs, controllerIDs, kinematicArray], [kinematicArray.buffer]);
   };
@@ -220,13 +222,14 @@ export class PhysXInstance {
   addController = async (object: Object3D, options?: ControllerConfig) => {
     const id = this._getNextAvailableBodyID();
     createPhysXBody(object, id, []);
-    await this.physicsProxy.addController([(object as Object3DBody).body]);
-    (object as Object3DBody).body.controller = { 
+    (object as Object3DBody).body.controller = {
+      config: { id: this._getNextAvailableShapeID(), height: 1, radius: 0.25 },
       collisions: { down: false, sides: false, up: false },
       delta: { x: 0, y: 0, z: 0 },
       velocity: { x: 0, y: 0, z: 0 },
     };
-    (object as Object3DBody).body.options.type = PhysXBodyType.CONTROLLER
+    await this.physicsProxy.addController([(object as Object3DBody).body]);
+    (object as Object3DBody).body.options.type = PhysXBodyType.CONTROLLER;
     this.controllerBodies.set(id, object as Object3DBody);
     proxyEventListener((object as Object3DBody).body);
     this.bodies.set(id, (object as Object3DBody).body);

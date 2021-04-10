@@ -2,6 +2,7 @@ import { PhysXInstance } from '../../src';
 import { Mesh, TorusKnotBufferGeometry, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group } from 'three';
 import { Object3DBody, PhysXBodyType, PhysXEvents, PhysXModelShapes, RigidBodyProxy } from '../../src/types/ThreePhysX';
 import { PhysXDebugRenderer } from './PhysXDebugRenderer';
+import { CapsuleBufferGeometry } from './CapsuleBufferGeometry';
 
 const load = async () => {
   const renderer = await import('./renderer');
@@ -48,12 +49,11 @@ const load = async () => {
   objects.set(kinematicBody.id, kinematicObject);
   renderer.addToScene(kinematicObject);
   kinematicBody.addEventListener(PhysXEvents.COLLISION_START, ({ bodySelf, bodyOther, shapeSelf, shapeOther }) => {
-    console.log('COLLISION DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
+    // console.log('COLLISION DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
   });
 
   const character = new Group();
-  character.add(new Mesh(new BoxBufferGeometry(0.25, 2, 0.25), new MeshBasicMaterial({ color: randomColor() })));
-  character.add(new Mesh(new SphereBufferGeometry(0.4), new MeshBasicMaterial({ color: randomColor() })).translateY(1));
+  character.add(new Mesh(new CapsuleBufferGeometry(0.25, 0.25, 1), new MeshBasicMaterial({ color: randomColor() })));
   const characterBody = await PhysXInstance.instance.addController(character);
   objects.set(characterBody.id, character);
 
@@ -107,7 +107,7 @@ const load = async () => {
     characterBody.controller.delta.y += characterBody.controller.velocity.y;
     PhysXInstance.instance.update();
     debug.update(objects);
-    renderer.update();
+    renderer.update(character);
     lastDelta = delta;
     lastTime = time;
     requestAnimationFrame(update);

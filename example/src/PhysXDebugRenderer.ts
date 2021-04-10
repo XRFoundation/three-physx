@@ -1,5 +1,6 @@
 import { Scene, Mesh, Points, SphereBufferGeometry, BoxBufferGeometry, PlaneBufferGeometry, BufferGeometry, MeshBasicMaterial, Vector3, SphereGeometry, BoxGeometry, PlaneGeometry, Object3D, Matrix4, Quaternion } from 'three';
-import { Object3DBody, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy } from '../../src/types/ThreePhysX';
+import { Object3DBody, PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy, ShapeConfig } from '../../src/types/ThreePhysX';
+import { CapsuleBufferGeometry } from './CapsuleBufferGeometry';
 const parentMatrix = new Matrix4();
 const childMatrix = new Matrix4();
 const pos = new Vector3();
@@ -9,8 +10,8 @@ const scale = new Vector3(1, 1, 1);
 const scale2 = new Vector3(1, 1, 1);
 export class PhysXDebugRenderer {
   private scene: Scene;
-  private _meshes: Mesh[] | Points[];
-  private _material: MeshBasicMaterial;
+  private _meshes: Map<number, any>;
+  private _materials: MeshBasicMaterial[];
   private _sphereGeometry: SphereBufferGeometry;
   private _boxGeometry: BoxBufferGeometry;
   private _planeGeometry: PlaneBufferGeometry;
@@ -21,9 +22,14 @@ export class PhysXDebugRenderer {
     this.scene = scene;
     this.enabled = false;
 
-    this._meshes = [];
+    this._meshes = new Map<number, any>();
 
-    this._material = new MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+    this._materials = [
+      new MeshBasicMaterial({ color: 0xff0000, wireframe: true }),
+      new MeshBasicMaterial({ color: 0x00ff00, wireframe: true }),
+      new MeshBasicMaterial({ color: 0x00aaff, wireframe: true }),
+      new MeshBasicMaterial({ color: 0xffffff, wireframe: true }),
+    ];
     this._sphereGeometry = new SphereBufferGeometry(1);
     this._boxGeometry = new BoxBufferGeometry();
     this._planeGeometry = new PlaneBufferGeometry();
@@ -31,9 +37,9 @@ export class PhysXDebugRenderer {
 
   public setEnabled(enabled) {
     this.enabled = enabled;
-    for (const mesh of this._meshes) {
+    this._meshes.forEach((mesh, id) => {
       mesh.visible = this.enabled;
-    }
+    })
   }
 
   public update(objects: Map<number, Object3D>) {
@@ -41,22 +47,24 @@ export class PhysXDebugRenderer {
       return;
     }
 
-    const meshes: Mesh[] | Points[] = this._meshes;
-
-    let meshIndex = 0;
-
     objects.forEach((object, id) => {
       //@ts-ignore
-      const { body } = object;
+      const body = object.body as RigidBodyProxy;
 
-      rot.set(body.transform.rotation.x, body.transform.rotation.y, body.transform.rotation.z, body.transform.rotation.w);
       pos.set(body.transform.translation.x, body.transform.translation.y, body.transform.translation.z);
+      if(body.options.type === PhysXBodyType.CONTROLLER) {
+        const id = body.controller.config.id;
+        this._updateController(object as Object3DBody);
+        this._meshes.get(id).position.copy(pos);
+        return;
+      }
+      rot.set(body.transform.rotation.x, body.transform.rotation.y, body.transform.rotation.z, body.transform.rotation.w);
       parentMatrix.compose(pos, rot, scale);
 
       body.shapes.forEach((shape: PhysXShapeConfig) => {
-        this._updateMesh(object as Object3DBody, meshIndex, body, shape);
-
-        const mesh = meshes[meshIndex];
+        
+        this._updateMesh(object as Object3DBody, shape);
+        const mesh = this._meshes.get(shape.id)
 
         if (mesh) {
           // Copy to meshes
@@ -68,37 +76,37 @@ export class PhysXDebugRenderer {
           mesh.position.copy(pos);
           mesh.quaternion.copy(rot);
         }
-
-        meshIndex++;
       });
     });
 
-    for (let i = meshIndex; i < meshes.length; i++) {
-      const mesh: Mesh | Points = meshes[i];
-      if (mesh) {
-        this.scene.remove(mesh);
-      }
-    }
-
-    meshes.length = meshIndex;
+    // TODO add automatic cleanup of removed objects
   }
 
-  private _updateMesh(root: Object3DBody, index: number, body: RigidBodyProxy, shape: PhysXShapeConfig) {
-    let mesh = this._meshes[index];
+  private _updateController(object: Object3DBody) {
+    const { config } = object.body.controller;
+    if (!this._meshes.has(config.id)) {
+      console.log(config)
+      this._meshes.set(config.id, new Mesh(new CapsuleBufferGeometry(config.radius, config.radius, config.height), this._materials[PhysXBodyType.CONTROLLER]));
+      this.scene.add(this._meshes.get(config.id));
+      console.log(object, this._meshes.get(config.id));
+    }
+  }
+
+  private _updateMesh(root: Object3DBody, shape: PhysXShapeConfig) {
+    let mesh = this._meshes.get(shape.id);
     if (!this._typeMatch(mesh, shape)) {
       if (mesh) {
         this.scene.remove(mesh);
       }
-      mesh = this._meshes[index] = this._createMesh(shape);
+      this._meshes.set(shape.id, this._createMesh(shape, root.body.options.type));
     }
-    this._scaleMesh(root, mesh, shape);
+    this._scaleMesh(root, this._meshes.get(shape.id), shape);
   }
 
   private _typeMatch(mesh: Mesh | Points, shape: PhysXShapeConfig): Boolean {
     if (!mesh) {
       return false;
     }
-    const geo: BufferGeometry = mesh.geometry;
     return (
       shape.shape === PhysXModelShapes.Sphere ||
       shape.shape === PhysXModelShapes.Box ||
@@ -109,10 +117,10 @@ export class PhysXDebugRenderer {
     );
   }
 
-  private _createMesh(shape: PhysXShapeConfig): Mesh | Points {
+  private _createMesh(shape: PhysXShapeConfig, type: PhysXBodyType): Mesh | Points {
     let mesh: Mesh | Points;
     let geometry: BufferGeometry;
-    const material: MeshBasicMaterial = this._material;
+    const material: MeshBasicMaterial = this._materials[type];
     let points: Vector3[] = [];
 
     switch (shape.shape) {
@@ -120,6 +128,10 @@ export class PhysXDebugRenderer {
         mesh = new Mesh(this._sphereGeometry, material);
         break;
 
+      case PhysXModelShapes.Capsule:
+        mesh = new Mesh(new CapsuleBufferGeometry(shape.options.capsuleRadius, shape.options.capsuleRadius, shape.options.capsuleHeight), material);
+        break;
+  
       case PhysXModelShapes.Box:
         mesh = new Mesh(this._boxGeometry, material);
         break;
