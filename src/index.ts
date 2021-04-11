@@ -36,36 +36,34 @@ export class PhysXInstance {
       });
     });
     messageQueue.addEventListener('data', (ev) => {
-      const array: Float32Array = ev.detail;
       let offset = 0;
-      while (offset < array.length) {
-        const id = array[offset];
-        const body = this.bodies.get(id);
+      while (offset < ev.detail.length) {
+        const body = this.bodies.get(ev.detail[offset]);
         if (body) {
           if (body.options.type === PhysXBodyType.CONTROLLER) {
-            body.transform.translation.x = array[offset + 1];
-            body.transform.translation.y = array[offset + 2];
-            body.transform.translation.z = array[offset + 3];
+            body.transform.translation.x = ev.detail[offset + 1];
+            body.transform.translation.y = ev.detail[offset + 2];
+            body.transform.translation.z = ev.detail[offset + 3];
             body.controller.collisions = {
-              down: Boolean(array[offset + 4]),
-              sides: Boolean(array[offset + 5]),
-              up: Boolean(array[offset + 6]),
+              down: Boolean(ev.detail[offset + 4]),
+              sides: Boolean(ev.detail[offset + 5]),
+              up: Boolean(ev.detail[offset + 6]),
             };
           } else if (body.options.type === PhysXBodyType.DYNAMIC) {
-            body.transform.translation.x = array[offset + 1];
-            body.transform.translation.y = array[offset + 2];
-            body.transform.translation.z = array[offset + 3];
-            body.transform.rotation.x = array[offset + 4];
-            body.transform.rotation.y = array[offset + 5];
-            body.transform.rotation.z = array[offset + 6];
-            body.transform.rotation.w = array[offset + 7];
+            body.transform.translation.x = ev.detail[offset + 1];
+            body.transform.translation.y = ev.detail[offset + 2];
+            body.transform.translation.z = ev.detail[offset + 3];
+            body.transform.rotation.x = ev.detail[offset + 4];
+            body.transform.rotation.y = ev.detail[offset + 5];
+            body.transform.rotation.z = ev.detail[offset + 6];
+            body.transform.rotation.w = ev.detail[offset + 7];
             if (body.options.type === PhysXBodyType.DYNAMIC) {
-              body.transform.linearVelocity.x = array[offset + 8];
-              body.transform.linearVelocity.y = array[offset + 9];
-              body.transform.linearVelocity.z = array[offset + 10];
-              body.transform.angularVelocity.x = array[offset + 11];
-              body.transform.angularVelocity.y = array[offset + 12];
-              body.transform.angularVelocity.z = array[offset + 13];
+              body.transform.linearVelocity.x = ev.detail[offset + 8];
+              body.transform.linearVelocity.y = ev.detail[offset + 9];
+              body.transform.linearVelocity.z = ev.detail[offset + 10];
+              body.transform.angularVelocity.x = ev.detail[offset + 11];
+              body.transform.angularVelocity.y = ev.detail[offset + 12];
+              body.transform.angularVelocity.z = ev.detail[offset + 13];
             }
           }
         }

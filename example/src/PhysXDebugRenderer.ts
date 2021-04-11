@@ -107,27 +107,13 @@ export class PhysXDebugRenderer {
 
   private _updateMesh(root: Object3DBody, index: number, shape: PhysXShapeConfig) {
     let mesh = this._meshes[index];
-    if (!this._typeMatch(mesh, shape)) {
-      if (mesh) {
-        this.scene.remove(mesh);
-      }
+    if (!mesh) {
+      // if (mesh) {
+      //   this.scene.remove(mesh);
+      // }
       mesh = this._meshes[index] = this._createMesh(shape, root.body.options.type);
     }
     this._scaleMesh(root, mesh, shape);
-  }
-
-  private _typeMatch(mesh: Mesh | Points, shape: PhysXShapeConfig): Boolean {
-    if (!mesh) {
-      return false;
-    }
-    return (
-      shape.shape === PhysXModelShapes.Sphere ||
-      shape.shape === PhysXModelShapes.Box ||
-      shape.shape === PhysXModelShapes.Plane ||
-      shape.shape === PhysXModelShapes.ConvexMesh ||
-      shape.shape === PhysXModelShapes.TriangleMesh ||
-      shape.shape === PhysXModelShapes.HeightField
-    );
   }
 
   private _createMesh(shape: PhysXShapeConfig, type: PhysXBodyType): Mesh | Points {
@@ -142,7 +128,7 @@ export class PhysXDebugRenderer {
         break;
 
       case PhysXModelShapes.Capsule:
-        mesh = new Mesh(new CapsuleBufferGeometry(shape.options.capsuleRadius, shape.options.capsuleRadius, shape.options.capsuleHeight), material);
+        mesh = new Mesh(new CapsuleBufferGeometry(shape.options.radius, shape.options.radius, shape.options.halfHeight * 2), material);
         break;
   
       case PhysXModelShapes.Box:
@@ -246,7 +232,7 @@ export class PhysXDebugRenderer {
     const scale = shape.transform.scale as Vector3;
     switch (shape.shape) {
       case PhysXModelShapes.Sphere:
-        const radius = shape.options.sphereRadius;
+        const radius = shape.options.radius;
         mesh.scale.multiplyScalar(radius);
         break;
 

@@ -1,4 +1,4 @@
-import { Vector3, Matrix4, Mesh, SphereBufferGeometry, Quaternion, Object3D, SphereGeometry } from 'three';
+import { Vector3, Matrix4, Mesh, SphereBufferGeometry, Quaternion, Object3D, SphereGeometry, BufferGeometry } from 'three';
 import { PhysXInstance } from '.';
 import { PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy, ShapeConfig } from './types/ThreePhysX';
 
@@ -99,7 +99,6 @@ const getShapeData = (mesh, shape): any => {
         options: { boxExtents: shape.boxExtents || getBoxExtents(mesh) },
       };
     case PhysXModelShapes.Capsule:
-      console.log(shape)
       return { 
         shape: shape.type,
         halfHeight: shape.halfHeight ?? 1,
@@ -110,6 +109,8 @@ const getShapeData = (mesh, shape): any => {
         shape: shape.type,
         options: { radius: shape.sphereRadius || getSphereRadius(mesh) },
       };
+    case PhysXModelShapes.ConvexMesh: 
+    
     case PhysXModelShapes.TriangleMesh:
     default:
       const vertices = Array.from(mesh.geometry.attributes.position.array);
@@ -127,7 +128,6 @@ const getGeometryShape = (mesh): any => {
         options: { boxExtents: getBoxExtents(mesh) },
       };
     case 'CapsuleBufferGeometry': // https://github.com/maximeq/three-js-capsule-geometry
-    console.log(mesh.geometry)
       return {
         shape: PhysXModelShapes.Capsule,
         options: { halfHeight: mesh.geometry._halfHeight ?? 1, radius: mesh.geometry.radius ?? mesh.geometry.radiusTop ?? 0.5 }
@@ -223,3 +223,69 @@ const getTransformRelativeToRoot = (mesh: Object3D, root: Object3D) => {
     scale: { x: scale.x, y: scale.y, z: scale.z },
   };
 };
+
+
+/**
+ * Returns a single geometry for the given object. If the object is compound,
+ * its geometries are automatically merged.
+ * @param {Object3D} object
+ * @return {BufferGeometry}
+ */
+ export function getGeometry (object) {
+  let mesh,
+      tmp = new BufferGeometry();
+  const meshes = getMeshes(object);
+
+  const combined = new BufferGeometry();
+
+  if (meshes.length === 0) return null;
+
+  // Apply scale  – it can't easily be applied to a CANNON.Shape later.
+  if (meshes.length === 1) {
+    const position = new Vector3(),
+        quaternion = new Quaternion(),
+        scale = new Vector3();
+    if (meshes[0].geometry.isBufferGeometry) {
+      if (meshes[0].geometry.attributes.position
+          && meshes[0].geometry.attributes.position.itemSize > 2) {
+        tmp = meshes[0].geometry;
+      }
+    } else {
+      tmp = meshes[0].geometry.clone();
+    }
+    //tmp.metadata = meshes[0].geometry.metadata;
+    meshes[0].updateMatrixWorld();
+    meshes[0].matrixWorld.decompose(position, quaternion, scale);
+    return tmp.scale(scale.x, scale.y, scale.z);
+  }
+
+  // Recursively merge geometry, preserving local transforms.
+  while ((mesh = meshes.pop())) {
+    mesh.updateMatrixWorld();
+    if (mesh.geometry.isBufferGeometry) {
+      if (mesh.geometry.attributes.position
+          && mesh.geometry.attributes.position.itemSize > 2) {
+        const tmpGeom = mesh.geometry;
+        combined.merge(tmpGeom, mesh.matrixWorld);
+        tmpGeom.dispose();
+      }
+    } else {
+      combined.merge(mesh.geometry, mesh.matrixWorld);
+    }
+  }
+
+  const matrix = new Matrix4();
+  matrix.scale(object.scale);
+  combined.applyMatrix4(matrix);
+  return combined;
+}
+
+function getMeshes (object) {
+  const meshes = [];
+  object.traverse((o) => {
+    if (o.type === 'Mesh') {
+      meshes.push(o);
+    }
+  });
+  return meshes;
+}

@@ -130,11 +130,10 @@ const load = async () => {
 };
 
 const createScene = () => {
-  const geoms = [new BoxBufferGeometry(), new SphereBufferGeometry(1)];
+  const geoms = [new BoxBufferGeometry(), new SphereBufferGeometry(1), new CapsuleBufferGeometry(0.5, 0.5, 1)];
   const meshes = [];
-  for (let i = 0; i < 10; i++) {
-    // const mesh = new Mesh(geoms[i % 2], new MeshStandardMaterial({ color: randomColor() }));
-    const mesh = new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshStandardMaterial({ color: randomColor() }));
+  for (let i = 0; i < 1000; i++) {
+    const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor() }));
     mesh.position.set(Math.random() * 100 - 50, Math.random() * 50, Math.random() * 100 - 50);
     mesh.userData.physx = {
       type: PhysXBodyType.DYNAMIC,

@@ -428,7 +428,7 @@ export const receiveWorker = async (): Promise<void> => {
     latestCollisions = [];
   };
   PhysXManager.instance.onEvent = (data) => {
-    latestCollisions.push(data);
+    // latestCollisions.push(data);
   };
   const addFunctionListener = (eventLabel) => {
     messageQueue.addEventListener(eventLabel, async ({ detail }) => {
