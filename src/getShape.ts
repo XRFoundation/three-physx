@@ -35,21 +35,60 @@ export const getShape = ({ shape, transform, options }): PhysX.PxShape => {
 const getGeometry = ({ shape, transform, options }): PhysX.PxGeometry => {
   const { boxExtents, radius, vertices, indices, halfHeight } = options || {};
   let geometry: PhysX.PxGeometry;
-  if (shape === PhysXModelShapes.Box) {
-    geometry = new PhysX.PxBoxGeometry(boxExtents.x, boxExtents.y, boxExtents.z);
-  } else if (shape === PhysXModelShapes.Sphere) {
-    geometry = new PhysX.PxSphereGeometry(radius);
-  } else if (shape === PhysXModelShapes.Capsule) {
-    geometry = new PhysX.PxCapsuleGeometry(radius, halfHeight);
-  } else if (shape === PhysXModelShapes.Plane) {
-    geometry = new PhysX.PxPlaneGeometry();
-  } else if (shape === PhysXModelShapes.TriangleMesh) {
-    geometry = createTrimesh(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices, indices);
+  switch(shape) {
+    case PhysXModelShapes.Box: geometry = new PhysX.PxBoxGeometry(boxExtents.x, boxExtents.y, boxExtents.z); break;
+    case PhysXModelShapes.Sphere: geometry = new PhysX.PxSphereGeometry(radius); break;
+    case PhysXModelShapes.Capsule: geometry = new PhysX.PxCapsuleGeometry(radius, halfHeight); break;
+    case PhysXModelShapes.Plane: geometry = new PhysX.PxPlaneGeometry(); break;
+    default: case PhysXModelShapes.TriangleMesh: geometry = createTrimesh(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices, indices); break;
+    // default: case PhysXModelShapes.ConvexMesh: geometry = new PhysX.PxConvexMeshGeometry(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices, indices); break;
+    // default: case PhysXModelShapes.ConvexMesh: geometry = createConvexMesh(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices, indices); break;
   }
   return geometry;
 };
 
 const createTrimesh = (transform: PhysXBodyTransform, cooking: PhysX.PxCooking, physics: PhysX.PxPhysics, vertices: ArrayLike<number>, indices: ArrayLike<number>): PhysX.PxTriangleMeshGeometry => {
+
+  const [verticesPtr, indicesPtr] = createMeshPointers(vertices, indices);
+
+  const trimesh = cooking.createTriMesh(verticesPtr, vertices.length, indicesPtr, indices.length, false, physics);
+
+  const meshScale = new PhysX.PxMeshScale(
+    { x: transform.scale.x, y: transform.scale.y, z: transform.scale.z },
+    // { x: 1, y: 1, z: 1 },
+    { x: 0, y: 0, z: 0, w: 1 },
+  );
+  const geometry = new PhysX.PxTriangleMeshGeometry(trimesh, meshScale, new PhysX.PxMeshGeometryFlags(0));
+  PhysX._free(verticesPtr);
+  PhysX._free(indicesPtr);
+  return geometry;
+};
+
+
+const createConvexMesh = (transform: PhysXBodyTransform, cooking: PhysX.PxCooking, physics: PhysX.PxPhysics, vertices: ArrayLike<number>, indices: ArrayLike<number>): PhysX.PxTriangleMeshGeometry => {
+
+  const [verticesPtr, indicesPtr] = createMeshPointers(vertices, indices);
+
+  const convexMeshDescription = new PhysX.PxConvexMeshDesc();
+  console.log(convexMeshDescription)
+
+  const trimesh = cooking.createConvexMesh(convexMeshDescription, physics);
+
+
+  const meshScale = new PhysX.PxMeshScale(
+    { x: transform.scale.x, y: transform.scale.y, z: transform.scale.z },
+    // { x: 1, y: 1, z: 1 },
+    { x: 0, y: 0, z: 0, w: 1 },
+  );
+  const geometry = new PhysX.PxTriangleMeshGeometry(trimesh, meshScale, new PhysX.PxMeshGeometryFlags(0));
+
+  PhysX._free(verticesPtr);
+  PhysX._free(indicesPtr);
+  
+  return geometry;
+};
+
+const createMeshPointers = (vertices: ArrayLike<number>, indices: ArrayLike<number>) => {
   const verticesPtr = PhysX._malloc(4 * vertices.length);
   let verticesOffset = 0;
 
@@ -66,17 +105,5 @@ const createTrimesh = (transform: PhysXBodyTransform, cooking: PhysX.PxCooking, 
     indicesOffset += 4;
   }
 
-  const trimesh = cooking.createTriMesh(verticesPtr, vertices.length, indicesPtr, indices.length, false, physics);
-
-  const meshScale = new PhysX.PxMeshScale(
-    { x: transform.scale.x, y: transform.scale.y, z: transform.scale.z },
-    // { x: 1, y: 1, z: 1 },
-    { x: 0, y: 0, z: 0, w: 1 },
-  );
-  const geometry = new PhysX.PxTriangleMeshGeometry(trimesh, meshScale, new PhysX.PxMeshGeometryFlags(0));
-
-  PhysX._free(verticesPtr);
-  PhysX._free(indicesPtr);
-
-  return geometry;
-};
+  return [verticesPtr, indicesPtr];
+}

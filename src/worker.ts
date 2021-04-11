@@ -119,12 +119,13 @@ export class PhysXManager {
     const bodyArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
     let offset = 0;
     this.bodies.forEach((body: PhysX.RigidActor, id: number) => {
+      bodyArray.set([id], offset)
       if (isDynamicBody(body)) {
-        bodyArray.set([id, ...getBodyData(body)], offset);
+        bodyArray.set([...getBodyData(body)], offset + 1);
       } else if (isControllerBody(body)) {
         const controller = this.controllers.get(id);
         const { x, y, z } = controller.getPosition();
-        bodyArray.set([id, x, y, z, ...(controller as any)._collisions], offset);
+        bodyArray.set([x, y, z, ...(controller as any)._collisions], offset + 1);
       }
       offset += BufferConfig.BODY_DATA_SIZE;
     });
@@ -195,7 +196,7 @@ export class PhysXManager {
     if (type === PhysXBodyType.STATIC) {
       rigidBody = this.physics.createRigidStatic(transform);
     } else {
-      rigidBody = this.physics.createRigidDynamic(transform) as PhysX.RigidDynamic;
+      rigidBody = this.physics.createRigidDynamic(transform);
     }
     (rigidBody as any)._type = type;
 
@@ -220,7 +221,7 @@ export class PhysXManager {
     this.bodies.set(id, rigidBody);
     this.scene.addActor(rigidBody, null);
 
-    delete options.type;
+    // delete options.type;
     this.updateBody({ id, options });
   };
 
@@ -428,7 +429,7 @@ export const receiveWorker = async (): Promise<void> => {
     latestCollisions = [];
   };
   PhysXManager.instance.onEvent = (data) => {
-    // latestCollisions.push(data);
+    latestCollisions.push(data);
   };
   const addFunctionListener = (eventLabel) => {
     messageQueue.addEventListener(eventLabel, async ({ detail }) => {

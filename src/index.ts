@@ -57,14 +57,12 @@ export class PhysXInstance {
             body.transform.rotation.y = ev.detail[offset + 5];
             body.transform.rotation.z = ev.detail[offset + 6];
             body.transform.rotation.w = ev.detail[offset + 7];
-            if (body.options.type === PhysXBodyType.DYNAMIC) {
-              body.transform.linearVelocity.x = ev.detail[offset + 8];
-              body.transform.linearVelocity.y = ev.detail[offset + 9];
-              body.transform.linearVelocity.z = ev.detail[offset + 10];
-              body.transform.angularVelocity.x = ev.detail[offset + 11];
-              body.transform.angularVelocity.y = ev.detail[offset + 12];
-              body.transform.angularVelocity.z = ev.detail[offset + 13];
-            }
+            body.transform.linearVelocity.x = ev.detail[offset + 8];
+            body.transform.linearVelocity.y = ev.detail[offset + 9];
+            body.transform.linearVelocity.z = ev.detail[offset + 10];
+            body.transform.angularVelocity.x = ev.detail[offset + 11];
+            body.transform.angularVelocity.y = ev.detail[offset + 12];
+            body.transform.angularVelocity.z = ev.detail[offset + 13];
           }
         }
         offset += BufferConfig.BODY_DATA_SIZE;

@@ -110,7 +110,6 @@ const getShapeData = (mesh, shape): any => {
         options: { radius: shape.sphereRadius || getSphereRadius(mesh) },
       };
     case PhysXModelShapes.ConvexMesh: 
-    
     case PhysXModelShapes.TriangleMesh:
     default:
       const vertices = Array.from(mesh.geometry.attributes.position.array);

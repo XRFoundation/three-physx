@@ -83,7 +83,10 @@ const load = async () => {
   let lastDelta = 1/60;
 
   setTimeout(() => {
-    // PhysXInstance.instance.removeBody(objects.get(0));
+    // PhysXInstance.instance.removeBody(objects.get(0)).then(() => {
+    //   renderer.scene.remove(objects.get(0))
+    //   objects.delete(0);
+    // })
   }, 2000)
 
   const update = () => {
@@ -112,7 +115,7 @@ const load = async () => {
         characterBody.controller.delta.x -= 2 / delta;
       }
       if (key === 'KeyD') {
-        characterBody.controller.delta.x += 5 / delta;
+        characterBody.controller.delta.x += 2 / delta;
       }
       if (key === 'Space' && characterBody.controller.collisions.down) {
         characterBody.controller.velocity.y += 2 / delta;
