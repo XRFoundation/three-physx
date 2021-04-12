@@ -1,0 +1,1 @@
+-I/src/PhysX/physx/include -I/src/PhysX/physx/../pxshared/include -I/src/PhysX/physx/source/foundation/include -I/src/PhysX/physx/source/foundation/include/linux 
