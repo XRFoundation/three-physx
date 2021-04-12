@@ -34,8 +34,8 @@ export class PhysXManager {
   onEvent: any;
   transformArray: Float32Array;
 
-  bodies: Map<number, PhysX.RigidActor> = new Map<number, PhysX.RigidActor>();
-  dynamic: Map<number, PhysX.RigidActor> = new Map<number, PhysX.RigidActor>();
+  bodies: Map<number, PhysX.PxRigidActor> = new Map<number, PhysX.PxRigidActor>();
+  dynamic: Map<number, PhysX.PxRigidActor> = new Map<number, PhysX.PxRigidActor>();
   shapes: Map<number, PhysX.PxShape> = new Map<number, PhysX.PxShape>();
   shapeIDByPointer: Map<number, number> = new Map<number, number>();
   bodyShapes: Map<number, PhysX.PxShape[]> = new Map<number, PhysX.PxShape[]>();
@@ -118,7 +118,7 @@ export class PhysXManager {
     this.scene.fetchResults(true);
     const bodyArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
     let offset = 0;
-    this.bodies.forEach((body: PhysX.RigidActor, id: number) => {
+    this.bodies.forEach((body: PhysX.PxRigidActor, id: number) => {
       bodyArray.set([id], offset)
       if (isDynamicBody(body)) {
         bodyArray.set([...getBodyData(body)], offset + 1);
@@ -137,7 +137,7 @@ export class PhysXManager {
     let offset = 0;
     while (offset < kinematicBodiesArray.length) {
       const id = kinematicBodiesArray[offset];
-      const body = this.bodies.get(id) as PhysX.RigidDynamic;
+      const body = this.bodies.get(id) as PhysX.PxRigidDynamic;
       if (!body) return;
 
       const currentPose = body.getGlobalPose();
@@ -191,7 +191,7 @@ export class PhysXManager {
   addBody = async ({ id, transform, shapes, options }: RigidBodyProxy) => {
     const { type } = options;
 
-    let rigidBody: PhysX.RigidStatic | PhysX.RigidDynamic;
+    let rigidBody: PhysX.PxRigidStatic | PhysX.PxRigidDynamic;
 
     if (type === PhysXBodyType.STATIC) {
       rigidBody = this.physics.createRigidStatic(transform);
@@ -230,22 +230,22 @@ export class PhysXManager {
     const actorFlags = body.getActorFlags();
     if (!isStaticBody(body)) {
       if (typeof options.type !== 'undefined') {
-        let flags = (body as PhysX.RigidDynamic).getRigidBodyFlags();
+        let flags = (body as PhysX.PxRigidDynamic).getRigidBodyFlags();
         if (options.type === PhysXBodyType.KINEMATIC) {
           flags |= PhysX.PxRigidBodyFlag.eKINEMATIC.value;
         } else {
           flags &= ~PhysX.PxRigidBodyFlag.eKINEMATIC.value;
         }
-        (body as PhysX.RigidDynamic).setRigidBodyFlags(new PhysX.PxRigidBodyFlags(flags));
+        (body as PhysX.PxRigidDynamic).setRigidBodyFlags(new PhysX.PxRigidBodyFlags(flags));
       }
       if (options.mass) {
-        (body as PhysX.RigidDynamic).setMass(options.mass);
+        (body as PhysX.PxRigidDynamic).setMass(options.mass);
       }
       if (options.linearDamping) {
-        (body as PhysX.RigidDynamic).setLinearDamping(options.linearDamping);
+        (body as PhysX.PxRigidDynamic).setLinearDamping(options.linearDamping);
       }
       if (options.angularDamping) {
-        (body as PhysX.RigidDynamic).setAngularDamping(options.angularDamping);
+        (body as PhysX.PxRigidDynamic).setAngularDamping(options.angularDamping);
       }
     }
     if (options.linearVelocity) {
@@ -298,18 +298,19 @@ export class PhysXManager {
     controllerDesc.climbingMode = config.climbingMode ?? PhysX.PxCapsuleClimbingMode.eEASY;
     controllerDesc.setReportCallback(
       PhysX.PxUserControllerHitReport.implement({
-        onShapeHit: (shape) => {
+        onShapeHit: (event: PhysX.PxControllerShapeHit) => {
           // TODO: make, get and return shape ID
-          const position = shape.getWorldPos();
-          const normal = shape.getWorldNormal();
-          const length = shape.getLength();
-          this.onEvent({ event: PhysXEvents.CONTROLLER_SHAPE_HIT, id, position, normal, length });
+
+          // const position = event.getWorldPos();
+          // const normal = event.getWorldNormal();
+          // const length = event.getLength();
+          // this.onEvent({ event: PhysXEvents.CONTROLLER_SHAPE_HIT, id, position, normal, length });
         },
-        onControllerHit: (shape) => {
+        onControllerHit: (event) => {
           // TODO
           console.warn('three-physx: onControllerHit event not implemented');
         },
-        onObstacleHit: (shape) => {
+        onObstacleHit: (event) => {
           // TODO
           console.warn('three-physx: onObstacleHit event not implemented');
         },
@@ -321,9 +322,14 @@ export class PhysXManager {
     }
     const controller = this.controllerManager.createController(controllerDesc);
     this.controllers.set(id, controller);
-    this.bodies.set(id, controller as any);
+    // todo: put the controller.getActor into this.bodies instead of controller
+    const actor = controller.getActor();
+    this.bodies.set(id, actor as any);
+    // todo: put actor shape into this.shapes
+    const shapes = actor.getShapes() as PhysX.PxShape;
+    this.shapeIDByPointer.set(shapes.$$.ptr, config.id);
     (controller as any)._collisions = [];
-    (controller as any)._type = PhysXBodyType.CONTROLLER;
+    (actor as any)._type = PhysXBodyType.CONTROLLER;
 
     // todo
   };
@@ -370,27 +376,27 @@ export class PhysXManager {
 function dec2bin(dec) {
   return (dec >>> 0).toString(2);
 }
-const isKinematicBody = (body: PhysX.RigidActor) => {
+const isKinematicBody = (body: PhysX.PxRigidActor) => {
   return (body as any)._type === PhysXBodyType.KINEMATIC;
 };
 
-const isControllerBody = (body: PhysX.RigidActor) => {
+const isControllerBody = (body: PhysX.PxRigidActor) => {
   return (body as any)._type === PhysXBodyType.CONTROLLER;
 };
 
-const isDynamicBody = (body: PhysX.RigidActor) => {
+const isDynamicBody = (body: PhysX.PxRigidActor) => {
   return (body as any)._type === PhysXBodyType.DYNAMIC;
 };
 
-const isStaticBody = (body: PhysX.RigidActor) => {
+const isStaticBody = (body: PhysX.PxRigidActor) => {
   return (body as any)._type === PhysXBodyType.STATIC;
 };
 
-const getRigidBodyFlag = (body: PhysX.RigidActor, flag: number) => {
-  return Boolean(flag & (body as PhysX.RigidBody).getRigidBodyFlags());
+const getRigidBodyFlag = (body: PhysX.PxRigidActor, flag: number) => {
+  return Boolean(flag & (body as PhysX.PxRigidBody).getRigidBodyFlags());
 };
 
-const getBodyData = (body: PhysX.RigidActor) => {
+const getBodyData = (body: PhysX.PxRigidActor) => {
   const transform = body.getGlobalPose();
   const linVel = body.getLinearVelocity();
   const angVel = body.getAngularVelocity();

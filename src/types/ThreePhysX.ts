@@ -116,7 +116,7 @@ export interface ControllerConfig {
   climbingMode?: PhysX.PxCapsuleClimbingMode;
 }
 
-export const DefaultControllerConfig = {
+export const DefaultControllerConfig: ControllerConfig = {
   height: 1,
   radius: 0.25,
   stepOffset: 0.1,

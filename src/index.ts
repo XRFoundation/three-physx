@@ -78,6 +78,8 @@ export class PhysXInstance {
           case PhysXEvents.TRIGGER_START:
           case PhysXEvents.TRIGGER_END:
             {
+              try {
+                
               const { event, idA, idB } = collision;
               const shapeA = this.shapes.get(idA);
               const shapeB = this.shapes.get(idB);
@@ -98,7 +100,8 @@ export class PhysXInstance {
                 shapeSelf: shapeB,
                 shapeOther: shapeA,
               });
-            }
+            } catch (e) { console.log(collision, e)}
+          }
             break;
           case PhysXEvents.CONTROLLER_SHAPE_HIT:
           case PhysXEvents.CONTROLLER_COLLIDER_HIT:
@@ -230,12 +233,14 @@ export class PhysXInstance {
   addController = async (object: Object3D, options?: ControllerConfig) => {
     const id = this._getNextAvailableBodyID();
     createPhysXBody(object, id, []);
+    const shape = { id: this._getNextAvailableShapeID(), height: 1, radius: 0.25, body: (object as Object3DBody).body };
     (object as Object3DBody).body.controller = {
-      config: { id: this._getNextAvailableShapeID(), height: 1, radius: 0.25 },
+      config: shape,
       collisions: { down: false, sides: false, up: false },
       delta: { x: 0, y: 0, z: 0 },
       velocity: { x: 0, y: 0, z: 0 },
     };
+    this.shapes.set(shape.id, shape as any);
     await this.physicsProxy.addController([
       {
         id: (object as Object3DBody).body.id,

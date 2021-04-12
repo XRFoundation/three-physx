@@ -232,13 +232,14 @@ declare namespace PhysX {
     getAngularVelocity(): PxVec3;
     addImpulseAtLocalPos(valueA: PxVec3, valueB: PxVec3): void;
   }
-  class RigidActor extends Actor {
+  class PxRigidActor extends Actor {
     attachShape(shape: PxShape): void;
     detachShape(shape: PxShape, wakeOnLostTouch?: boolean | true): void;
     addForce(force: PxVec3 | any, mode: PxForceMode | number, autowake: boolean): void;
+    getShapes(): PxShape[] | PxShape;
   }
   enum PxForceMode {}
-  class RigidBody extends RigidActor {
+  class PxRigidBody extends PxRigidActor {
     setRigidBodyFlags(flags: PxRigidBodyFlags): void;
     getRigidBodyFlags(): number;
 
@@ -256,8 +257,8 @@ declare namespace PhysX {
     setMassSpaceInertiaTensor(value: PxVec3): void;
   }
 
-  class RigidStatic extends RigidActor {}
-  class RigidDynamic extends RigidBody {
+  class PxRigidStatic extends PxRigidActor {}
+  class PxRigidDynamic extends PxRigidBody {
     wakeUp(): void; //, &PxRigidDynamic::wakeUp)
     setWakeCounter(): void; //, &PxRigidDynamic::setWakeCounter)
     isSleeping(): boolean; //, &PxRigidDynamic::isSleeping)
@@ -338,8 +339,8 @@ declare namespace PhysX {
   class PxPhysics {
     createSceneDesc(): PxSceneDesc;
     createScene(a: PxSceneDesc): PxScene;
-    createRigidDynamic(a: PxTransform | any): RigidDynamic;
-    createRigidStatic(a: PxTransform | any): RigidStatic;
+    createRigidDynamic(a: PxTransform | any): PxRigidDynamic;
+    createRigidStatic(a: PxTransform | any): PxRigidStatic;
     createMaterial(staticFriction: number, dynamicFriction: number, restitution: number): Material;
     //shapeFlags = PxShapeFlag:: eVISUALIZATION | PxShapeFlag:: eSCENE_QUERY_SHAPE | PxShapeFlag:: eSIMULATION_SHAPE
     createShape(geometry: PxGeometry, material: Material, isExclusive?: boolean | false, shapeFlags?: number | PxShapeFlags): PxShape;
@@ -424,6 +425,7 @@ declare namespace PhysX {
     move(displacement: PxVec3, minDistance: number, elapsedTime: number, filters: PxControllerFilters, obstacles?: PxObstacleContext): PxControllerCollisionFlags;
     setPosition(pos: PxVec3): any;
     getPosition(): PxVec3;
+    getActor(): PxRigidDynamic;
   }
 
   class PxCapsuleController extends PxController {
@@ -441,9 +443,13 @@ declare namespace PhysX {
   }
 
   class PxControllerShapeHit {
-    getWorldPos(): PxVec3;
-    getWorldNormal(): PxVec3;
-    getLength(): number;
+    getShape(): PxVec3;
+    getActor(): PxVec3;
+    getTriangleIndex(): number;
+    // todo - reimplement this
+    // getWorldPos(): PxVec3;
+    // getWorldNormal(): PxVec3;
+    // getLength(): number;
   }
 }
 

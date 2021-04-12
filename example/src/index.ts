@@ -25,7 +25,7 @@ const load = async () => {
   };
   // @ts-ignore
   new PhysXInstance(new Worker(new URL('../../src/worker.ts', import.meta.url)), onUpdate, renderer.scene);
-  await PhysXInstance.instance.initPhysX({ jsPath: '/physx/physx.release.js', wasmPath: '/physx/physx.release.wasm' });
+  await PhysXInstance.instance.initPhysX({ jsPath: '/physx/physx.test.js', wasmPath: '/physx/physx.test.wasm' });
   // await PhysXInstance.instance.initPhysX({ jsPath: '/physx/physx-js-webidl.wasm.js', wasmPath: '/physx/physx-js-webidl.wasm.wasm' });
 
   createScene().forEach(async (object) => {

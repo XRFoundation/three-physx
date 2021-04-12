@@ -1,0 +1,23 @@
+{
+  "name": "physx-js",
+  "version": "0.3.0",
+  "private": "true",
+  "author": "Ash Connell <hello@ashconnell.com>",
+  "main": "dist/physx.release.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ashconnell/physx-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ashconnell/physx-js/issues"
+  },
+  "scripts": {
+    "generate": "docker run --rm -v $(pwd):/src trzeci/emscripten ./generate.sh",
+    "make": "docker run --rm -v $(pwd):/src trzeci/emscripten ./make.sh",
+    "clean": "docker run --rm -v $(pwd):/src trzeci/emscripten ./clean.sh",
+    "shell": "docker run --rm -it -v $(pwd):/src trzeci/emscripten /bin/bash",
+    "copy": "./copy.sh",
+    "dev": "docker run --rm -v $(pwd):/src trzeci/emscripten ./make.sh && ./copy.sh",
+    "prep-examples": "./prep-examples.sh"
+  }
+}
