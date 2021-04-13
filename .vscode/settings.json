@@ -1,0 +1,9 @@
+{
+  "files.associations": {
+    "optional": "cpp",
+    "system_error": "cpp",
+    "memory": "cpp",
+    "istream": "cpp",
+    "tuple": "cpp"
+  }
+}

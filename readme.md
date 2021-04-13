@@ -12,12 +12,12 @@ Progress:
 - [x] kinematic
 - [x] collision events
 - [x] update bodies
+- [x] new build with more bindings
+- [x] put body ids on arraybuffers for more efficient data transfer
 - [ ] capsule, cylinder and convex colliders
 - [ ] character & vehicle
 - [ ] implement all API functions
 - [ ] raycasts
-- [ ] put body ids on arraybuffers for more efficient data transfer
-- [ ] new build with more bindings
 - [ ] fix root object scaling bug
 
 ## Example

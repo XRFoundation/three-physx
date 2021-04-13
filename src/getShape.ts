@@ -40,9 +40,9 @@ const getGeometry = ({ shape, transform, options }): PhysX.PxGeometry => {
     case PhysXModelShapes.Sphere: geometry = new PhysX.PxSphereGeometry(radius); break;
     case PhysXModelShapes.Capsule: geometry = new PhysX.PxCapsuleGeometry(radius, halfHeight); break;
     case PhysXModelShapes.Plane: geometry = new PhysX.PxPlaneGeometry(); break;
-    default: case PhysXModelShapes.TriangleMesh: geometry = createTrimesh(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices, indices); break;
+    case PhysXModelShapes.TriangleMesh: geometry = createTrimesh(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices, indices); break;
     // default: case PhysXModelShapes.ConvexMesh: geometry = new PhysX.PxConvexMeshGeometry(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices, indices); break;
-    // default: case PhysXModelShapes.ConvexMesh: geometry = createConvexMesh(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices, indices); break;
+    default: case PhysXModelShapes.ConvexMesh: geometry = createConvexMesh(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices, indices); break;
   }
   return geometry;
 };
@@ -69,18 +69,14 @@ const createConvexMesh = (transform: PhysXBodyTransform, cooking: PhysX.PxCookin
 
   const [verticesPtr, indicesPtr] = createMeshPointers(vertices, indices);
 
-  const convexMeshDescription = new PhysX.PxConvexMeshDesc();
-  console.log(convexMeshDescription)
-
-  const trimesh = cooking.createConvexMesh(convexMeshDescription, physics);
-
+  const convexMesh = cooking.createConvexMeshFromBuffer(verticesPtr, vertices.length, physics);
 
   const meshScale = new PhysX.PxMeshScale(
     { x: transform.scale.x, y: transform.scale.y, z: transform.scale.z },
     // { x: 1, y: 1, z: 1 },
     { x: 0, y: 0, z: 0, w: 1 },
   );
-  const geometry = new PhysX.PxTriangleMeshGeometry(trimesh, meshScale, new PhysX.PxMeshGeometryFlags(0));
+  const geometry = new PhysX.PxConvexMeshGeometry(convexMesh, meshScale, new PhysX.PxConvexMeshGeometryFlags(0));
 
   PhysX._free(verticesPtr);
   PhysX._free(indicesPtr);

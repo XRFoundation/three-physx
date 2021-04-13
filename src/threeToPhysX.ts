@@ -144,7 +144,7 @@ const getGeometryShape = (mesh): any => {
       const vertices = Array.from(mesh.geometry.attributes.position.array);
       const indices = Array.from(mesh.geometry.index.array);
       return {
-        shape: PhysXModelShapes.TriangleMesh,
+        shape: PhysXModelShapes.ConvexMesh,
         options: { vertices, indices },
       };
   }

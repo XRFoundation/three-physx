@@ -73,6 +73,10 @@ declare namespace PhysX {
     constructor(a: any);
   }
 
+  class PxConvexMeshGeometryFlags {
+    constructor(a: any);
+  }
+
   class PxControllerCollisionFlags {
     isSet(flag: PxControllerCollisionFlag): boolean;
   }
@@ -210,6 +214,10 @@ declare namespace PhysX {
     constructor(a: any, b: any, c: any);
   }
 
+  class PxConvexMeshGeometry extends PxGeometry {
+    constructor(a: any, b: any, c: any);
+  }
+
   class Material extends Base {}
 
   class PxShape extends Base {
@@ -333,7 +341,9 @@ declare namespace PhysX {
   }
 
   class PxCooking {
-    createTriMesh(verticesPtr: number, vertCount: number, indicesPrt: number, indexCount: number, isU16: boolean, physcis: PxPhysics): void;
+    createTriMesh(verticesPtr: number, vertCount: number, indicesPrt: number, indexCount: number, isU16: boolean, physics: PxPhysics): void;
+    // todo: createConvexMesh();
+    createConvexMeshFromBuffer(verticesPtr: number, vertCount: number, physics: PxPhysics): void;
   }
 
   class PxPhysics {

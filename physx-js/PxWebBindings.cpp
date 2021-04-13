@@ -509,7 +509,14 @@ EMSCRIPTEN_BINDINGS(physx)
       .function("setDriveVelocity", select_overload<void(const PxVec3 &, const PxVec3 &, bool)>(&PxD6Joint::setDriveVelocity));
 
   class_<PxAllocatorCallback>("PxAllocatorCallback");
-  class_<PxDefaultAllocator, base<PxAllocatorCallback>>("PxDefaultAllocator").constructor<>();
+  // .function("allocate", &PxAllocatorCallback::allocate, allow_raw_pointers())
+  // .function("deallocate", &PxAllocatorCallback::deallocate, allow_raw_pointers());
+
+  class_<PxDefaultAllocator, base<PxAllocatorCallback>>("PxDefaultAllocator")
+      .constructor<>()
+      .function("allocate", &PxDefaultAllocator::allocate, allow_raw_pointers())
+      .function("deallocate", &PxDefaultAllocator::deallocate, allow_raw_pointers());
+
   class_<PxTolerancesScale>("PxTolerancesScale")
       .constructor<>()
       .property("speed", &PxTolerancesScale::speed)
@@ -565,6 +572,11 @@ EMSCRIPTEN_BINDINGS(physx)
       .property("gravity", &PxSceneDesc::gravity);
 
   class_<PxFoundation>("PxFoundation")
+      // todo: figure these out
+      // .function("getAllocatorCallback", &PxFoundation::getAllocatorCallback, allow_raw_pointers())
+      // .function("getErrorCallback", &PxFoundation::getErrorCallback)//, allow_raw_pointers())
+      .function("getErrorLevel", &PxFoundation::getErrorLevel) //, allow_raw_pointers())
+      .function("getReportAllocationNames", &PxFoundation::getReportAllocationNames)
       .function("release", &PxFoundation::release);
 
   class_<PxSceneFlags>("PxSceneFlags");
@@ -673,6 +685,7 @@ EMSCRIPTEN_BINDINGS(physx)
 
   class_<PxHitFlags>("PxHitFlags")
       .constructor<int>();
+
   enum_<PxHitFlag::Enum>("PxHitFlag")
       .value("eDEFAULT", PxHitFlag::Enum::eDEFAULT)
       .value("eMESH_BOTH_SIDES", PxHitFlag::Enum::eMESH_BOTH_SIDES)
@@ -754,28 +767,74 @@ EMSCRIPTEN_BINDINGS(physx)
                                       }));
 
   class_<PxPhysics>("PxPhysics")
-      .function("release", &PxPhysics::release)
-      .function("getTolerancesScale", &PxPhysics::getTolerancesScale)
+      .function("createAggregate", &PxPhysics::createAggregate, allow_raw_pointers())
+      .function("createArticulation", &PxPhysics::createArticulation, allow_raw_pointers())
+      .function("createArticulationReducedCoordinate", &PxPhysics::createArticulationReducedCoordinate, allow_raw_pointers())
+      .function("createBVHStructure", &PxPhysics::createBVHStructure, allow_raw_pointers())
+      .function("createConstraint", &PxPhysics::createConstraint, allow_raw_pointers())
+      .function("createConvexMesh", &PxPhysics::createConvexMesh, allow_raw_pointers())
+      .function("createHeightField", &PxPhysics::createHeightField, allow_raw_pointers())
+      .function("createAggregate", &PxPhysics::createAggregate, allow_raw_pointers())
+      .function("createMaterial", &PxPhysics::createMaterial, allow_raw_pointers())
+      .function("createPruningStructure", &PxPhysics::createPruningStructure, allow_raw_pointers())
+      .function("createRigidDynamic", &PxPhysics::createRigidDynamic, allow_raw_pointers())
+      .function("createRigidStatic", &PxPhysics::createRigidStatic, allow_raw_pointers())
       .function("createScene", &PxPhysics::createScene, allow_raw_pointers())
       .function("createShape", select_overload<PxShape *(const PxGeometry &, const PxMaterial &, bool, PxShapeFlags)>(&PxPhysics::createShape), allow_raw_pointers())
-      .function("createMaterial", &PxPhysics::createMaterial, allow_raw_pointers())
-      .function("createRigidDynamic", &PxPhysics::createRigidDynamic, allow_raw_pointers())
-      .function("createRigidStatic", &PxPhysics::createRigidStatic, allow_raw_pointers());
+      .function("createTriangleMesh", &PxPhysics::createTriangleMesh, allow_raw_pointers())
+      .function("getBVHStructures", &PxPhysics::getBVHStructures, allow_raw_pointers())
+      .function("getConvexMeshes", &PxPhysics::getConvexMeshes, allow_raw_pointers())
+      // .function("getFoundation", &PxPhysics::getFoundation, allow_raw_pointers())
+      .function("getHeightFields", &PxPhysics::getHeightFields, allow_raw_pointers())
+      .function("getMaterials", &PxPhysics::getMaterials, allow_raw_pointers())
+      .function("getNbConvexMeshes", &PxPhysics::getNbConvexMeshes, allow_raw_pointers())
+      .function("getNbHeightFields", &PxPhysics::getNbHeightFields, allow_raw_pointers())
+      .function("getNbMaterials", &PxPhysics::getNbMaterials, allow_raw_pointers())
+      .function("getNbScenes", &PxPhysics::getNbScenes, allow_raw_pointers())
+      .function("getNbShapes", &PxPhysics::getNbShapes, allow_raw_pointers())
+      .function("getNbTriangleMeshes", &PxPhysics::getNbTriangleMeshes, allow_raw_pointers())
+      // .function("getPhysicsInsertionCallback", &PxPhysics::getPhysicsInsertionCallback, allow_raw_pointers())
+      .function("getScenes", &PxPhysics::getScenes, allow_raw_pointers())
+      .function("getShapes", &PxPhysics::getShapes, allow_raw_pointers())
+      .function("getTolerancesScale", &PxPhysics::getTolerancesScale, allow_raw_pointers())
+      .function("getTriangleMeshes", &PxPhysics::getTriangleMeshes, allow_raw_pointers())
+      .function("registerDeletionListener", &PxPhysics::registerDeletionListener, allow_raw_pointers())
+      .function("registerDeletionListenerObjects", &PxPhysics::registerDeletionListenerObjects, allow_raw_pointers())
+      .function("release", &PxPhysics::release)
+      .function("unregisterDeletionListener", &PxPhysics::unregisterDeletionListener, allow_raw_pointers())
+      .function("unregisterDeletionListenerObjects", &PxPhysics::unregisterDeletionListenerObjects, allow_raw_pointers());
 
+  class_<PxPhysicsInsertionCallback>("PxPhysicsInsertionCallback");
   class_<PxPvd>("PxPvd");
 
   class_<PxShapeFlags>("PxShapeFlags")
       .constructor<int>()
       .function("isSet", &PxShapeFlags::isSet);
+
   enum_<PxShapeFlag::Enum>("PxShapeFlag")
       .value("eSIMULATION_SHAPE", PxShapeFlag::Enum::eSIMULATION_SHAPE)
       .value("eSCENE_QUERY_SHAPE", PxShapeFlag::Enum::eSCENE_QUERY_SHAPE)
       .value("eTRIGGER_SHAPE", PxShapeFlag::Enum::eTRIGGER_SHAPE)
       .value("eVISUALIZATION", PxShapeFlag::Enum::eVISUALIZATION);
 
-  class_<PxErrorCallback>("PxErrorCallback");
+  enum_<PxErrorCode::Enum>("PxErrorCode")
+      .value("eNO_ERROR", PxErrorCode::Enum::eNO_ERROR)
+      .value("eDEBUG_INFO", PxErrorCode::Enum::eDEBUG_INFO)
+      .value("eDEBUG_WARNING", PxErrorCode::Enum::eDEBUG_WARNING)
+      .value("eINVALID_PARAMETER", PxErrorCode::Enum::eINVALID_PARAMETER)
+      .value("eINVALID_OPERATION", PxErrorCode::Enum::eINVALID_OPERATION)
+      .value("eOUT_OF_MEMORY", PxErrorCode::Enum::eOUT_OF_MEMORY)
+      .value("eINTERNAL_ERROR", PxErrorCode::Enum::eINTERNAL_ERROR)
+      .value("eABORT", PxErrorCode::Enum::eABORT)
+      .value("ePERF_WARNING", PxErrorCode::Enum::ePERF_WARNING)
+      .value("eMASK_ALL", PxErrorCode::Enum::eMASK_ALL);
+
+  class_<PxErrorCallback>("PxErrorCallback")
+      .function("reportError", &PxErrorCallback::reportError, allow_raw_pointers());
+
   class_<PxDefaultErrorCallback, base<PxErrorCallback>>("PxDefaultErrorCallback")
-      .constructor<>();
+      .constructor<>()
+      .function("reportError", &PxDefaultErrorCallback::reportError, allow_raw_pointers());
 
   class_<PxBitAndByte>("PxBitAndByte")
       .function("isBitSet", &PxBitAndByte::isBitSet)
@@ -792,6 +851,12 @@ EMSCRIPTEN_BINDINGS(physx)
   register_vector<PxU16>("PxU16Vector");
 
   class_<PxCooking>("PxCooking")
+      // .function("computeHullPolygons", &PxCooking::computeHullPolygons, allow_raw_pointers())
+      .function("cookBVHStructure", &PxCooking::cookBVHStructure, allow_raw_pointers())
+      .function("cookConvexMesh", &PxCooking::cookConvexMesh, allow_raw_pointers())
+      .function("cookHeightField", &PxCooking::cookHeightField, allow_raw_pointers())
+      .function("cookTriangleMesh", &PxCooking::cookTriangleMesh, allow_raw_pointers())
+      .function("createBVHStructure", &PxCooking::createBVHStructure, allow_raw_pointers())
       .function("createConvexMesh", optional_override([](PxCooking &cooking, std::vector<PxVec3> &vertices, PxPhysics &physics) {
                   return createConvexMesh(vertices, cooking, physics);
                 }),
@@ -811,7 +876,57 @@ EMSCRIPTEN_BINDINGS(physx)
       .function("createHeightFieldExt", optional_override([](PxCooking &cooking, PxU32 numCols, PxU32 numRows, std::vector<PxHeightFieldSample> &samples, PxPhysics &physics) {
                   return createHeightFieldExt(numCols, numRows, samples, cooking, physics);
                 }),
-                allow_raw_pointers());
+                allow_raw_pointers())
+      // .function("createHeightField", &PxCooking::createHeightField, allow_raw_pointers())
+      // .function("createTriangleMesh", &PxCooking::createTriangleMesh, allow_raw_pointers())
+      .function("getParams", &PxCooking::getParams)
+      .function("platformMismatch", &PxCooking::platformMismatch)
+      .function("release", &PxCooking::release)
+      .function("setParams", &PxCooking::setParams)
+      .function("validateConvexMesh", &PxCooking::validateConvexMesh)
+      .function("validateTriangleMesh", &PxCooking::validateTriangleMesh);
+
+  // these are problematic, so we have our own cooking create mesh functions
+  // class_<PxStridedData>("PxStridedData")
+  //     .constructor<>();
+  // .function("at", &PxStridedData::at)
+  // .property("data", &PxStridedData::data, allow_raw_pointers())
+  // .property("stride", &PxStridedData::stride);
+
+  // class_<PxBoundedData, base<PxStridedData>>("PxBoundedData");
+  // .property("data", &PxBoundedData::data, allow_raw_pointers())
+  // .property("stride", &PxBoundedData::stride)
+  // .property("count", &PxBoundedData::count);
+
+  class_<PxConvexMeshDesc>("PxConvexMeshDesc")
+      .constructor<>()
+      .property("points", &PxConvexMeshDesc::points)
+      .property("polygons", &PxConvexMeshDesc::polygons)
+      .property("indices", &PxConvexMeshDesc::indices)
+      .property("flags", &PxConvexMeshDesc::flags)
+      .property("vertexLimit", &PxConvexMeshDesc::vertexLimit)
+      .property("quantizedCount", &PxConvexMeshDesc::quantizedCount)
+      .function("setToDefault", &PxConvexMeshDesc::setToDefault)
+      .function("isValid", &PxConvexMeshDesc::isValid);
+
+  class_<PxConvexFlags>("PxConvexFlags").constructor<int>();
+  enum_<PxConvexFlag::Enum>("PxConvexFlag")
+      .value("e16_BIT_INDICES", PxConvexFlag::Enum::e16_BIT_INDICES)
+      .value("eCOMPUTE_CONVEX", PxConvexFlag::Enum::eCOMPUTE_CONVEX)
+      .value("eCHECK_ZERO_AREA_TRIANGLES", PxConvexFlag::Enum::eCHECK_ZERO_AREA_TRIANGLES)
+      .value("eQUANTIZE_INPUT", PxConvexFlag::Enum::eQUANTIZE_INPUT)
+      .value("eDISABLE_MESH_VALIDATION", PxConvexFlag::Enum::eDISABLE_MESH_VALIDATION)
+      .value("ePLANE_SHIFTING", PxConvexFlag::Enum::ePLANE_SHIFTING)
+      .value("eFAST_INERTIA_COMPUTATION", PxConvexFlag::Enum::eFAST_INERTIA_COMPUTATION)
+      .value("eGPU_COMPATIBLE", PxConvexFlag::Enum::eGPU_COMPATIBLE)
+      .value("eSHIFT_VERTICES", PxConvexFlag::Enum::eSHIFT_VERTICES);
+
+  enum_<PxConvexMeshCookingResult::Enum>("PxConvexMeshCookingResult")
+      .value("eSUCCESS", PxConvexMeshCookingResult::Enum::eSUCCESS)
+      .value("eZERO_AREA_TEST_FAILED", PxConvexMeshCookingResult::Enum::eZERO_AREA_TEST_FAILED)
+      .value("ePOLYGONS_LIMIT_REACHED", PxConvexMeshCookingResult::Enum::ePOLYGONS_LIMIT_REACHED)
+      .value("eFAILURE", PxConvexMeshCookingResult::Enum::eFAILURE);
+
   class_<PxCookingParams>("PxCookingParams")
       .constructor<PxTolerancesScale>();
   class_<PxCpuDispatcher>("PxCpuDispatcher");
@@ -1034,6 +1149,7 @@ EMSCRIPTEN_BINDINGS(physx)
       .function("release", &PxTriangleMesh::release);
 
   class_<PxTriangleMeshGeometry, base<PxGeometry>>("PxTriangleMeshGeometry")
+      .constructor<>()
       .constructor<PxTriangleMesh *, const PxMeshScale &, PxMeshGeometryFlags>()
       .function("setScale", optional_override([](PxTriangleMeshGeometry &geo, PxMeshScale &scale) {
                   geo.scale.scale = scale.scale;
@@ -1041,7 +1157,8 @@ EMSCRIPTEN_BINDINGS(physx)
                 }))
       .function("isValid", &PxTriangleMeshGeometry::isValid);
 
-  class_<PxMeshGeometryFlags>("PxMeshGeometryFlags").constructor<int>();
+  class_<PxMeshGeometryFlags>("PxMeshGeometryFlags")
+      .constructor<int>();
   enum_<PxMeshGeometryFlag::Enum>("PxMeshGeometryFlag")
       .value("eDOUBLE_SIDED", PxMeshGeometryFlag::Enum::eDOUBLE_SIDED);
 
@@ -1264,5 +1381,12 @@ namespace emscripten
     void raw_destructor<PxUserControllerHitReport>(PxUserControllerHitReport *){};
     template <>
     void raw_destructor<PxControllerShapeHit>(PxControllerShapeHit *){};
+    template <>
+    void raw_destructor<PxPhysicsInsertionCallback>(PxPhysicsInsertionCallback *){};
+    template <>
+    void raw_destructor<PxErrorCallback>(PxErrorCallback *){};
+    template <>
+    void raw_destructor<PxDefaultErrorCallback>(PxDefaultErrorCallback *){};
+
   }
 }
