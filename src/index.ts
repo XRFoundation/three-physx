@@ -107,11 +107,12 @@ export class PhysXInstance {
           case PhysXEvents.CONTROLLER_COLLIDER_HIT:
           case PhysXEvents.CONTROLLER_OBSTACLE_HIT:
             {
-              const { event, id, position, normal, length } = collision;
-              const shape = this.shapes.get(id);
-              const controllerBody: RigidBodyProxy = (shape as any).body;
+              const { event, controllerID, shapeID, position, normal, length } = collision;
+              const controllerBody: RigidBodyProxy =  this.bodies.get(controllerID)
+              const shape = this.shapes.get(shapeID);
               controllerBody.dispatchEvent({
                 type: event,
+                shape,
                 position,
                 normal,
                 length,
@@ -245,7 +246,7 @@ export class PhysXInstance {
     await this.physicsProxy.addController([
       {
         id: (object as Object3DBody).body.id,
-        config: (object as Object3DBody).body.controller.config,
+        config: shape,
       },
     ]);
     (object as Object3DBody).body.options.type = PhysXBodyType.CONTROLLER;

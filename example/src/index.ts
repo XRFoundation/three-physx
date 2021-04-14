@@ -58,6 +58,9 @@ const load = async () => {
   character.add(new Mesh(new CapsuleBufferGeometry(0.25, 0.25, 1), new MeshBasicMaterial({ color: randomColor() })));
   const characterBody = await PhysXInstance.instance.addController(character);
   objects.set(characterBody.id, character);
+  characterBody.addEventListener(PhysXEvents.CONTROLLER_SHAPE_HIT, (ev) => {
+    // console.log('COLLISION DETECTED', ev);
+  });
 
   renderer.addToScene(character);
   const keys = {}

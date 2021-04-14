@@ -304,11 +304,11 @@ export class PhysXManager {
         onShapeHit: (event: PhysX.PxControllerShapeHit) => {
           // TODO: make, get and return shape ID
           const shape = event.getShape();
-          const id = this.shapeIDByPointer.get(shape.$$.ptr);
+          const shapeID = this.shapeIDByPointer.get(shape.$$.ptr);
           const position = event.getWorldPos();
           const normal = event.getWorldNormal();
           const length = event.getLength();
-          this.onEvent({ event: PhysXEvents.CONTROLLER_SHAPE_HIT, id, position, normal, length });
+          this.onEvent({ event: PhysXEvents.CONTROLLER_SHAPE_HIT, controllerID: id, shapeID, position, normal, length });
         },
         onControllerHit: (event) => {
           // TODO
