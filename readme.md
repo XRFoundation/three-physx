@@ -14,11 +14,14 @@ Progress:
 - [x] update bodies
 - [x] new build with more bindings
 - [x] put body ids on arraybuffers for more efficient data transfer
-- [ ] capsule, cylinder and convex colliders
-- [ ] character & vehicle
-- [ ] implement all API functions
-- [ ] raycasts
+- [x] capsule
+- [ ] trimesh and convex
+- [ ] character controller
+- [ ] vehicle controller
+- [ ] raycasts (subscribe + promise)
+- [ ] heightfield colliders
 - [ ] fix root object scaling bug
+- [ ] geometry per instance scaling
 
 ## Example
 

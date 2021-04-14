@@ -1,8 +1,10 @@
 import { PhysXInstance } from '../../src';
-import { Mesh, TorusKnotBufferGeometry, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, CylinderBufferGeometry, Vector3 } from 'three';
+import { Mesh, TorusKnotBufferGeometry, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, CylinderBufferGeometry, Vector3, TorusBufferGeometry, BufferGeometry } from 'three';
 import { Object3DBody, PhysXBodyType, PhysXEvents, PhysXModelShapes, RigidBodyProxy } from '../../src/types/ThreePhysX';
-import { PhysXDebugRenderer } from './PhysXDebugRenderer';
-import { CapsuleBufferGeometry } from './CapsuleBufferGeometry';
+import { DebugRenderer } from '../../src/utils/DebugRenderer';
+import { CapsuleBufferGeometry } from '../../src/utils/CapsuleBufferGeometry';
+import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry';
+import { BufferGeometryUtils } from "three/examples/jsm/utils/BufferGeometryUtils";
 
 const load = async () => {
   const renderer = await import('./renderer');
@@ -26,7 +28,6 @@ const load = async () => {
   // @ts-ignore
   new PhysXInstance(new Worker(new URL('../../src/worker.ts', import.meta.url)), onUpdate, renderer.scene);
   await PhysXInstance.instance.initPhysX({ jsPath: '/physx/physx.release.js', wasmPath: '/physx/physx.release.wasm' });
-  // await PhysXInstance.instance.initPhysX({ jsPath: '/physx/physx-js-webidl.wasm.js', wasmPath: '/physx/physx-js-webidl.wasm.wasm' });
 
   createScene().forEach(async (object) => {
     const body = await PhysXInstance.instance.addBody(object);
@@ -34,7 +35,7 @@ const load = async () => {
     renderer.addToScene(object);
   });
 
-  const kinematicObject = new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() })).translateY(-2.5).rotateZ(Math.PI / 2);
+  const kinematicObject = new Group();//new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() })).translateY(-2.5).rotateZ(Math.PI / 2);
   // kinematicObject.scale.setScalar(2)
   kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateX(2).rotateY(Math.PI / 2));
   kinematicObject.children[0].scale.setScalar(2);
@@ -77,7 +78,7 @@ const load = async () => {
     }
   });
 
-  const debug = new PhysXDebugRenderer(renderer.scene);
+  const debug = new DebugRenderer(renderer.scene);
   debug.setEnabled(true);
   let lastTime = Date.now() - (1/60);
   let lastDelta = 1/60;
@@ -131,15 +132,16 @@ const load = async () => {
   };
   update();
 };
-
+const spread = 10;
 const createScene = () => {
   const geoms = [new BoxBufferGeometry(), new SphereBufferGeometry(1), new CapsuleBufferGeometry(0.5, 0.5, 1)];
   const meshes = [];
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < 1; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor() }));
-    mesh.position.set(Math.random() * 100 - 50, Math.random() * 50, Math.random() * 100 - 50);
+    mesh.position.set((Math.random()-0.5) * spread, Math.random() * spread, (Math.random()-0.5) * spread);
     mesh.userData.physx = {
       type: PhysXBodyType.DYNAMIC,
+      // shapes: [ { type: PhysXModelShapes.TriangleMesh, } ]
     };
     meshes.push(mesh);
   }

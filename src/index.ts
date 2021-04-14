@@ -108,7 +108,8 @@ export class PhysXInstance {
           case PhysXEvents.CONTROLLER_OBSTACLE_HIT:
             {
               const { event, id, position, normal, length } = collision;
-              const controllerBody: RigidBodyProxy = this.controllerBodies.get(id).body;
+              const shape = this.shapes.get(id);
+              const controllerBody: RigidBodyProxy = (shape as any).body;
               controllerBody.dispatchEvent({
                 type: event,
                 position,
@@ -179,7 +180,7 @@ export class PhysXInstance {
         this.shapes.set(shape.id, shape);
       });
     }
-    createPhysXBody(object, id, shapes || this.addShapes(object, id));
+    createPhysXBody(object, id, shapes || this.addShapes(object));
     await this.physicsProxy.addBody([(object as Object3DBody).body]);
     (object as Object3DBody).body.shapes.forEach((shape) => {
       (shape as any).body = (object as Object3DBody).body;
@@ -192,8 +193,8 @@ export class PhysXInstance {
     return (object as Object3DBody).body;
   };
 
-  addShapes = (object, id) => {
-    const shapes = createPhysXShapes(object, id);
+  addShapes = (object) => {
+    const shapes = createPhysXShapes(object);
     shapes.forEach((shape) => {
       this.shapes.set(shape.id, shape);
     });
@@ -322,4 +323,5 @@ const generateUUID = (): string => {
     .join('-');
 };
 
-export { threeToPhysXModelDescription } from './threeToPhysXModelDescription';
+export { CapsuleBufferGeometry } from "./utils/CapsuleBufferGeometry";
+export { DebugRenderer } from "./utils/DebugRenderer";

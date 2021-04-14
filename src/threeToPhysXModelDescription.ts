@@ -118,18 +118,19 @@ const createBoundingBoxShape = (object): BodyShape => {
  * @param  {Object3D} mesh
  * @return {BodyShape}
  */
-function createConvexPolyhedron(object): BodyShape {
+export function createConvexPolyhedron(geometry): BodyShape {
   let i;
   const eps = 1e-4;
-  const geometry = getGeometry(object);
+  // const geometry = getGeometry(object);
 
   if (!geometry || !geometry.attributes.position.count) return null;
+  console.log(geometry)
 
-  for (i = 0; i < geometry.attributes.position.count; i++) {
-    geometry.attributes.position[i].x += (Math.random() - 0.5) * eps;
-    geometry.attributes.position[i].y += (Math.random() - 0.5) * eps;
-    geometry.attributes.position[i].z += (Math.random() - 0.5) * eps;
-  }
+  // for (i = 0; i < geometry.attributes.position.count; i++) {
+  //   geometry.attributes.position[i].x += (Math.random() - 0.5) * eps;
+  //   geometry.attributes.position[i].y += (Math.random() - 0.5) * eps;
+  //   geometry.attributes.position[i].z += (Math.random() - 0.5) * eps;
+  // }
 
   const hull = quickhull(geometry);
 

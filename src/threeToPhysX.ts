@@ -1,6 +1,9 @@
-import { Vector3, Matrix4, Mesh, SphereBufferGeometry, Quaternion, Object3D, SphereGeometry, BufferGeometry } from 'three';
+import { Vector3, Matrix4, Mesh, Quaternion, Object3D, SphereGeometry, BufferGeometry } from 'three';
+import { BufferGeometryUtils } from "three/examples/jsm/utils/BufferGeometryUtils";
+import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry';
 import { PhysXInstance } from '.';
 import { PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy, ShapeConfig } from './types/ThreePhysX';
+import { quickhull } from './utils/quickhull';
 
 const matrixA = new Matrix4();
 const matrixB = new Matrix4();
@@ -10,7 +13,7 @@ const scale = new Vector3(1, 1, 1);
 
 // TODO: set root to the scene in case objects are parented already
 
-export const createPhysXShapes = (object: any, id: number) => {
+export const createPhysXShapes = (object: any) => {
   const shapes: PhysXShapeConfig[] = [];
   object.updateMatrixWorld(true);
   iterateGeometries(object, { includeInvisible: true }, (data) => {
@@ -48,16 +51,18 @@ const createShapes = (mesh, root): PhysXShapeConfig[] => {
     const relativeTransform = getTransformRelativeToRoot(mesh, root);
     mesh.userData.physx.shapes.forEach((shape) => {
       const data = getShapeData(mesh, shape);
+      if (!data) return;
       const transform = shape.transform || relativeTransform;
       const id = PhysXInstance.instance._getNextAvailableShapeID();
       data.id = id;
       data.transform = transform;
-      data.config = getShapeConfig(shape.config);
+      data.config = getShapeConfig(shape.config ?? {});
       data.config.id = id;
       shapes.push(data);
     });
   } else {
-    const data = getGeometryShape(mesh);
+    const data = getThreeGeometryShape(mesh);
+    if (!data) return [];
     const transform = getTransformRelativeToRoot(mesh, root);
     const id = PhysXInstance.instance._getNextAvailableShapeID();
     data.id = id;
@@ -92,6 +97,7 @@ const getShapeConfig = (data) => {
 };
 
 const getShapeData = (mesh, shape): any => {
+  console.log(mesh.geometry, shape)
   switch (shape.type) {
     case PhysXModelShapes.Box:
       return {
@@ -99,7 +105,7 @@ const getShapeData = (mesh, shape): any => {
         options: { boxExtents: shape.boxExtents || getBoxExtents(mesh) },
       };
     case PhysXModelShapes.Capsule:
-      return { 
+      return {
         shape: shape.type,
         halfHeight: shape.halfHeight ?? 1,
         radius: shape.radius ?? shape.radiusTop ?? 0.5
@@ -109,16 +115,19 @@ const getShapeData = (mesh, shape): any => {
         shape: shape.type,
         options: { radius: shape.sphereRadius || getSphereRadius(mesh) },
       };
-    case PhysXModelShapes.ConvexMesh: 
+    case PhysXModelShapes.ConvexMesh:
     case PhysXModelShapes.TriangleMesh:
-    default:
+    default: {
+      // const vertices = removeDuplicates(Array.from(mesh.geometry.attributes.position.array));
       const vertices = Array.from(mesh.geometry.attributes.position.array);
-      const indices = Array.from(mesh.geometry.index.array);
+      const indices = mesh.geometry.index ? Array.from(mesh.geometry.index.array) : [];
       return { shape: shape.type, options: { vertices, indices } };
+    }
   }
 };
 
-const getGeometryShape = (mesh): any => {
+const getThreeGeometryShape = (mesh): any => {
+  if (!mesh.geometry) throw new Error('No geometry defined!')
   switch (mesh.geometry.type) {
     case 'BoxGeometry':
     case 'BoxBufferGeometry':
@@ -130,23 +139,26 @@ const getGeometryShape = (mesh): any => {
       return {
         shape: PhysXModelShapes.Capsule,
         options: { halfHeight: mesh.geometry._halfHeight ?? 1, radius: mesh.geometry.radius ?? mesh.geometry.radiusTop ?? 0.5 }
-      }
-    // case 'PlaneGeometry':
-    // case 'PlaneBufferGeometry':
-    //   return ;
+      };
     case 'SphereGeometry':
     case 'SphereBufferGeometry':
       return {
         shape: PhysXModelShapes.Sphere,
         options: { radius: getSphereRadius(mesh) },
       };
+    // case 'ConvexGeometry': {
+    //   const vertices = Array.from(mesh.geometry.attributes.position.array);
+    //   return { shape: PhysXModelShapes.ConvexMesh, options: { vertices } };
+    // }
     default:
-      const vertices = Array.from(mesh.geometry.attributes.position.array);
-      const indices = Array.from(mesh.geometry.index.array);
-      return {
-        shape: PhysXModelShapes.ConvexMesh,
-        options: { vertices, indices },
-      };
+      console.log("threeToPhysX: geometry of type", mesh.geometry.type, "not supported. No shape will be added.")
+      return;
+    // const vertices = Array.from(mesh.geometry.attributes.position.array);
+    // const indices = Array.from(mesh.geometry.index.array);
+    // return {
+    //   shape: PhysXModelShapes.ConvexMesh,
+    //   options: { vertices, indices },
+    // };
   }
 };
 
@@ -230,9 +242,9 @@ const getTransformRelativeToRoot = (mesh: Object3D, root: Object3D) => {
  * @param {Object3D} object
  * @return {BufferGeometry}
  */
- export function getGeometry (object) {
+export function getGeometry(object) {
   let mesh,
-      tmp = new BufferGeometry();
+    tmp = new BufferGeometry();
   const meshes = getMeshes(object);
 
   const combined = new BufferGeometry();
@@ -242,11 +254,11 @@ const getTransformRelativeToRoot = (mesh: Object3D, root: Object3D) => {
   // Apply scale  – it can't easily be applied to a CANNON.Shape later.
   if (meshes.length === 1) {
     const position = new Vector3(),
-        quaternion = new Quaternion(),
-        scale = new Vector3();
+      quaternion = new Quaternion(),
+      scale = new Vector3();
     if (meshes[0].geometry.isBufferGeometry) {
       if (meshes[0].geometry.attributes.position
-          && meshes[0].geometry.attributes.position.itemSize > 2) {
+        && meshes[0].geometry.attributes.position.itemSize > 2) {
         tmp = meshes[0].geometry;
       }
     } else {
@@ -263,7 +275,7 @@ const getTransformRelativeToRoot = (mesh: Object3D, root: Object3D) => {
     mesh.updateMatrixWorld();
     if (mesh.geometry.isBufferGeometry) {
       if (mesh.geometry.attributes.position
-          && mesh.geometry.attributes.position.itemSize > 2) {
+        && mesh.geometry.attributes.position.itemSize > 2) {
         const tmpGeom = mesh.geometry;
         combined.merge(tmpGeom, mesh.matrixWorld);
         tmpGeom.dispose();
@@ -279,7 +291,7 @@ const getTransformRelativeToRoot = (mesh: Object3D, root: Object3D) => {
   return combined;
 }
 
-function getMeshes (object) {
+function getMeshes(object) {
   const meshes = [];
   object.traverse((o) => {
     if (o.type === 'Mesh') {
@@ -287,4 +299,26 @@ function getMeshes (object) {
     }
   });
   return meshes;
+}
+
+const removeDuplicates = (verticesIn: number[]) => {
+
+  const vertices: Vector3[] = [];
+  for (let i = 0; i < verticesIn.length; i += 3) {
+    const newVec = new Vector3(verticesIn[i], verticesIn[i + 1], verticesIn[i + 2]);
+    let exists = false;
+    for (const vert of vertices) {
+      if (vert.equals(newVec)) {
+        exists = true;
+      }
+    }
+    if (!exists) {
+      vertices.push(newVec);
+    }
+  }
+  const verticesOut = [];
+  vertices.forEach((vert) => {
+    verticesOut.push(vert.x, vert.y, vert.z)
+  })
+  return verticesOut;
 }

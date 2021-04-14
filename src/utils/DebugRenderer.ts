@@ -1,5 +1,5 @@
 import { Scene, Mesh, Points, SphereBufferGeometry, BoxBufferGeometry, PlaneBufferGeometry, BufferGeometry, MeshBasicMaterial, Vector3, SphereGeometry, BoxGeometry, PlaneGeometry, Object3D, Matrix4, Quaternion } from 'three';
-import { Object3DBody, PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy } from '../../src/types/ThreePhysX';
+import { Object3DBody, PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy } from '../types/ThreePhysX';
 import { CapsuleBufferGeometry } from './CapsuleBufferGeometry';
 const parentMatrix = new Matrix4();
 const childMatrix = new Matrix4();
@@ -8,7 +8,7 @@ const rot = new Quaternion();
 const quat = new Quaternion();
 const scale = new Vector3(1, 1, 1);
 const scale2 = new Vector3(1, 1, 1);
-export class PhysXDebugRenderer {
+export class DebugRenderer {
   private scene: Scene;
   private _meshes: Mesh[] | Points[];
   private _materials: MeshBasicMaterial[];

@@ -342,8 +342,8 @@ declare namespace PhysX {
 
   class PxCooking {
     createTriMesh(verticesPtr: number, vertCount: number, indicesPrt: number, indexCount: number, isU16: boolean, physics: PxPhysics): void;
-    // todo: createConvexMesh();
-    createConvexMeshFromBuffer(verticesPtr: number, vertCount: number, physics: PxPhysics): void;
+    // todo: createConvexMeshFromVectors();
+    createConvexMesh(verticesPtr: number, vertCount: number, physics: PxPhysics): void;
   }
 
   class PxPhysics {
@@ -453,8 +453,8 @@ declare namespace PhysX {
   }
 
   class PxControllerShapeHit {
-    getShape(): PxVec3;
-    getActor(): PxVec3;
+    getShape(): PxShape;
+    getActor(): PxRigidActor;
     getTriangleIndex(): number;
     // todo - reimplement this
     // getWorldPos(): PxVec3;

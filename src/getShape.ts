@@ -10,6 +10,7 @@ const halfPI = Math.PI / 2
 
 export const getShape = ({ shape, transform, options }): PhysX.PxShape => {
   const geometry = getGeometry({ shape, transform, options });
+  if(!geometry) return;
 
   const material = PhysXManager.instance.physics.createMaterial(0.2, 0.2, 0.2);
   const flags = new PhysX.PxShapeFlags(PhysX.PxShapeFlag.eSCENE_QUERY_SHAPE.value | PhysX.PxShapeFlag.eSIMULATION_SHAPE.value);
@@ -40,18 +41,22 @@ const getGeometry = ({ shape, transform, options }): PhysX.PxGeometry => {
     case PhysXModelShapes.Sphere: geometry = new PhysX.PxSphereGeometry(radius); break;
     case PhysXModelShapes.Capsule: geometry = new PhysX.PxCapsuleGeometry(radius, halfHeight); break;
     case PhysXModelShapes.Plane: geometry = new PhysX.PxPlaneGeometry(); break;
-    case PhysXModelShapes.TriangleMesh: geometry = createTrimesh(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices, indices); break;
-    // default: case PhysXModelShapes.ConvexMesh: geometry = new PhysX.PxConvexMeshGeometry(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices, indices); break;
-    default: case PhysXModelShapes.ConvexMesh: geometry = createConvexMesh(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices, indices); break;
+    // case PhysXModelShapes.TriangleMesh: geometry = createTrimesh(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices, indices); break;
+    // default: case PhysXModelShapes.ConvexMesh: geometry = createConvexMesh(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices, indices); break;
   }
   return geometry;
 };
 
 const createTrimesh = (transform: PhysXBodyTransform, cooking: PhysX.PxCooking, physics: PhysX.PxPhysics, vertices: ArrayLike<number>, indices: ArrayLike<number>): PhysX.PxTriangleMeshGeometry => {
 
-  const [verticesPtr, indicesPtr] = createMeshPointers(vertices, indices);
+  const verticesPtr = createArrayPointers(vertices);
+  const indicesPtr = createArrayPointers(indices);
 
-  const trimesh = cooking.createTriMesh(verticesPtr, vertices.length, indicesPtr, indices.length, false, physics);
+  const trimesh = cooking.createTriMesh(verticesPtr, vertices.length / 3, indicesPtr, indices.length / 3, false, physics);
+  
+  if(trimesh === null) return;
+
+  console.log(trimesh)
 
   const meshScale = new PhysX.PxMeshScale(
     { x: transform.scale.x, y: transform.scale.y, z: transform.scale.z },
@@ -59,17 +64,20 @@ const createTrimesh = (transform: PhysXBodyTransform, cooking: PhysX.PxCooking, 
     { x: 0, y: 0, z: 0, w: 1 },
   );
   const geometry = new PhysX.PxTriangleMeshGeometry(trimesh, meshScale, new PhysX.PxMeshGeometryFlags(0));
+
   PhysX._free(verticesPtr);
   PhysX._free(indicesPtr);
+  
   return geometry;
 };
 
 
 const createConvexMesh = (transform: PhysXBodyTransform, cooking: PhysX.PxCooking, physics: PhysX.PxPhysics, vertices: ArrayLike<number>, indices: ArrayLike<number>): PhysX.PxTriangleMeshGeometry => {
 
-  const [verticesPtr, indicesPtr] = createMeshPointers(vertices, indices);
+  const verticesPtr = createArrayPointers(vertices);
+  const indicesPtr = createArrayPointers(indices);
 
-  const convexMesh = cooking.createConvexMeshFromBuffer(verticesPtr, vertices.length, physics);
+  const convexMesh = cooking.createConvexMesh(verticesPtr, vertices.length / 3, indicesPtr, indices.length / 3, physics);
 
   const meshScale = new PhysX.PxMeshScale(
     { x: transform.scale.x, y: transform.scale.y, z: transform.scale.z },
@@ -79,27 +87,18 @@ const createConvexMesh = (transform: PhysXBodyTransform, cooking: PhysX.PxCookin
   const geometry = new PhysX.PxConvexMeshGeometry(convexMesh, meshScale, new PhysX.PxConvexMeshGeometryFlags(0));
 
   PhysX._free(verticesPtr);
-  PhysX._free(indicesPtr);
   
   return geometry;
 };
 
-const createMeshPointers = (vertices: ArrayLike<number>, indices: ArrayLike<number>) => {
-  const verticesPtr = PhysX._malloc(4 * vertices.length);
-  let verticesOffset = 0;
+const createArrayPointers = (array: ArrayLike<number>) => {
+  const ptr = PhysX._malloc(4 * array.length);
+  let offset = 0;
 
-  for (let i = 0; i < vertices.length; i++) {
-    PhysX.HEAPF32[(verticesPtr + verticesOffset) >> 2] = vertices[i];
-    verticesOffset += 4;
+  for (let i = 0; i < array.length; i++) {
+    PhysX.HEAPF32[(ptr + offset) >> 2] = array[i];
+    offset += 4;
   }
 
-  const indicesPtr = PhysX._malloc(4 * indices.length);
-  let indicesOffset = 0;
-
-  for (let i = 0; i < indices.length; i++) {
-    PhysX.HEAPU32[(indicesPtr + indicesOffset) >> 2] = indices[i];
-    indicesOffset += 4;
-  }
-
-  return [verticesPtr, indicesPtr];
+  return ptr;
 }

@@ -76,7 +76,7 @@ export interface ShapeConfig {
 
 export interface BodyConfig {
   type?: PhysXBodyType;
-  mass?: number; // todo
+  mass?: number;
   linearDamping?: number;
   angularDamping?: number;
   linearVelocity?: Vec3;

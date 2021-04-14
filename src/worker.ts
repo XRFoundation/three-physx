@@ -58,10 +58,12 @@ export class PhysXManager {
     this.physxVersion = PhysX.PX_PHYSICS_VERSION;
     this.defaultErrorCallback = new PhysX.PxDefaultErrorCallback();
     this.allocator = new PhysX.PxDefaultAllocator();
+    const tolerance = new PhysX.PxTolerancesScale();
+    tolerance.length = 0.01;
     this.foundation = PhysX.PxCreateFoundation(this.physxVersion, this.allocator, this.defaultErrorCallback);
-    this.cookingParamas = new PhysX.PxCookingParams(new PhysX.PxTolerancesScale());
+    this.cookingParamas = new PhysX.PxCookingParams(tolerance);
     this.cooking = PhysX.PxCreateCooking(this.physxVersion, this.foundation, this.cookingParamas);
-    this.physics = PhysX.PxCreatePhysics(this.physxVersion, this.foundation, new PhysX.PxTolerancesScale(), false, null);
+    this.physics = PhysX.PxCreatePhysics(this.physxVersion, this.foundation, tolerance, false, null);
 
     const triggerCallback = {
       onContactBegin: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
@@ -165,8 +167,8 @@ export class PhysXManager {
       };
       const deltaTime = controllerBodiesArray[offset + 4];
       // TODO
-      // const filterData = new PhysX.PxFilterData(1, 1, 1, 1);
-      // const queryCallback = PhysX.PxQueryFilterCallback.implement({ preFilter: console.log, postFilter: console.log })
+      const filterData = new PhysX.PxFilterData(1, 1, 1, 1);
+      const queryCallback = PhysX.PxQueryFilterCallback.implement({ preFilter: console.log, postFilter: console.log })
       const filters = new PhysX.PxControllerFilters(null, null, null);
       const collisionFlags = controller.move(deltaPos, 0.01, deltaTime, filters, null);
       const collisions = {
@@ -207,6 +209,7 @@ export class PhysXManager {
         transform,
         options,
       });
+      if(!bodyShape) return;
       bodyShape.setContactOffset(0.0000001);
       // const filterData = new PhysX.PxFilterData(1, 1, 0, 0);
       // bodyShape.setSimulationFilterData(filterData);
@@ -300,11 +303,12 @@ export class PhysXManager {
       PhysX.PxUserControllerHitReport.implement({
         onShapeHit: (event: PhysX.PxControllerShapeHit) => {
           // TODO: make, get and return shape ID
-
-          // const position = event.getWorldPos();
-          // const normal = event.getWorldNormal();
-          // const length = event.getLength();
-          // this.onEvent({ event: PhysXEvents.CONTROLLER_SHAPE_HIT, id, position, normal, length });
+          const shape = event.getShape();
+          const id = this.shapeIDByPointer.get(shape.$$.ptr);
+          const position = event.getWorldPos();
+          const normal = event.getWorldNormal();
+          const length = event.getLength();
+          this.onEvent({ event: PhysXEvents.CONTROLLER_SHAPE_HIT, id, position, normal, length });
         },
         onControllerHit: (event) => {
           // TODO
@@ -336,17 +340,16 @@ export class PhysXManager {
 
   updateController = async ({ id, config }: { id: number; config: ControllerConfig }) => {
     const controller = this.controllers.get(id) as PhysX.PxCapsuleController;
-    // console.log(controller, id, config)
-    // if (typeof config.height !== 'undefined') {
-    //   controller.setHeight(config.height);
-    // }
-    // if (typeof config.radius !== 'undefined') {
-    //   controller.setRadius(config.radius);
-    // }
-    // if (typeof config.height !== 'undefined') {
-    //   controller.setClimbingMode(config.climbingMode);
-    // }
-    // todo
+    console.log(controller, id, config)
+    if (typeof config.height !== 'undefined') {
+      controller.setHeight(config.height);
+    }
+    if (typeof config.radius !== 'undefined') {
+      controller.setRadius(config.radius);
+    }
+    if (typeof config.height !== 'undefined') {
+      controller.setClimbingMode(config.climbingMode);
+    }
   };
 
   removeController = async () => {

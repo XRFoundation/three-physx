@@ -235,7 +235,7 @@ PxSceneDesc *getDefaultSceneDesc(PxTolerancesScale &scale, int numThreads, PxSim
   return sceneDesc;
 }
 
-PxConvexMesh *createConvexMesh(std::vector<PxVec3> &vertices, PxCooking &cooking, PxPhysics &physics)
+PxConvexMesh *createConvexMeshFromVectors(std::vector<PxVec3> &vertices, PxCooking &cooking, PxPhysics &physics)
 {
   PxConvexMeshDesc convexDesc;
   convexDesc.points.count = vertices.size();
@@ -243,18 +243,60 @@ PxConvexMesh *createConvexMesh(std::vector<PxVec3> &vertices, PxCooking &cooking
   convexDesc.points.data = vertices.data();
   convexDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
 
+  cooking.validateConvexMesh(convexDesc);
+
   PxConvexMesh *convexMesh = cooking.createConvexMesh(convexDesc, physics.getPhysicsInsertionCallback());
 
   return convexMesh;
 }
 
-PxConvexMesh *createConvexMeshFromBuffer(int vertices, PxU32 vertCount, PxCooking &cooking, PxPhysics &physics)
+// this should work, but somehow threejs primitives fail
+PxConvexMesh *createConvexMesh(int vertices, PxU32 vertCount, int indices, PxU32 indexCount, PxCooking &cooking, PxPhysics &physics)
 {
+  PxSimpleTriangleMesh triangleMesh;
+  triangleMesh.points.count = vertCount;
+  triangleMesh.points.stride = sizeof(PxVec3);
+  triangleMesh.points.data = (PxVec3 *)vertices;
+
+  triangleMesh.triangles.count = indexCount;
+  triangleMesh.triangles.stride = 3 * sizeof(PxU32);
+  triangleMesh.triangles.data = (PxU32 *)indices;
+
+  PxDefaultAllocator cb;
+  PxU32 nbVerts;
+  PxVec3 *hullVertices;
+  PxU32 nbIndices;
+  PxU32 *hullIndices;
+  PxU32 nbPolygons;
+  PxHullPolygon *hullPolygons;
+
+  cooking.computeHullPolygons(
+      triangleMesh,
+      cb,
+      nbVerts,
+      hullVertices,
+      nbIndices,
+      hullIndices,
+      nbPolygons,
+      hullPolygons);
+
   PxConvexMeshDesc convexDesc;
-  convexDesc.points.count = vertCount;
+
+  convexDesc.points.count = nbVerts;
   convexDesc.points.stride = sizeof(PxVec3);
-  convexDesc.points.data = (PxVec3 *)vertices;
+  convexDesc.points.data = &hullVertices;
+
+  convexDesc.points.count = nbIndices;
+  convexDesc.points.stride = sizeof(PxVec3);
+  convexDesc.points.data = &hullIndices;
+
+  convexDesc.points.count = nbPolygons;
+  convexDesc.points.stride = sizeof(PxVec3);
+  convexDesc.points.data = &hullPolygons;
+
   convexDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
+
+  cooking.validateConvexMesh(convexDesc);
 
   PxConvexMesh *convexMesh = cooking.createConvexMesh(convexDesc, physics.getPhysicsInsertionCallback());
 
@@ -280,6 +322,8 @@ PxTriangleMesh *createTriMesh(int vertices, PxU32 vertCount, int indices, PxU32 
     meshDesc.triangles.stride = 3 * sizeof(PxU32);
     meshDesc.triangles.data = (PxU32 *)indices;
   }
+
+  cooking.validateTriangleMesh(meshDesc);
 
   PxTriangleMesh *triangleMesh = cooking.createTriangleMesh(meshDesc, physics.getPhysicsInsertionCallback());
   return triangleMesh;
@@ -858,11 +902,11 @@ EMSCRIPTEN_BINDINGS(physx)
       .function("cookTriangleMesh", &PxCooking::cookTriangleMesh, allow_raw_pointers())
       .function("createBVHStructure", &PxCooking::createBVHStructure, allow_raw_pointers())
       .function("createConvexMesh", optional_override([](PxCooking &cooking, std::vector<PxVec3> &vertices, PxPhysics &physics) {
-                  return createConvexMesh(vertices, cooking, physics);
+                  return createConvexMeshFromVectors(vertices, cooking, physics);
                 }),
                 allow_raw_pointers())
-      .function("createConvexMeshFromBuffer", optional_override([](PxCooking &cooking, int vertices, PxU32 vertCount, PxPhysics &physics) {
-                  return createConvexMeshFromBuffer(vertices, vertCount, cooking, physics);
+      .function("createConvexMesh", optional_override([](PxCooking &cooking, int vertices, PxU32 vertCount, int indices, PxU32 indexCount, PxPhysics &physics) {
+                  return createConvexMesh(vertices, vertCount, indices, indexCount, cooking, physics);
                 }),
                 allow_raw_pointers())
       .function("createTriMesh", optional_override([](PxCooking &cooking, int vertices, PxU32 vertCount, int indices, PxU32 indexCount, bool isU16, PxPhysics &physics) {
@@ -1267,7 +1311,26 @@ EMSCRIPTEN_BINDINGS(physx)
                 }),
                 allow_raw_pointers());
 
-  class_<PxControllerShapeHit>("PxControllerShapeHit")
+  class_<PxControllerHit>("PxControllerHit")
+      .constructor<>()
+      .function("getWorldPos", optional_override([](PxControllerShapeHit &hit) {
+                  return hit.worldPos;
+                }),
+                allow_raw_pointers())
+      .function("getWorldNormal", optional_override([](PxControllerShapeHit &hit) {
+                  return hit.worldNormal;
+                }),
+                allow_raw_pointers())
+      .function("getLength", optional_override([](PxControllerShapeHit &hit) {
+                  return hit.length;
+                }),
+                allow_raw_pointers())
+      .function("getDirection", optional_override([](PxControllerShapeHit &hit) {
+                  return hit.dir;
+                }),
+                allow_raw_pointers());
+
+  class_<PxControllerShapeHit, base<PxControllerHit>>("PxControllerShapeHit")
       .constructor<>()
       .function("getShape", optional_override([](PxControllerShapeHit &hit) {
                   return hit.shape;
@@ -1282,14 +1345,14 @@ EMSCRIPTEN_BINDINGS(physx)
                 }),
                 allow_raw_pointers());
 
-  class_<PxControllersHit>("PxControllersHit")
+  class_<PxControllersHit, base<PxControllerHit>>("PxControllersHit")
       .constructor<>()
       .function("getOther", optional_override([](PxControllersHit &hit) {
                   return hit.other;
                 }),
                 allow_raw_pointers());
 
-  class_<PxControllerObstacleHit>("PxControllerObstacleHit")
+  class_<PxControllerObstacleHit, base<PxControllerHit>>("PxControllerObstacleHit")
       .constructor<>()
       .function("getUserData", optional_override([](PxControllerObstacleHit &hit) {
                   return hit.userData;
@@ -1387,6 +1450,7 @@ namespace emscripten
     void raw_destructor<PxErrorCallback>(PxErrorCallback *){};
     template <>
     void raw_destructor<PxDefaultErrorCallback>(PxDefaultErrorCallback *){};
-
+    template <>
+    void raw_destructor<PxControllerHit>(PxControllerHit *){};
   }
 }
