@@ -5,7 +5,6 @@ import { getShape } from './getShape';
 import { PhysXConfig, PhysXBodyTransform, PhysXBodyType, PhysXEvents, BodyConfig, PhysXBodyData, RigidBodyProxy, ShapeConfig, PhysXShapeConfig, ControllerConfig, Vec3 } from './types/ThreePhysX';
 import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
-import { clampNonzeroPositive } from './utils/misc';
 
 const mat4 = new Matrix4();
 const pos = new Vector3();
@@ -213,7 +212,7 @@ export class PhysXManager {
       });
       if (!bodyShape) return;
       bodyShape.setContactOffset(0.0000001);
-      // const filterData = new PhysX.PxFilterData(1, 1, 0, 0);
+      // const filterData = new PhysX.PxFilterData(1, 1, 1, 1);
       // bodyShape.setSimulationFilterData(filterData);
       bodyShapes.push(bodyShape);
       rigidBody.attachShape(bodyShape);
@@ -226,22 +225,23 @@ export class PhysXManager {
     this.bodies.set(id, rigidBody);
     this.scene.addActor(rigidBody, null);
 
-    // delete options.type;
+    delete options.type;
     this.updateBody({ id, options });
   };
 
   updateBody = async ({ id, options }: { id: number; options: BodyConfig }) => {
     const body = this.bodies.get(id);
-    const actorFlags = body.getActorFlags();
     if (!isStaticBody(body)) {
       if (typeof options.type !== 'undefined') {
-        let flags = (body as PhysX.PxRigidDynamic).getRigidBodyFlags();
+        const transform = body.getGlobalPose();
         if (options.type === PhysXBodyType.KINEMATIC) {
-          flags |= PhysX.PxRigidBodyFlag.eKINEMATIC.value;
+          (body as PhysX.PxRigidDynamic).setRigidBodyFlag(PhysX.PxRigidBodyFlag.eKINEMATIC, true);
+          (body as any)._type = PhysXBodyType.KINEMATIC;
         } else {
-          flags &= ~PhysX.PxRigidBodyFlag.eKINEMATIC.value;
+          (body as PhysX.PxRigidDynamic).setRigidBodyFlag(PhysX.PxRigidBodyFlag.eKINEMATIC, false);
+          (body as any)._type = PhysXBodyType.DYNAMIC;
         }
-        (body as PhysX.PxRigidDynamic).setRigidBodyFlags(new PhysX.PxRigidBodyFlags(flags));
+        body.setGlobalPose(transform, true);
       }
       if (options.mass) {
         (body as PhysX.PxRigidDynamic).setMass(options.mass);
@@ -278,7 +278,7 @@ export class PhysXManager {
   _updateShape({ id, isTrigger, collisionId, collisionMask, staticFriction, dynamicFriction, restitution }: ShapeConfig) {
     const shape = this.shapes.get(id);
     if (!shape) return;
-    const filterData = new PhysX.PxFilterData(collisionId, collisionMask, 1, 1);
+    const filterData = new PhysX.PxFilterData(collisionId ?? 1, collisionMask ?? 1, 1, 1);
     shape.setSimulationFilterData(filterData);
     if (typeof staticFriction !== 'undefined' || typeof dynamicFriction !== 'undefined' || typeof restitution !== 'undefined') {
     }
@@ -385,22 +385,25 @@ export class PhysXManager {
       });
     }
     if (typeof config.height !== 'undefined') {
-      (controller as PhysX.PxCapsuleController).setHeight(clampNonzeroPositive(config.height));
+      (controller as PhysX.PxCapsuleController).setHeight(config.height);
+    }
+    if (typeof config.resize !== 'undefined') {
+      (controller as PhysX.PxController).resize(config.resize);
     }
     if (typeof config.radius !== 'undefined') {
-      (controller as PhysX.PxCapsuleController).setRadius(clampNonzeroPositive(config.radius));
+      (controller as PhysX.PxCapsuleController).setRadius(config.radius);
     }
     if (typeof config.climbingMode !== 'undefined') {
       (controller as PhysX.PxCapsuleController).setClimbingMode(config.climbingMode);
     }
     if (typeof config.halfForwardExtent !== 'undefined') {
-      (controller as PhysX.PxBoxController).setHalfForwardExtent(clampNonzeroPositive(config.halfForwardExtent));
+      (controller as PhysX.PxBoxController).setHalfForwardExtent(config.halfForwardExtent);
     }
     if (typeof config.halfHeight !== 'undefined') {
-      (controller as PhysX.PxBoxController).setHalfHeight(clampNonzeroPositive(config.halfHeight));
+      (controller as PhysX.PxBoxController).setHalfHeight(config.halfHeight);
     }
     if (typeof config.halfSideExtent !== 'undefined') {
-      (controller as PhysX.PxBoxController).setHalfSideExtent(clampNonzeroPositive(config.halfSideExtent));
+      (controller as PhysX.PxBoxController).setHalfSideExtent(config.halfSideExtent);
     }
   };
 
@@ -442,10 +445,6 @@ const isDynamicBody = (body: PhysX.PxRigidActor) => {
 
 const isStaticBody = (body: PhysX.PxRigidActor) => {
   return (body as any)._type === PhysXBodyType.STATIC;
-};
-
-const getRigidBodyFlag = (body: PhysX.PxRigidActor, flag: number) => {
-  return Boolean(flag & (body as PhysX.PxRigidBody).getRigidBodyFlags());
 };
 
 const getBodyData = (body: PhysX.PxRigidActor) => {

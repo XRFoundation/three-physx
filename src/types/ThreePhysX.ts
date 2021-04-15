@@ -60,6 +60,7 @@ export interface PhysXShapeConfig {
   shape: PhysXModelShapes;
   transform: PhysXBodyTransform;
   config: ShapeConfig;
+  _debugNeedsUpdate?: any;
   options?: {
     vertices?: number[];
     indices?: number[];
@@ -119,6 +120,7 @@ export interface ControllerConfig {
   maxJumpHeight?: number;
   invisibleWallHeight?: number;
   isCapsule?: boolean;
+  resize?: number;
   // capsule
   height?: number;
   radius?: number;

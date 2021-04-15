@@ -5,7 +5,6 @@ import { PhysXConfig, PhysXBodyType, RigidBodyProxy, Object3DBody, PhysXShapeCon
 import { Object3D, Quaternion, Scene, Vector3 } from 'three';
 import { createPhysXBody, createPhysXShapes, getTransformFromWorldPos } from './threeToPhysX';
 import { proxyEventListener } from './utils/proxyEventListener';
-import { clampNonzeroPositive } from './utils/misc';
 
 let nextAvailableBodyIndex = 0;
 let nextAvailablShapeID = 0;
@@ -205,7 +204,6 @@ export class PhysXInstance {
   };
 
   updateBody = async (object: Object3DBody | any, options: BodyConfig) => {
-    // console.log(object)
     if (typeof object.body === 'undefined') {
       throw new Error('three-physx! Tried to update a body that does not exist.');
     }
@@ -220,6 +218,9 @@ export class PhysXInstance {
       object.body.options.type = PhysXBodyType.DYNAMIC;
     }
     const id = (object as Object3DBody).body.id;
+    (object as Object3DBody).body.shapes.forEach((shape) => {
+      shape._debugNeedsUpdate = true;
+    });
     await this.physicsProxy.updateBody([{ id, options }]);
     return;
   };
@@ -227,6 +228,9 @@ export class PhysXInstance {
   removeBody = async (object: Object3DBody) => {
     if (!object.body) return;
     this.bodies.delete(object.body.id);
+    if (object.body.options.type === PhysXBodyType.KINEMATIC) {
+      this.kinematicBodies.delete(object.body.id);
+    }
     const id = object.body.id;
     delete object.body;
     await this.physicsProxy.removeBody([{ id }]);
@@ -273,22 +277,30 @@ export class PhysXInstance {
     if (!this.controllerBodies.has(object.body.id)) return;
     object.body.controller._debugNeedsUpdate = true;
     if (typeof config.height !== 'undefined') {
-      object.body.controller.config.height = clampNonzeroPositive(config.height);
+      object.body.controller.config.height = config.height;
+    }
+    if (typeof config.resize !== 'undefined') {
+      if (typeof object.body.controller.config.height !== 'undefined') {
+        object.body.controller.config.height = config.resize;
+      }
+      if (typeof object.body.controller.config.halfHeight !== 'undefined') {
+        object.body.controller.config.halfHeight = config.resize * 2;
+      }
     }
     if (typeof config.radius !== 'undefined') {
-      object.body.controller.config.radius = clampNonzeroPositive(config.radius);
+      object.body.controller.config.radius = config.radius;
     }
     if (typeof config.climbingMode !== 'undefined') {
       object.body.controller.config.climbingMode = config.climbingMode;
     }
     if (typeof config.halfForwardExtent !== 'undefined') {
-      object.body.controller.config.halfForwardExtent = clampNonzeroPositive(config.halfForwardExtent);
+      object.body.controller.config.halfForwardExtent = config.halfForwardExtent;
     }
     if (typeof config.halfHeight !== 'undefined') {
-      object.body.controller.config.halfHeight = clampNonzeroPositive(config.halfHeight);
+      object.body.controller.config.halfHeight = config.halfHeight;
     }
     if (typeof config.halfSideExtent !== 'undefined') {
-      object.body.controller.config.halfSideExtent = clampNonzeroPositive(config.halfSideExtent);
+      object.body.controller.config.halfSideExtent = config.halfSideExtent;
     }
     await this.physicsProxy.updateController([
       {

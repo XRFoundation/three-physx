@@ -23,6 +23,8 @@ export class DebugRenderer {
     this.scene = scene;
     this.enabled = false;
 
+    globalThis.meshes = this._meshes;
+
     this._materials = [
       new MeshBasicMaterial({ color: 0xff0000, wireframe: true }),
       new MeshBasicMaterial({ color: 0x00ff00, wireframe: true }),
@@ -50,27 +52,28 @@ export class DebugRenderer {
     }
 
     PhysXInstance.instance.bodies.forEach((body, id) => {
-      if (!body) return;
       rot.set(body.transform.rotation.x, body.transform.rotation.y, body.transform.rotation.z, body.transform.rotation.w);
       pos.set(body.transform.translation.x, body.transform.translation.y, body.transform.translation.z);
       if (body.options.type === PhysXBodyType.CONTROLLER) {
-        this._updateController(body, id);
-        this._meshes.get(id).position.copy(pos);
+        const controllerShapeID = body.controller.config.id;
+        this._updateController(body, controllerShapeID);
+        this._meshes.get(controllerShapeID).position.copy(pos);
+        return;
       }
       parentMatrix.compose(pos, rot, scale);
 
       body.shapes.forEach((shape: PhysXShapeConfig) => {
-        this._updateMesh(body, id, shape);
+        this._updateMesh(body, shape.id, shape);
 
-        if (this._meshes.get(id)) {
+        if (this._meshes.get(shape.id)) {
           // Copy to meshes
           pos.set(shape.transform.translation.x, shape.transform.translation.y, shape.transform.translation.z);
           rot.set(shape.transform.rotation.x, shape.transform.rotation.y, shape.transform.rotation.z, shape.transform.rotation.w);
           childMatrix.compose(pos, rot, scale);
           childMatrix.premultiply(parentMatrix);
           childMatrix.decompose(pos, rot, scale2);
-          this._meshes.get(id).position.copy(pos);
-          this._meshes.get(id).quaternion.copy(rot);
+          this._meshes.get(shape.id).position.copy(pos);
+          this._meshes.get(shape.id).quaternion.copy(rot);
         }
       });
     });
@@ -82,9 +85,9 @@ export class DebugRenderer {
     });
   }
 
-  private _updateController(body: RigidBodyProxy, index: number) {
+  private _updateController(body: RigidBodyProxy, id: number) {
     const { config } = body.controller;
-    let mesh = this._meshes.get(body.id);
+    let mesh = this._meshes.get(id);
     let needsUpdate = false;
     if (body.controller._debugNeedsUpdate) {
       if (mesh) {
@@ -96,20 +99,28 @@ export class DebugRenderer {
 
     if (!mesh || needsUpdate) {
       if (config.isCapsule) {
-        mesh = new Mesh(new CapsuleBufferGeometry(config.radius, config.radius, config.height), this._materials[PhysXBodyType.CONTROLLER]);
+        mesh = new Mesh(new CapsuleBufferGeometry(clampNonzeroPositive(config.radius), clampNonzeroPositive(config.radius), clampNonzeroPositive(config.height)), this._materials[PhysXBodyType.CONTROLLER]);
       } else {
-        mesh = new Mesh(new BoxBufferGeometry(config.halfSideExtent * 2, config.halfHeight * 2, config.halfForwardExtent * 2), this._materials[PhysXBodyType.CONTROLLER]);
+        mesh = new Mesh(new BoxBufferGeometry(clampNonzeroPositive(config.halfSideExtent * 2), clampNonzeroPositive(config.halfHeight * 2), clampNonzeroPositive(config.halfForwardExtent * 2)), this._materials[PhysXBodyType.CONTROLLER]);
       }
-      this._meshes.set(body.id, mesh);
+      this._meshes.set(id, mesh);
       this.scene.add(mesh);
     }
   }
 
-  private _updateMesh(body: RigidBodyProxy, index: number, shape: PhysXShapeConfig) {
-    let mesh = this._meshes.get(body.id);
-    if (!mesh) {
+  private _updateMesh(body: RigidBodyProxy, id: number, shape: PhysXShapeConfig) {
+    let mesh = this._meshes.get(id);
+    let needsUpdate = false;
+    if (shape._debugNeedsUpdate) {
+      if (mesh) {
+        this.scene.remove(mesh);
+        needsUpdate = true;
+      }
+      delete shape._debugNeedsUpdate;
+    }
+    if (!mesh || needsUpdate) {
       mesh = this._createMesh(shape, body.options.type);
-      this._meshes.set(body.id, mesh);
+      this._meshes.set(id, mesh);
     }
     this._scaleMesh(mesh, shape);
   }
@@ -126,7 +137,7 @@ export class DebugRenderer {
         break;
 
       case PhysXModelShapes.Capsule:
-        mesh = new Mesh(new CapsuleBufferGeometry(shape.options.radius, shape.options.radius, shape.options.halfHeight * 2), material);
+        mesh = new Mesh(new CapsuleBufferGeometry(clampNonzeroPositive(shape.options.radius), clampNonzeroPositive(shape.options.radius), clampNonzeroPositive(shape.options.halfHeight) * 2), material);
         break;
 
       case PhysXModelShapes.Box:
@@ -230,13 +241,13 @@ export class DebugRenderer {
     const scale = shape.transform.scale as Vector3;
     switch (shape.shape) {
       case PhysXModelShapes.Sphere:
-        const radius = shape.options.radius;
+        const radius = clampNonzeroPositive(shape.options.radius);
         mesh.scale.multiplyScalar(radius);
         break;
 
       case PhysXModelShapes.Box:
         const { x, y, z } = shape.options.boxExtents;
-        mesh.scale.set(x, y, z).multiplyScalar(2);
+        mesh.scale.set(clampNonzeroPositive(x), clampNonzeroPositive(y), clampNonzeroPositive(z)).multiplyScalar(2);
         break;
 
       default:
@@ -245,3 +256,6 @@ export class DebugRenderer {
     }
   }
 }
+const clampNonzeroPositive = (num) => {
+  return Math.max(0.00001, num);
+};

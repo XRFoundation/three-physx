@@ -623,7 +623,9 @@ EMSCRIPTEN_BINDINGS(physx)
       .function("getReportAllocationNames", &PxFoundation::getReportAllocationNames)
       .function("release", &PxFoundation::release);
 
-  class_<PxSceneFlags>("PxSceneFlags");
+  class_<PxSceneFlags>("PxSceneFlags")
+      .constructor<int>()
+      .function("isSet", &PxSceneFlags::isSet);
   enum_<PxSceneFlag::Enum>("PxSceneFlag")
       .value("eENABLE_ACTIVE_ACTORS ", PxSceneFlag::Enum::eENABLE_ACTIVE_ACTORS)
       .value("eENABLE_CCD", PxSceneFlag::Enum::eENABLE_CCD)
@@ -728,7 +730,8 @@ EMSCRIPTEN_BINDINGS(physx)
   function("allocateSweepHitBuffers", &allocateSweepHitBuffers, allow_raw_pointers());
 
   class_<PxHitFlags>("PxHitFlags")
-      .constructor<int>();
+      .constructor<int>()
+      .function("isSet", &PxHitFlags::isSet);
 
   enum_<PxHitFlag::Enum>("PxHitFlag")
       .value("eDEFAULT", PxHitFlag::Enum::eDEFAULT)
@@ -751,7 +754,8 @@ EMSCRIPTEN_BINDINGS(physx)
                 }))
       .property("data", &PxQueryFilterData::data);
   class_<PxQueryFlags>("PxQueryFlags")
-      .constructor<int>();
+      .constructor<int>()
+      .function("isSet", &PxQueryFlags::isSet);
   enum_<PxQueryFlag::Enum>("PxQueryFlag")
       .value("eANY_HIT", PxQueryFlag::Enum::eANY_HIT)
       .value("eDYNAMIC", PxQueryFlag::Enum::eDYNAMIC)
@@ -953,7 +957,9 @@ EMSCRIPTEN_BINDINGS(physx)
       .function("setToDefault", &PxConvexMeshDesc::setToDefault)
       .function("isValid", &PxConvexMeshDesc::isValid);
 
-  class_<PxConvexFlags>("PxConvexFlags").constructor<int>();
+  class_<PxConvexFlags>("PxConvexFlags")
+      .constructor<int>()
+      .function("isSet", &PxConvexFlags::isSet);
   enum_<PxConvexFlag::Enum>("PxConvexFlag")
       .value("e16_BIT_INDICES", PxConvexFlag::Enum::e16_BIT_INDICES)
       .value("eCOMPUTE_CONVEX", PxConvexFlag::Enum::eCOMPUTE_CONVEX)
@@ -991,8 +997,13 @@ EMSCRIPTEN_BINDINGS(physx)
   //   .field("word2", &PxFilterData::word2)
   //   .field("word3", &PxFilterData::word3);
 
-  class_<PxPairFlags>("PxPairFlags");
-  class_<PxFilterFlags>("PxFilterFlags");
+  class_<PxPairFlags>("PxPairFlags")
+      .constructor<int>()
+      .function("isSet", &PxPairFlags::isSet);
+
+  class_<PxFilterFlags>("PxFilterFlags")
+      .constructor<int>()
+      .function("isSet", &PxFilterFlags::isSet);
 
   enum_<PxPairFlag::Enum>("PxPairFlag");
   enum_<PxFilterFlag::Enum>("PxFilterFlag");
@@ -1003,7 +1014,10 @@ EMSCRIPTEN_BINDINGS(physx)
       .function("getActorFlags", &PxActor::getActorFlags)
       .function("release", &PxActor::release);
 
-  class_<PxActorFlags>("PxActorFlags").constructor<int>();
+  class_<PxActorFlags>("PxActorFlags")
+      .constructor<int>()
+      .function("isSet", &PxActorFlags::isSet);
+    
   enum_<PxActorFlag::Enum>("PxActorFlag")
       .value("eVISUALIZATION", PxActorFlag::Enum::eVISUALIZATION)
       .value("eDISABLE_GRAVITY", PxActorFlag::Enum::eDISABLE_GRAVITY)
@@ -1119,10 +1133,10 @@ EMSCRIPTEN_BINDINGS(physx)
                                  }))
       .function("setRigidBodyFlag", &PxRigidBody::setRigidBodyFlag)
       .function("setRigidBodyFlags", &PxRigidBody::setRigidBodyFlags)
-      .function("getRigidBodyFlags", optional_override(
-                                         [](PxRigidBody &body) {
-                                           return (bool)(body.getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC);
-                                         }))
+      .function("getRigidBodyFlags", &PxRigidBody::getRigidBodyFlags)//optional_override(
+                                        //  [](PxRigidBody &body) {
+                                        //    return (bool)(body.getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC);
+                                        //  }))
       .function("setMassAndUpdateInertia", optional_override(
                                                [](PxRigidBody &body, PxReal mass) {
                                                  return PxRigidBodyExt::setMassAndUpdateInertia(body, mass, NULL, false);
@@ -1133,7 +1147,9 @@ EMSCRIPTEN_BINDINGS(physx)
                                               return PxRigidBodyExt::updateMassAndInertia(body, &shapeDensities[0], shapeDensities.size());
                                             }));
 
-  class_<PxRigidBodyFlags>("PxRigidBodyFlags").constructor<int>();
+  class_<PxRigidBodyFlags>("PxRigidBodyFlags")
+      .constructor<int>()
+      .function("isSet", &PxRigidBodyFlags::isSet);
   enum_<PxRigidBodyFlag::Enum>("PxRigidBodyFlag")
       .value("eKINEMATIC", PxRigidBodyFlag::Enum::eKINEMATIC)
       .value("eUSE_KINEMATIC_TARGET_FOR_SCENE_QUERIES", PxRigidBodyFlag::Enum::eUSE_KINEMATIC_TARGET_FOR_SCENE_QUERIES)
@@ -1158,7 +1174,9 @@ EMSCRIPTEN_BINDINGS(physx)
       .function("setRigidDynamicLockFlags", &PxRigidDynamic::setRigidDynamicLockFlags)
       .function("getRigidDynamicLockFlags", &PxRigidDynamic::getRigidDynamicLockFlags)
       .function("setSolverIterationCounts", &PxRigidDynamic::setSolverIterationCounts);
-  class_<PxRigidDynamicLockFlags>("PxRigidDynamicLockFlags").constructor<int>();
+  class_<PxRigidDynamicLockFlags>("PxRigidDynamicLockFlags")
+      .constructor<int>()
+      .function("isSet", &PxRigidDynamicLockFlags::isSet);
   enum_<PxRigidDynamicLockFlag::Enum>("PxRigidDynamicLockFlag")
       .value("eLOCK_LINEAR_X", PxRigidDynamicLockFlag::Enum::eLOCK_LINEAR_X)
       .value("eLOCK_LINEAR_Y", PxRigidDynamicLockFlag::Enum::eLOCK_LINEAR_Y)
@@ -1202,7 +1220,8 @@ EMSCRIPTEN_BINDINGS(physx)
       .function("isValid", &PxTriangleMeshGeometry::isValid);
 
   class_<PxMeshGeometryFlags>("PxMeshGeometryFlags")
-      .constructor<int>();
+      .constructor<int>()
+      .function("isSet", &PxMeshGeometryFlags::isSet);
   enum_<PxMeshGeometryFlag::Enum>("PxMeshGeometryFlag")
       .value("eDOUBLE_SIDED", PxMeshGeometryFlag::Enum::eDOUBLE_SIDED);
 
@@ -1226,7 +1245,8 @@ EMSCRIPTEN_BINDINGS(physx)
       .function("setRotation", optional_override([](PxMeshScale &ms, PxQuat &rot) { ms.rotation = rot; }));
 
   class_<PxConvexMeshGeometryFlags>("PxConvexMeshGeometryFlags")
-      .constructor<int>();
+      .constructor<int>()
+      .function("isSet", &PxConvexMeshGeometryFlags::isSet);
   enum_<PxConvexMeshGeometryFlag::Enum>("PxConvexMeshGeometryFlag")
       .value("eTIGHT_BOUNDS", PxConvexMeshGeometryFlag::Enum::eTIGHT_BOUNDS);
 
@@ -1260,7 +1280,7 @@ EMSCRIPTEN_BINDINGS(physx)
       .value("ePREVENT_CLIMBING_AND_FORCE_SLIDING", PxControllerNonWalkableMode::Enum::ePREVENT_CLIMBING_AND_FORCE_SLIDING);
 
   class_<PxControllerManager>("PxControllerManager")
-      // constructor weirdness, handle types manually      
+      // constructor weirdness, handle types manually
       // .function("createController", &PxControllerManager::createController, allow_raw_pointers())
       .function("createCapsuleController", optional_override([](PxControllerManager &ctrlMng, PxControllerDesc &desc) {
                   return (PxCapsuleController *)ctrlMng.createController(desc);
@@ -1279,6 +1299,7 @@ EMSCRIPTEN_BINDINGS(physx)
 
   class_<PxController>("PxController")
       .function("release", &PxController::release)
+      .function("resize", &PxController::resize)
       .function("move", &PxController::move, allow_raw_pointers())
       .function("getActor", optional_override([](PxController &controller) {
                   return controller.getActor();

@@ -249,6 +249,7 @@ declare namespace PhysX {
   enum PxForceMode {}
   class PxRigidBody extends PxRigidActor {
     setRigidBodyFlags(flags: PxRigidBodyFlags): void;
+    setRigidBodyFlag(flag: PxRigidBodyFlag, value: boolean): void;
     getRigidBodyFlags(): number;
 
     setMass(value: number): void;
@@ -443,6 +444,7 @@ declare namespace PhysX {
     setPosition(pos: PxVec3): any;
     getPosition(): PxVec3;
     getActor(): PxRigidDynamic;
+    resize(height: number): void;
     release(): void;
   }
 

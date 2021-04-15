@@ -16,7 +16,7 @@ Progress:
 - [x] put body ids on arraybuffers for more efficient data transfer
 - [x] capsule
 - [ ] trimesh and convex
-- [ x character controller
+- [x] character controller
 - [ ] vehicle controller
 - [ ] raycasts (subscribe + promise)
 - [ ] heightfield colliders
