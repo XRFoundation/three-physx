@@ -1260,7 +1260,17 @@ EMSCRIPTEN_BINDINGS(physx)
       .value("ePREVENT_CLIMBING_AND_FORCE_SLIDING", PxControllerNonWalkableMode::Enum::ePREVENT_CLIMBING_AND_FORCE_SLIDING);
 
   class_<PxControllerManager>("PxControllerManager")
-      .function("createController", &PxControllerManager::createController, allow_raw_pointers())
+      // constructor weirdness, handle types manually      
+      // .function("createController", &PxControllerManager::createController, allow_raw_pointers())
+      .function("createCapsuleController", optional_override([](PxControllerManager &ctrlMng, PxControllerDesc &desc) {
+                  return (PxCapsuleController *)ctrlMng.createController(desc);
+                }),
+                allow_raw_pointers())
+      .function("createBoxController", //&PxControllerManager::createController, allow_raw_pointers())
+                optional_override([](PxControllerManager &ctrlMng, PxControllerDesc &desc) {
+                  return (PxBoxController *)ctrlMng.createController(desc);
+                }),
+                allow_raw_pointers())
       .function("setTessellation", &PxControllerManager::setTessellation)
       .function("setOverlapRecoveryModule", &PxControllerManager::setOverlapRecoveryModule)
       .function("setPreciseSweeps", &PxControllerManager::setPreciseSweeps)
@@ -1286,6 +1296,22 @@ EMSCRIPTEN_BINDINGS(physx)
                                                  shape->setSimulationFilterData(data);
                                                  return;
                                                }));
+
+  class_<PxCapsuleController, base<PxController>>("PxCapsuleController")
+      .function("getRadius", &PxCapsuleController::getRadius)
+      .function("setRadius", &PxCapsuleController::setRadius)
+      .function("getHeight", &PxCapsuleController::getHeight)
+      .function("setHeight", &PxCapsuleController::setHeight)
+      .function("getClimbingMode", &PxCapsuleController::getClimbingMode)
+      .function("setClimbingMode", &PxCapsuleController::setClimbingMode);
+
+  class_<PxBoxController, base<PxController>>("PxBoxController")
+      .function("getHalfForwardExtent", &PxBoxController::getHalfForwardExtent)
+      .function("getHalfHeight", &PxBoxController::getHalfHeight)
+      .function("getHalfSideExtent", &PxBoxController::getHalfSideExtent)
+      .function("setHalfForwardExtent", &PxBoxController::setHalfForwardExtent)
+      .function("setHalfHeight", &PxBoxController::setHalfHeight)
+      .function("setHalfSideExtent", &PxBoxController::setHalfSideExtent);
 
   class_<PxControllerDesc>("PxControllerDesc")
       .function("isValid", &PxControllerDesc::isValid)
@@ -1332,6 +1358,10 @@ EMSCRIPTEN_BINDINGS(physx)
 
   class_<PxControllerShapeHit, base<PxControllerHit>>("PxControllerShapeHit")
       .constructor<>()
+      .function("getController", optional_override([](PxControllerShapeHit &hit) {
+                  return hit.controller;
+                }),
+                allow_raw_pointers())
       .function("getShape", optional_override([](PxControllerShapeHit &hit) {
                   return hit.shape;
                 }),
@@ -1365,6 +1395,12 @@ EMSCRIPTEN_BINDINGS(physx)
       .property("radius", &PxCapsuleControllerDesc::radius)
       .property("height", &PxCapsuleControllerDesc::height)
       .property("climbingMode", &PxCapsuleControllerDesc::climbingMode);
+
+  class_<PxBoxControllerDesc, base<PxControllerDesc>>("PxBoxControllerDesc")
+      .constructor<>()
+      .property("halfForwardExtent", &PxBoxControllerDesc::halfForwardExtent)
+      .property("halfHeight", &PxBoxControllerDesc::halfHeight)
+      .property("halfSideExtent", &PxBoxControllerDesc::halfSideExtent);
 
   class_<PxObstacleContext>("PxObstacleContext");
 
@@ -1428,6 +1464,10 @@ namespace emscripten
     void raw_destructor<PxTriangleMesh>(PxTriangleMesh *){};
     template <>
     void raw_destructor<PxController>(PxController *){};
+    template <>
+    void raw_destructor<PxCapsuleController>(PxCapsuleController *){};
+    template <>
+    void raw_destructor<PxBoxController>(PxBoxController *){};
     template <>
     void raw_destructor<PxControllerDesc>(PxControllerDesc *){};
     template <>

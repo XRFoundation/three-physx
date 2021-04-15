@@ -16,12 +16,13 @@ Progress:
 - [x] put body ids on arraybuffers for more efficient data transfer
 - [x] capsule
 - [ ] trimesh and convex
-- [ ] character controller
+- [ x character controller
 - [ ] vehicle controller
 - [ ] raycasts (subscribe + promise)
 - [ ] heightfield colliders
 - [ ] fix root object scaling bug
 - [ ] geometry per instance scaling
+- [ ] add subscribe for event listeners on worker to reduce redundant transfer overhead
 
 ## Example
 

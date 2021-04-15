@@ -1,4 +1,5 @@
 import { Scene, Mesh, Points, SphereBufferGeometry, BoxBufferGeometry, PlaneBufferGeometry, BufferGeometry, MeshBasicMaterial, Vector3, SphereGeometry, BoxGeometry, PlaneGeometry, Object3D, Matrix4, Quaternion } from 'three';
+import { PhysXInstance } from '..';
 import { Object3DBody, PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy } from '../types/ThreePhysX';
 import { CapsuleBufferGeometry } from './CapsuleBufferGeometry';
 const parentMatrix = new Matrix4();
@@ -10,7 +11,7 @@ const scale = new Vector3(1, 1, 1);
 const scale2 = new Vector3(1, 1, 1);
 export class DebugRenderer {
   private scene: Scene;
-  private _meshes: Mesh[] | Points[];
+  private _meshes: Map<number, any> = new Map<number, any>();
   private _materials: MeshBasicMaterial[];
   private _sphereGeometry: SphereBufferGeometry;
   private _boxGeometry: BoxBufferGeometry;
@@ -21,8 +22,6 @@ export class DebugRenderer {
   constructor(scene: Scene) {
     this.scene = scene;
     this.enabled = false;
-
-    this._meshes = [];
 
     this._materials = [
       new MeshBasicMaterial({ color: 0xff0000, wireframe: true }),
@@ -37,83 +36,82 @@ export class DebugRenderer {
 
   public setEnabled(enabled) {
     this.enabled = enabled;
-    if(!enabled) {
+    if (!enabled) {
       this._meshes.forEach((mesh) => {
         this.scene.remove(mesh);
-      })
-      this._meshes = [];
+      });
+      this._meshes.clear();
     }
   }
 
-  public update(objects: Map<number, Object3D>) {
+  public update() {
     if (!this.enabled) {
       return;
     }
 
-    const meshes: Mesh[] | Points[] = this._meshes;
-
-    let meshIndex = 0;
-    objects.forEach((object, id) => {
-      //@ts-ignore
-      const body = object.body as RigidBodyProxy;
-
+    PhysXInstance.instance.bodies.forEach((body, id) => {
+      if (!body) return;
       rot.set(body.transform.rotation.x, body.transform.rotation.y, body.transform.rotation.z, body.transform.rotation.w);
       pos.set(body.transform.translation.x, body.transform.translation.y, body.transform.translation.z);
-      if(body.options.type === PhysXBodyType.CONTROLLER) {
-
-        this._updateController(object as Object3DBody, meshIndex);
-        meshes[meshIndex].position.copy(pos)
-        // console.log(body, meshes[meshIndex])
-        meshIndex++;
+      if (body.options.type === PhysXBodyType.CONTROLLER) {
+        this._updateController(body, id);
+        this._meshes.get(id).position.copy(pos);
       }
       parentMatrix.compose(pos, rot, scale);
 
       body.shapes.forEach((shape: PhysXShapeConfig) => {
-        this._updateMesh(object as Object3DBody, meshIndex, shape);
+        this._updateMesh(body, id, shape);
 
-        const mesh = meshes[meshIndex];
-
-        if (mesh) {
+        if (this._meshes.get(id)) {
           // Copy to meshes
           pos.set(shape.transform.translation.x, shape.transform.translation.y, shape.transform.translation.z);
           rot.set(shape.transform.rotation.x, shape.transform.rotation.y, shape.transform.rotation.z, shape.transform.rotation.w);
           childMatrix.compose(pos, rot, scale);
           childMatrix.premultiply(parentMatrix);
           childMatrix.decompose(pos, rot, scale2);
-          mesh.position.copy(pos);
-          mesh.quaternion.copy(rot);
+          this._meshes.get(id).position.copy(pos);
+          this._meshes.get(id).quaternion.copy(rot);
         }
-
-        meshIndex++;
       });
     });
-    for (let i = meshIndex; i < meshes.length; i++) {
-      const mesh: Mesh | Points = meshes[i];
-      if (mesh) {
+    this._meshes.forEach((mesh, id) => {
+      if (mesh && !PhysXInstance.instance.bodies.get(id)) {
         this.scene.remove(mesh);
+        this._meshes.delete(id);
       }
-    }
-    meshes.length = meshIndex;
+    });
   }
 
-  private _updateController(root: Object3DBody, index: number) {
-    const { config } = root.body.controller;
-    let mesh = this._meshes[index];
-    if (!mesh) {
-      mesh = this._meshes[index] = new Mesh(new CapsuleBufferGeometry(config.radius, config.radius, config.height), this._materials[PhysXBodyType.CONTROLLER])
+  private _updateController(body: RigidBodyProxy, index: number) {
+    const { config } = body.controller;
+    let mesh = this._meshes.get(body.id);
+    let needsUpdate = false;
+    if (body.controller._debugNeedsUpdate) {
+      if (mesh) {
+        this.scene.remove(mesh);
+        needsUpdate = true;
+      }
+      delete body.controller._debugNeedsUpdate;
+    }
+
+    if (!mesh || needsUpdate) {
+      if (config.isCapsule) {
+        mesh = new Mesh(new CapsuleBufferGeometry(config.radius, config.radius, config.height), this._materials[PhysXBodyType.CONTROLLER]);
+      } else {
+        mesh = new Mesh(new BoxBufferGeometry(config.halfSideExtent * 2, config.halfHeight * 2, config.halfForwardExtent * 2), this._materials[PhysXBodyType.CONTROLLER]);
+      }
+      this._meshes.set(body.id, mesh);
       this.scene.add(mesh);
     }
   }
 
-  private _updateMesh(root: Object3DBody, index: number, shape: PhysXShapeConfig) {
-    let mesh = this._meshes[index];
+  private _updateMesh(body: RigidBodyProxy, index: number, shape: PhysXShapeConfig) {
+    let mesh = this._meshes.get(body.id);
     if (!mesh) {
-      // if (mesh) {
-      //   this.scene.remove(mesh);
-      // }
-      mesh = this._meshes[index] = this._createMesh(shape, root.body.options.type);
+      mesh = this._createMesh(shape, body.options.type);
+      this._meshes.set(body.id, mesh);
     }
-    this._scaleMesh(root, mesh, shape);
+    this._scaleMesh(mesh, shape);
   }
 
   private _createMesh(shape: PhysXShapeConfig, type: PhysXBodyType): Mesh | Points {
@@ -130,7 +128,7 @@ export class DebugRenderer {
       case PhysXModelShapes.Capsule:
         mesh = new Mesh(new CapsuleBufferGeometry(shape.options.radius, shape.options.radius, shape.options.halfHeight * 2), material);
         break;
-  
+
       case PhysXModelShapes.Box:
         mesh = new Mesh(this._boxGeometry, material);
         break;
@@ -228,7 +226,7 @@ export class DebugRenderer {
     return mesh;
   }
 
-  private _scaleMesh(root: Object3DBody, mesh: Mesh | Points, shape: PhysXShapeConfig) {
+  private _scaleMesh(mesh: Mesh | Points, shape: PhysXShapeConfig) {
     const scale = shape.transform.scale as Vector3;
     switch (shape.shape) {
       case PhysXModelShapes.Sphere:

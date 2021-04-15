@@ -124,7 +124,7 @@ export function createConvexPolyhedron(geometry): BodyShape {
   // const geometry = getGeometry(object);
 
   if (!geometry || !geometry.attributes.position.count) return null;
-  console.log(geometry)
+  console.log(geometry);
 
   // for (i = 0; i < geometry.attributes.position.count; i++) {
   //   geometry.attributes.position[i].x += (Math.random() - 0.5) * eps;

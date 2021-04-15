@@ -380,25 +380,32 @@ declare namespace PhysX {
   function PxCreateControllerManager(scene: PxScene, lockingEnabled: boolean): PxControllerManager;
 
   class PxControllerManager {
-    createController(desc: PxControllerDesc): PxController;
+    createCapsuleController(desc: PxControllerDesc): PxCapsuleController;
+    createBoxController(desc: PxControllerDesc): PxBoxController;
   }
 
   class PxControllerDesc {
+    position: PxVec3;
     isValid(): boolean;
     setMaterial(material: Material): void;
-  }
-
-  class PxCapsuleControllerDesc extends PxControllerDesc {
-    position: PxVec3;
-    radius: number;
-    height: number;
     stepOffset: number;
     contactOffset: number;
     maxJumpHeight: number;
     invisibleWallHeight: number;
     slopeLimit: number;
-    climbingMode: PxCapsuleClimbingMode;
     setReportCallback(callbackImp: any): any;
+  }
+
+  class PxCapsuleControllerDesc extends PxControllerDesc {
+    radius: number;
+    height: number;
+    climbingMode: PxCapsuleClimbingMode;
+  }
+
+  class PxBoxControllerDesc extends PxControllerDesc {
+    halfForwardExtent: number;
+    halfHeight: number;
+    halfSideExtent: number;
   }
 
   enum PxCapsuleClimbingMode {
@@ -431,17 +438,30 @@ declare namespace PhysX {
 
   class PxObstacleContext {}
 
-  class PxController {
+  class PxController extends Base {
     move(displacement: PxVec3, minDistance: number, elapsedTime: number, filters: PxControllerFilters, obstacles?: PxObstacleContext): PxControllerCollisionFlags;
     setPosition(pos: PxVec3): any;
     getPosition(): PxVec3;
     getActor(): PxRigidDynamic;
+    release(): void;
   }
 
   class PxCapsuleController extends PxController {
+    getHeight(): number;
+    getRadius(): number;
+    getClimbingMode(): PxCapsuleClimbingMode;
     setHeight(height: number): void;
     setRadius(radius: number): void;
     setClimbingMode(climbingMode: PxCapsuleClimbingMode): void;
+  }
+
+  class PxBoxController extends PxController {
+    getHalfForwardExtent(): number;
+    getHalfHeight(): number;
+    getHalfSideExtent(): number;
+    setHalfForwardExtent(size: number): void;
+    setHalfHeight(size: number): void;
+    setHalfSideExtent(size: number): void;
   }
 
   class PxUserControllerHitReport {
@@ -452,14 +472,24 @@ declare namespace PhysX {
     onObstacleHit(event: unknown): void;
   }
 
-  class PxControllerShapeHit {
+  class PxControllerHit {
+    getController(): PxController;
+    getWorldPos(): PxVec3;
+    getWorldNormal(): PxVec3;
+    getLength(): number;
+    getTriangleIndex(): number;
+  }
+
+  class PxControllerShapeHit extends PxControllerHit {
     getShape(): PxShape;
     getActor(): PxRigidActor;
-    getTriangleIndex(): number;
-    // todo - reimplement this
-    // getWorldPos(): PxVec3;
-    // getWorldNormal(): PxVec3;
-    // getLength(): number;
+  }
+
+  class PxControllersHit extends PxControllerHit {
+    getOther(): PxController;
+  }
+  class PxObstacleHit extends PxControllerHit {
+    getUserData(): number;
   }
 }
 

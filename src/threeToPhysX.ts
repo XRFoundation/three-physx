@@ -1,5 +1,5 @@
 import { Vector3, Matrix4, Mesh, Quaternion, Object3D, SphereGeometry, BufferGeometry } from 'three';
-import { BufferGeometryUtils } from "three/examples/jsm/utils/BufferGeometryUtils";
+import { BufferGeometryUtils } from 'three/examples/jsm/utils/BufferGeometryUtils';
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry';
 import { PhysXInstance } from '.';
 import { PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy, ShapeConfig } from './types/ThreePhysX';
@@ -97,7 +97,7 @@ const getShapeConfig = (data) => {
 };
 
 const getShapeData = (mesh, shape): any => {
-  console.log(mesh.geometry, shape)
+  console.log(mesh.geometry, shape);
   switch (shape.type) {
     case PhysXModelShapes.Box:
       return {
@@ -108,7 +108,7 @@ const getShapeData = (mesh, shape): any => {
       return {
         shape: shape.type,
         halfHeight: shape.halfHeight ?? 1,
-        radius: shape.radius ?? shape.radiusTop ?? 0.5
+        radius: shape.radius ?? shape.radiusTop ?? 0.5,
       };
     case PhysXModelShapes.Sphere:
       return {
@@ -127,7 +127,7 @@ const getShapeData = (mesh, shape): any => {
 };
 
 const getThreeGeometryShape = (mesh): any => {
-  if (!mesh.geometry) throw new Error('No geometry defined!')
+  if (!mesh.geometry) throw new Error('No geometry defined!');
   switch (mesh.geometry.type) {
     case 'BoxGeometry':
     case 'BoxBufferGeometry':
@@ -138,7 +138,7 @@ const getThreeGeometryShape = (mesh): any => {
     case 'CapsuleBufferGeometry': // https://github.com/maximeq/three-js-capsule-geometry
       return {
         shape: PhysXModelShapes.Capsule,
-        options: { halfHeight: mesh.geometry._halfHeight ?? 1, radius: mesh.geometry.radius ?? mesh.geometry.radiusTop ?? 0.5 }
+        options: { halfHeight: mesh.geometry._halfHeight ?? 1, radius: mesh.geometry.radius ?? mesh.geometry.radiusTop ?? 0.5 },
       };
     case 'SphereGeometry':
     case 'SphereBufferGeometry':
@@ -151,7 +151,7 @@ const getThreeGeometryShape = (mesh): any => {
     //   return { shape: PhysXModelShapes.ConvexMesh, options: { vertices } };
     // }
     default:
-      console.log("threeToPhysX: geometry of type", mesh.geometry.type, "not supported. No shape will be added.")
+      console.log('threeToPhysX: geometry of type', mesh.geometry.type, 'not supported. No shape will be added.');
       return;
     // const vertices = Array.from(mesh.geometry.attributes.position.array);
     // const indices = Array.from(mesh.geometry.index.array);
@@ -235,7 +235,6 @@ const getTransformRelativeToRoot = (mesh: Object3D, root: Object3D) => {
   };
 };
 
-
 /**
  * Returns a single geometry for the given object. If the object is compound,
  * its geometries are automatically merged.
@@ -257,8 +256,7 @@ export function getGeometry(object) {
       quaternion = new Quaternion(),
       scale = new Vector3();
     if (meshes[0].geometry.isBufferGeometry) {
-      if (meshes[0].geometry.attributes.position
-        && meshes[0].geometry.attributes.position.itemSize > 2) {
+      if (meshes[0].geometry.attributes.position && meshes[0].geometry.attributes.position.itemSize > 2) {
         tmp = meshes[0].geometry;
       }
     } else {
@@ -274,8 +272,7 @@ export function getGeometry(object) {
   while ((mesh = meshes.pop())) {
     mesh.updateMatrixWorld();
     if (mesh.geometry.isBufferGeometry) {
-      if (mesh.geometry.attributes.position
-        && mesh.geometry.attributes.position.itemSize > 2) {
+      if (mesh.geometry.attributes.position && mesh.geometry.attributes.position.itemSize > 2) {
         const tmpGeom = mesh.geometry;
         combined.merge(tmpGeom, mesh.matrixWorld);
         tmpGeom.dispose();
@@ -302,7 +299,6 @@ function getMeshes(object) {
 }
 
 const removeDuplicates = (verticesIn: number[]) => {
-
   const vertices: Vector3[] = [];
   for (let i = 0; i < verticesIn.length; i += 3) {
     const newVec = new Vector3(verticesIn[i], verticesIn[i + 1], verticesIn[i + 2]);
@@ -318,7 +314,7 @@ const removeDuplicates = (verticesIn: number[]) => {
   }
   const verticesOut = [];
   vertices.forEach((vert) => {
-    verticesOut.push(vert.x, vert.y, vert.z)
-  })
+    verticesOut.push(vert.x, vert.y, vert.z);
+  });
   return verticesOut;
-}
+};

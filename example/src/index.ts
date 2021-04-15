@@ -3,8 +3,6 @@ import { Mesh, TorusKnotBufferGeometry, MeshBasicMaterial, BoxBufferGeometry, Sp
 import { Object3DBody, PhysXBodyType, PhysXEvents, PhysXModelShapes, RigidBodyProxy } from '../../src/types/ThreePhysX';
 import { DebugRenderer } from '../../src/utils/DebugRenderer';
 import { CapsuleBufferGeometry } from '../../src/utils/CapsuleBufferGeometry';
-import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry';
-import { BufferGeometryUtils } from "three/examples/jsm/utils/BufferGeometryUtils";
 
 const load = async () => {
   const renderer = await import('./renderer');
@@ -14,6 +12,7 @@ const load = async () => {
 
   const onUpdate = () => {
     objects.forEach((obj: Object3DBody, id) => {
+      if(!obj.body) return;
       if ((obj.body as RigidBodyProxy).options.type === PhysXBodyType.DYNAMIC) {
         const translation = (obj.body as RigidBodyProxy).transform.translation;
         const rotation = (obj.body as RigidBodyProxy).transform.rotation;
@@ -56,7 +55,7 @@ const load = async () => {
 
   const character = new Group();
   character.add(new Mesh(new CapsuleBufferGeometry(0.25, 0.25, 1), new MeshBasicMaterial({ color: randomColor() })));
-  const characterBody = await PhysXInstance.instance.addController(character);
+  const characterBody = await PhysXInstance.instance.addController(character, { isCapsule: true });
   objects.set(characterBody.id, character);
   characterBody.addEventListener(PhysXEvents.CONTROLLER_SHAPE_HIT, (ev) => {
     // console.log('COLLISION DETECTED', ev);
@@ -71,13 +70,13 @@ const load = async () => {
       debug.setEnabled(!debug.enabled)
     }
     if (ev.code === 'ShiftLeft') {
-      PhysXInstance.instance.updateController(character, { height: 0.5 });
+      PhysXInstance.instance.updateController((character as any), { height: 0, positionDelta: { y: -0.5 } });
     }
   });
   document.addEventListener('keyup', (ev) => {
     delete keys[ev.code];
     if (ev.code === 'ShiftLeft') {
-      PhysXInstance.instance.updateController(character, { height: 1 });
+      PhysXInstance.instance.updateController((character as any), { height: 1, positionDelta: { y: 0.5 } });
     }
   });
 
@@ -85,13 +84,6 @@ const load = async () => {
   debug.setEnabled(true);
   let lastTime = Date.now() - (1/60);
   let lastDelta = 1/60;
-
-  setTimeout(() => {
-    // PhysXInstance.instance.removeBody(objects.get(0)).then(() => {
-    //   renderer.scene.remove(objects.get(0))
-    //   objects.delete(0);
-    // })
-  }, 2000)
 
   const update = () => {
     const time = Date.now();
@@ -122,12 +114,21 @@ const load = async () => {
         characterBody.controller.delta.x += 2 / delta;
       }
       if (key === 'Space' && characterBody.controller.collisions.down) {
-        characterBody.controller.velocity.y += 2 / delta;
+        characterBody.controller.velocity.y = 5 / delta;
+      }
+    })
+    objects.forEach(async (object: Object3DBody, id) => {
+      if(object.position.y < -10 && object.body) {
+        await PhysXInstance.instance.removeBody(object);
+        objects.delete(id);
+        object.position.copy(randomVector3OnPlatform());
+        const body = await PhysXInstance.instance.addBody(object);
+        objects.set(body.id, object);
       }
     })
     characterBody.controller.delta.y += characterBody.controller.velocity.y;
     PhysXInstance.instance.update(delta);
-    debug.update(objects);
+    debug.update();
     renderer.update();
     lastDelta = delta;
     lastTime = time;
@@ -135,24 +136,28 @@ const load = async () => {
   };
   update();
 };
-const spread = 10;
+const platformSize = 50;
 const createScene = () => {
   const geoms = [new BoxBufferGeometry(), new SphereBufferGeometry(1), new CapsuleBufferGeometry(0.5, 0.5, 1)];
   const meshes = [];
-  for (let i = 0; i < 1; i++) {
+  for (let i = 0; i < 250; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor() }));
-    mesh.position.set((Math.random()-0.5) * spread, Math.random() * spread, (Math.random()-0.5) * spread);
+    mesh.position.copy(randomVector3OnPlatform());
     mesh.userData.physx = {
       type: PhysXBodyType.DYNAMIC,
       // shapes: [ { type: PhysXModelShapes.TriangleMesh, } ]
     };
     meshes.push(mesh);
   }
-  const floor = new Mesh(new BoxBufferGeometry(100, 1, 100), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide })).translateY(-2);
+  const floor = new Mesh(new BoxBufferGeometry(platformSize, 1, platformSize), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide })).translateY(-1);
   floor.userData.physx = { type: PhysXBodyType.STATIC };
 
   return [...meshes, floor];
 };
+
+const randomVector3OnPlatform = () => {
+  return new Vector3((Math.random()-0.5) * platformSize, Math.random() * platformSize, (Math.random()-0.5) * platformSize)
+}
 
 const randomColor = () => {
   return new Color(Math.random() * 0xffffff);

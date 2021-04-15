@@ -2,9 +2,10 @@
 
 import { Matrix4, Vector3, Quaternion } from 'three';
 import { getShape } from './getShape';
-import { PhysXConfig, PhysXBodyTransform, PhysXBodyType, PhysXEvents, BodyConfig, PhysXBodyData, RigidBodyProxy, ShapeConfig, PhysXShapeConfig, ControllerConfig } from './types/ThreePhysX';
+import { PhysXConfig, PhysXBodyTransform, PhysXBodyType, PhysXEvents, BodyConfig, PhysXBodyData, RigidBodyProxy, ShapeConfig, PhysXShapeConfig, ControllerConfig, Vec3 } from './types/ThreePhysX';
 import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
+import { clampNonzeroPositive } from './utils/misc';
 
 const mat4 = new Matrix4();
 const pos = new Vector3();
@@ -38,6 +39,7 @@ export class PhysXManager {
   dynamic: Map<number, PhysX.PxRigidActor> = new Map<number, PhysX.PxRigidActor>();
   shapes: Map<number, PhysX.PxShape> = new Map<number, PhysX.PxShape>();
   shapeIDByPointer: Map<number, number> = new Map<number, number>();
+  controllerIDByPointer: Map<number, number> = new Map<number, number>();
   bodyShapes: Map<number, PhysX.PxShape[]> = new Map<number, PhysX.PxShape[]>();
   matrices: Map<number, Matrix4> = new Map<number, Matrix4>();
   indices: Map<number, number> = new Map<number, number>();
@@ -121,7 +123,7 @@ export class PhysXManager {
     const bodyArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
     let offset = 0;
     this.bodies.forEach((body: PhysX.PxRigidActor, id: number) => {
-      bodyArray.set([id], offset)
+      bodyArray.set([id], offset);
       if (isDynamicBody(body)) {
         bodyArray.set([...getBodyData(body)], offset + 1);
       } else if (isControllerBody(body)) {
@@ -168,7 +170,7 @@ export class PhysXManager {
       const deltaTime = controllerBodiesArray[offset + 4];
       // TODO
       const filterData = new PhysX.PxFilterData(1, 1, 1, 1);
-      const queryCallback = PhysX.PxQueryFilterCallback.implement({ preFilter: console.log, postFilter: console.log })
+      const queryCallback = PhysX.PxQueryFilterCallback.implement({ preFilter: console.log, postFilter: console.log });
       const filters = new PhysX.PxControllerFilters(null, null, null);
       const collisionFlags = controller.move(deltaPos, 0.01, deltaTime, filters, null);
       const collisions = {
@@ -209,7 +211,7 @@ export class PhysXManager {
         transform,
         options,
       });
-      if(!bodyShape) return;
+      if (!bodyShape) return;
       bodyShape.setContactOffset(0.0000001);
       // const filterData = new PhysX.PxFilterData(1, 1, 0, 0);
       // bodyShape.setSimulationFilterData(filterData);
@@ -284,21 +286,33 @@ export class PhysXManager {
 
   removeBody = async ({ id }) => {
     const body = this.bodies.get(id);
-    this.scene.removeActor(body, false);
-    this.bodies.delete(id);
+    if (!body) return;
+    try {
+      this.scene.removeActor(body, false);
+      this.bodies.delete(id);
+      return true;
+    } catch (e) {
+      console.log(e, id, body);
+    }
   };
 
   addController = async ({ id, config }: { id: number; config: ControllerConfig }) => {
-    const controllerDesc = new PhysX.PxCapsuleControllerDesc();
-    controllerDesc.position = config.position ?? { x: 0, y: 0, z: 0 };
-    controllerDesc.height = config.height ?? 1;
-    controllerDesc.radius = config.radius ?? 0.25;
+    const controllerDesc = config.isCapsule ? new PhysX.PxCapsuleControllerDesc() : new PhysX.PxBoxControllerDesc();
+    controllerDesc.position = (config.position as Vec3) ?? { x: 0, y: 0, z: 0 };
+    if (config.isCapsule) {
+      (controllerDesc as PhysX.PxCapsuleControllerDesc).height = config.height;
+      (controllerDesc as PhysX.PxCapsuleControllerDesc).radius = config.radius;
+      (controllerDesc as PhysX.PxCapsuleControllerDesc).climbingMode = config.climbingMode ?? PhysX.PxCapsuleClimbingMode.eEASY;
+    } else {
+      (controllerDesc as PhysX.PxBoxControllerDesc).halfForwardExtent = config.halfForwardExtent;
+      (controllerDesc as PhysX.PxBoxControllerDesc).halfHeight = config.halfHeight;
+      (controllerDesc as PhysX.PxBoxControllerDesc).halfSideExtent = config.halfSideExtent;
+    }
     controllerDesc.stepOffset = config.stepOffset ?? 0.1;
     controllerDesc.maxJumpHeight = config.maxJumpHeight ?? 0.1;
     controllerDesc.contactOffset = config.contactOffset ?? 0.01;
     controllerDesc.invisibleWallHeight = config.invisibleWallHeight ?? 0;
     controllerDesc.slopeLimit = config.slopeLimit ?? Math.cos((45 * Math.PI) / 180);
-    controllerDesc.climbingMode = config.climbingMode ?? PhysX.PxCapsuleClimbingMode.eEASY;
     controllerDesc.setReportCallback(
       PhysX.PxUserControllerHitReport.implement({
         onShapeHit: (event: PhysX.PxControllerShapeHit) => {
@@ -310,12 +324,25 @@ export class PhysXManager {
           const length = event.getLength();
           this.onEvent({ event: PhysXEvents.CONTROLLER_SHAPE_HIT, controllerID: id, shapeID, position, normal, length });
         },
-        onControllerHit: (event) => {
+        onControllerHit: (event: PhysX.PxControllersHit) => {
           // TODO
-          console.warn('three-physx: onControllerHit event not implemented');
+          const other = event.getOther();
+          const otherID = this.controllerIDByPointer.get(other.$$.ptr);
+          const position = event.getWorldPos();
+          const normal = event.getWorldNormal();
+          const length = event.getLength();
+          this.onEvent({ event: PhysXEvents.CONTROLLER_CONTROLLER_HIT, controllerID: id, otherID, position, normal, length });
         },
         onObstacleHit: (event) => {
           // TODO
+          // notes for future reference: use userData as an id to callback to main thread
+          //
+          // const obstacle = event.getObstacle();
+          // const obstacleID = this.obstaclesIDByPointer.get(obstacle.$$.ptr);
+          // const position = event.getWorldPos();
+          // const normal = event.getWorldNormal();
+          // const length = event.getLength();
+          // this.onEvent({ event: PhysXEvents.CONTROLLER_OBSTACLE_HIT, controllerID: id, obstacleID, position, normal, length });
           console.warn('three-physx: onObstacleHit event not implemented');
         },
       }),
@@ -324,35 +351,69 @@ export class PhysXManager {
     if (!controllerDesc.isValid()) {
       console.warn('[WARN] Controller Description invalid!');
     }
-    const controller = this.controllerManager.createController(controllerDesc);
+    const controller = config.isCapsule ? this.controllerManager.createCapsuleController(controllerDesc) : this.controllerManager.createBoxController(controllerDesc);
     this.controllers.set(id, controller);
-    // todo: put the controller.getActor into this.bodies instead of controller
+    this.controllerIDByPointer.set(controller.$$.ptr, id);
     const actor = controller.getActor();
     this.bodies.set(id, actor as any);
-    // todo: put actor shape into this.shapes
     const shapes = actor.getShapes() as PhysX.PxShape;
     this.shapeIDByPointer.set(shapes.$$.ptr, config.id);
     (controller as any)._collisions = [];
     (actor as any)._type = PhysXBodyType.CONTROLLER;
-
-    // todo
   };
 
   updateController = async ({ id, config }: { id: number; config: ControllerConfig }) => {
-    const controller = this.controllers.get(id) as PhysX.PxCapsuleController;
-    console.log(controller, id, config)
+    const controller = this.controllers.get(id);
+    if (!controller) return;
+    if (typeof config.position !== 'undefined') {
+      controller.setPosition(config.position as Vec3);
+    }
+    if (typeof config.positionDelta !== 'undefined') {
+      const currentPos = controller.getPosition();
+      controller.setPosition({
+        x: currentPos.x + (config.positionDelta.x ?? 0),
+        y: currentPos.y + (config.positionDelta.y ?? 0),
+        z: currentPos.z + (config.positionDelta.z ?? 0),
+      });
+    }
+    if (typeof config.position !== 'undefined') {
+      const currentPos = controller.getPosition();
+      controller.setPosition({
+        x: config.position.x ?? currentPos.x,
+        y: config.position.y ?? currentPos.y,
+        z: config.position.z ?? currentPos.z,
+      });
+    }
     if (typeof config.height !== 'undefined') {
-      controller.setHeight(config.height);
+      (controller as PhysX.PxCapsuleController).setHeight(clampNonzeroPositive(config.height));
     }
     if (typeof config.radius !== 'undefined') {
-      controller.setRadius(config.radius);
+      (controller as PhysX.PxCapsuleController).setRadius(clampNonzeroPositive(config.radius));
     }
-    if (typeof config.height !== 'undefined') {
-      controller.setClimbingMode(config.climbingMode);
+    if (typeof config.climbingMode !== 'undefined') {
+      (controller as PhysX.PxCapsuleController).setClimbingMode(config.climbingMode);
+    }
+    if (typeof config.halfForwardExtent !== 'undefined') {
+      (controller as PhysX.PxBoxController).setHalfForwardExtent(clampNonzeroPositive(config.halfForwardExtent));
+    }
+    if (typeof config.halfHeight !== 'undefined') {
+      (controller as PhysX.PxBoxController).setHalfHeight(clampNonzeroPositive(config.halfHeight));
+    }
+    if (typeof config.halfSideExtent !== 'undefined') {
+      (controller as PhysX.PxBoxController).setHalfSideExtent(clampNonzeroPositive(config.halfSideExtent));
     }
   };
 
-  removeController = async () => {
+  removeController = async ({ id }) => {
+    const controller = this.controllers.get(id);
+    if (!controller) return;
+    const actor = controller.getActor();
+    const shapes = actor.getShapes() as PhysX.PxShape;
+    this.controllerIDByPointer.delete(controller.$$.ptr);
+    this.shapeIDByPointer.delete(shapes.$$.ptr);
+    this.controllers.delete(id);
+    this.bodies.delete(id);
+    controller.release();
     // todo
   };
 
@@ -361,18 +422,6 @@ export class PhysXManager {
   };
 
   removeConstraint = async () => {
-    // todo
-  };
-
-  enableDebug = async () => {
-    // todo
-  };
-
-  resetDynamicBody = async () => {
-    // todo
-  };
-
-  activateBody = async () => {
     // todo
   };
 }

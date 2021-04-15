@@ -15,14 +15,19 @@ export enum PhysXModelShapes {
   TriangleMesh,
   HeightField,
 }
+export interface Vec3Fragment {
+  x?: number;
+  y?: number;
+  z?: number;
+}
 
-interface Vec3 {
+export interface Vec3 {
   x: number;
   y: number;
   z: number;
 }
 
-interface Quat {
+export interface Quat {
   x: number;
   y: number;
   z: number;
@@ -91,6 +96,7 @@ export interface RigidBodyProxy {
   shapes: PhysXShapeConfig[];
   options: BodyConfig;
   controller?: {
+    _debugNeedsUpdate?: any;
     config: ControllerConfig;
     collisions: { down: boolean; sides: boolean; up: boolean };
     delta: { x: number; y: number; z: number };
@@ -104,16 +110,23 @@ export interface RigidBodyProxy {
 
 export interface ControllerConfig {
   id?: number;
-  position?: Vec3;
-  // isCapsule?: boolean;
-  height?: number;
-  radius?: number;
+  body?: any; // internal use
+  position?: Vec3Fragment;
+  positionDelta?: Vec3Fragment;
   stepOffset?: number;
   contactOffset?: number;
   slopeLimit?: number;
   maxJumpHeight?: number;
   invisibleWallHeight?: number;
+  isCapsule?: boolean;
+  // capsule
+  height?: number;
+  radius?: number;
   climbingMode?: PhysX.PxCapsuleClimbingMode;
+  // box
+  halfForwardExtent?: number;
+  halfHeight?: number;
+  halfSideExtent?: number;
 }
 
 export const DefaultControllerConfig: ControllerConfig = {
@@ -135,7 +148,7 @@ export enum PhysXEvents {
   COLLISION_END = 'COLLISION_END',
 
   CONTROLLER_SHAPE_HIT = 'CONTROLLER_SHAPE_HIT',
-  CONTROLLER_COLLIDER_HIT = 'CONTROLLER_COLLIDER_HIT',
+  CONTROLLER_CONTROLLER_HIT = 'CONTROLLER_CONTROLLER_HIT',
   CONTROLLER_OBSTACLE_HIT = 'CONTROLLER_OBSTACLE_HIT',
 
   TRIGGER_START = 'TRIGGER_START',

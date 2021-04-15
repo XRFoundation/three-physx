@@ -5,6 +5,7 @@ import { PhysXConfig, PhysXBodyType, RigidBodyProxy, Object3DBody, PhysXShapeCon
 import { Object3D, Quaternion, Scene, Vector3 } from 'three';
 import { createPhysXBody, createPhysXShapes, getTransformFromWorldPos } from './threeToPhysX';
 import { proxyEventListener } from './utils/proxyEventListener';
+import { clampNonzeroPositive } from './utils/misc';
 
 let nextAvailableBodyIndex = 0;
 let nextAvailablShapeID = 0;
@@ -18,7 +19,7 @@ export class PhysXInstance {
   bodies: Map<number, RigidBodyProxy> = new Map<number, RigidBodyProxy>();
   shapes: Map<number, PhysXShapeConfig> = new Map<number, PhysXShapeConfig>();
   kinematicBodies: Map<number, Object3DBody> = new Map<number, Object3DBody>();
-  controllerBodies: Map<number, any> = new Map<number, any>();
+  controllerBodies: Map<number, RigidBodyProxy> = new Map<number, RigidBodyProxy>();
   scene: Scene;
 
   constructor(worker: Worker, onUpdate: any, scene: Scene) {
@@ -79,36 +80,37 @@ export class PhysXInstance {
           case PhysXEvents.TRIGGER_END:
             {
               try {
-                
-              const { event, idA, idB } = collision;
-              const shapeA = this.shapes.get(idA);
-              const shapeB = this.shapes.get(idB);
-              const bodyA = (shapeA as any).body;
-              const bodyB = (shapeB as any).body;
-              if (!bodyA || !bodyB) return; // TODO this is a hack
-              bodyA.dispatchEvent({
-                type: event,
-                bodySelf: bodyA,
-                bodyOther: bodyB,
-                shapeSelf: shapeA,
-                shapeOther: shapeB,
-              });
-              bodyB.dispatchEvent({
-                type: event,
-                bodySelf: bodyB,
-                bodyOther: bodyA,
-                shapeSelf: shapeB,
-                shapeOther: shapeA,
-              });
-            } catch (e) { console.log(collision, e)}
-          }
+                const { event, idA, idB } = collision;
+                const shapeA = this.shapes.get(idA);
+                const shapeB = this.shapes.get(idB);
+                const bodyA = (shapeA as any).body;
+                const bodyB = (shapeB as any).body;
+                if (!bodyA || !bodyB) return; // TODO this is a hack
+                bodyA.dispatchEvent({
+                  type: event,
+                  bodySelf: bodyA,
+                  bodyOther: bodyB,
+                  shapeSelf: shapeA,
+                  shapeOther: shapeB,
+                });
+                bodyB.dispatchEvent({
+                  type: event,
+                  bodySelf: bodyB,
+                  bodyOther: bodyA,
+                  shapeSelf: shapeB,
+                  shapeOther: shapeA,
+                });
+              } catch (e) {
+                console.log(collision, e);
+              }
+            }
             break;
           case PhysXEvents.CONTROLLER_SHAPE_HIT:
-          case PhysXEvents.CONTROLLER_COLLIDER_HIT:
+          case PhysXEvents.CONTROLLER_CONTROLLER_HIT:
           case PhysXEvents.CONTROLLER_OBSTACLE_HIT:
             {
               const { event, controllerID, shapeID, position, normal, length } = collision;
-              const controllerBody: RigidBodyProxy =  this.bodies.get(controllerID)
+              const controllerBody: RigidBodyProxy = this.bodies.get(controllerID);
               const shape = this.shapes.get(shapeID);
               controllerBody.dispatchEvent({
                 type: event,
@@ -159,11 +161,11 @@ export class PhysXInstance {
     offset = 0;
     const controllerArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.CONTROLLER_DATA_SIZE * this.controllerBodies.size));
     const controllerIDs = [];
-    this.controllerBodies.forEach((obj, id) => {
+    this.controllerBodies.forEach((body, id) => {
       controllerIDs.push(id);
-      const { x, y, z } = obj.body.controller.delta;
+      const { x, y, z } = body.controller.delta;
       controllerArray.set([id, x, y, z, delta], offset);
-      obj.body.controller.delta = { x: 0, y: 0, z: 0 };
+      body.controller.delta = { x: 0, y: 0, z: 0 };
       offset += BufferConfig.CONTROLLER_DATA_SIZE;
     });
     this.physicsProxy.update([kinematicArray, controllerArray], [kinematicArray.buffer, controllerArray.buffer]);
@@ -222,20 +224,30 @@ export class PhysXInstance {
     return;
   };
 
-  removeBody = async (object: Object3DBody | any) => {
-    if (typeof object.body === 'undefined') {
-      throw new Error('three-physx! Tried to update a body that does not exist.');
-    }
-    const id = (object as Object3DBody).body.id;
+  removeBody = async (object: Object3DBody) => {
+    if (!object.body) return;
+    this.bodies.delete(object.body.id);
+    const id = object.body.id;
+    delete object.body;
     await this.physicsProxy.removeBody([{ id }]);
-    this.bodies.delete(id);
-    return;
   };
 
   addController = async (object: Object3D, options?: ControllerConfig) => {
     const id = this._getNextAvailableBodyID();
     createPhysXBody(object, id, []);
-    const shape = { id: this._getNextAvailableShapeID(), height: 1, radius: 0.25, body: (object as Object3DBody).body };
+    const shape = options ?? {};
+    if (typeof options !== 'undefined') {
+      if (options.isCapsule) {
+        shape.height = options.height ?? 1;
+        shape.radius = options.radius ?? 0.5;
+      } else {
+        shape.halfForwardExtent = options.halfForwardExtent ?? 0.5;
+        shape.halfHeight = options.halfHeight ?? 0.5;
+        shape.halfSideExtent = options.halfSideExtent ?? 0.5;
+      }
+    }
+    shape.id = this._getNextAvailableShapeID();
+    shape.body = (object as Object3DBody).body;
     (object as Object3DBody).body.controller = {
       config: shape,
       collisions: { down: false, sides: false, up: false },
@@ -250,25 +262,49 @@ export class PhysXInstance {
       },
     ]);
     (object as Object3DBody).body.options.type = PhysXBodyType.CONTROLLER;
-    this.controllerBodies.set(id, object as Object3DBody);
+    this.controllerBodies.set(id, (object as Object3DBody).body);
     proxyEventListener((object as Object3DBody).body);
     this.bodies.set(id, (object as Object3DBody).body);
     return (object as Object3DBody).body;
   };
 
-  updateController = async (controller: any, config: ControllerConfig) => {
-    if (typeof controller?.body?.id === 'undefined') return;
-    if (!this.controllerBodies.has(controller.body.id)) return;
-
+  updateController = async (object: Object3DBody, config: ControllerConfig) => {
+    if (typeof object?.body?.id === 'undefined') return;
+    if (!this.controllerBodies.has(object.body.id)) return;
+    object.body.controller._debugNeedsUpdate = true;
+    if (typeof config.height !== 'undefined') {
+      object.body.controller.config.height = clampNonzeroPositive(config.height);
+    }
+    if (typeof config.radius !== 'undefined') {
+      object.body.controller.config.radius = clampNonzeroPositive(config.radius);
+    }
+    if (typeof config.climbingMode !== 'undefined') {
+      object.body.controller.config.climbingMode = config.climbingMode;
+    }
+    if (typeof config.halfForwardExtent !== 'undefined') {
+      object.body.controller.config.halfForwardExtent = clampNonzeroPositive(config.halfForwardExtent);
+    }
+    if (typeof config.halfHeight !== 'undefined') {
+      object.body.controller.config.halfHeight = clampNonzeroPositive(config.halfHeight);
+    }
+    if (typeof config.halfSideExtent !== 'undefined') {
+      object.body.controller.config.halfSideExtent = clampNonzeroPositive(config.halfSideExtent);
+    }
     await this.physicsProxy.updateController([
       {
-        id: (controller as Object3DBody).body.id,
+        id: object.body.id,
         config,
       },
     ]);
   };
 
-  removeController = async () => {
+  removeController = async (id) => {
+    if (await this.physicsProxy.removeController([{ id }])) {
+      const body = this.controllerBodies.get(id);
+      this.shapes.delete(body.controller.config.id);
+      this.controllerBodies.delete(id);
+      this.bodies.delete(id);
+    }
     // todo
   };
 
@@ -277,18 +313,6 @@ export class PhysXInstance {
   };
 
   removeConstraint = async () => {
-    // todo
-  };
-
-  enableDebug = async () => {
-    // todo
-  };
-
-  resetDynamicBody = async () => {
-    // todo
-  };
-
-  activateBody = async () => {
     // todo
   };
 
@@ -324,5 +348,5 @@ const generateUUID = (): string => {
     .join('-');
 };
 
-export { CapsuleBufferGeometry } from "./utils/CapsuleBufferGeometry";
-export { DebugRenderer } from "./utils/DebugRenderer";
+export { CapsuleBufferGeometry } from './utils/CapsuleBufferGeometry';
+export { DebugRenderer } from './utils/DebugRenderer';

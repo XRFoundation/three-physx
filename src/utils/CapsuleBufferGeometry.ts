@@ -1,6 +1,6 @@
 // Credit https://github.com/maximeq/three-js-capsule-geometry
 
-import { BufferGeometry, BufferAttribute, Vector3, Vector2 } from 'three'
+import { BufferGeometry, BufferAttribute, Vector3, Vector2 } from 'three';
 
 // helper variables
 
@@ -11,7 +11,7 @@ export class CapsuleBufferGeometry extends BufferGeometry {
   parameters;
   radiusTop: number;
   radiusBottom: number;
-  height: number
+  height: number;
   radialSegments: number;
   heightSegments: number;
   capsTopSegments: number;
@@ -32,7 +32,7 @@ export class CapsuleBufferGeometry extends BufferGeometry {
   _indexOffset: number = 0;
 
   constructor(radiusTop?: number, radiusBottom?: number, height?: number, radialSegments?: number, heightSegments?: number, capsTopSegments?: number, capsBottomSegments?: number, thetaStart?: number, thetaLength?: number) {
-    super()
+    super();
     this.type = 'CapsuleBufferGeometry';
 
     this.parameters = {
@@ -42,7 +42,7 @@ export class CapsuleBufferGeometry extends BufferGeometry {
       radialSegments: radialSegments,
       heightSegments: heightSegments,
       thetaStart: thetaStart,
-      thetaLength: thetaLength
+      thetaLength: thetaLength,
     };
 
     this.radiusTop = radiusTop !== undefined ? radiusTop : 0.25;
@@ -59,7 +59,7 @@ export class CapsuleBufferGeometry extends BufferGeometry {
 
     // Alpha is the angle such that Math.PI/2 - alpha is the cone part angle.
     this.alpha = Math.acos((this.radiusBottom - this.radiusTop) / this.height);
-    this.eqRadii = (this.radiusTop - this.radiusBottom === 0);
+    this.eqRadii = this.radiusTop - this.radiusBottom === 0;
 
     this.vertexCount = this.calculateVertexCount();
     this.indexCount = this.calculateIndexCount();
@@ -97,7 +97,6 @@ export class CapsuleBufferGeometry extends BufferGeometry {
   }
 
   generateTorso() {
-
     var x, y;
     var normal = new Vector3();
     var vertex = new Vector3();
@@ -105,20 +104,10 @@ export class CapsuleBufferGeometry extends BufferGeometry {
     var cosAlpha = Math.cos(this.alpha);
     var sinAlpha = Math.sin(this.alpha);
 
-    var cone_length =
-      new Vector2(
-        this.radiusTop * sinAlpha,
-        this._halfHeight + this.radiusTop * cosAlpha
-      ).sub(new Vector2(
-        this.radiusBottom * sinAlpha,
-        -this._halfHeight + this.radiusBottom * cosAlpha
-      )
-      ).length();
+    var cone_length = new Vector2(this.radiusTop * sinAlpha, this._halfHeight + this.radiusTop * cosAlpha).sub(new Vector2(this.radiusBottom * sinAlpha, -this._halfHeight + this.radiusBottom * cosAlpha)).length();
 
     // Total length for v texture coord
-    var vl = this.radiusTop * this.alpha
-      + cone_length
-      + this.radiusBottom * (Math.PI / 2 - this.alpha);
+    var vl = this.radiusTop * this.alpha + cone_length + this.radiusBottom * (Math.PI / 2 - this.alpha);
 
     var groupCount = 0;
 
@@ -126,12 +115,11 @@ export class CapsuleBufferGeometry extends BufferGeometry {
 
     var v = 0;
     for (y = 0; y <= this.capsTopSegments; y++) {
-
       var indexRow = [];
 
       var a = Math.PI / 2 - this.alpha * (y / this.capsTopSegments);
 
-      v += this.radiusTop * this.alpha / this.capsTopSegments;
+      v += (this.radiusTop * this.alpha) / this.capsTopSegments;
 
       var cosA = Math.cos(a);
       var sinA = Math.sin(a);
@@ -140,7 +128,6 @@ export class CapsuleBufferGeometry extends BufferGeometry {
       var radius = cosA * this.radiusTop;
 
       for (x = 0; x <= this.radialSegments; x++) {
-
         var u = x / this.radialSegments;
 
         var theta = u * this.thetaLength + this.thetaStart;
@@ -166,27 +153,23 @@ export class CapsuleBufferGeometry extends BufferGeometry {
 
         // increase index
         this._index++;
-
       }
 
       // now save vertices of the row in our index array
       this._indexArray.push(indexRow);
-
     }
 
     var cone_height = this.height + cosAlpha * this.radiusTop - cosAlpha * this.radiusBottom;
-    var slope = sinAlpha * (this.radiusBottom - this.radiusTop) / cone_height;
+    var slope = (sinAlpha * (this.radiusBottom - this.radiusTop)) / cone_height;
     for (y = 1; y <= this.heightSegments; y++) {
-
       var indexRow = [];
 
       v += cone_length / this.heightSegments;
 
       // calculate the radius of the current row
-      var radius = sinAlpha * (y * (this.radiusBottom - this.radiusTop) / this.heightSegments + this.radiusTop);
+      var radius = sinAlpha * ((y * (this.radiusBottom - this.radiusTop)) / this.heightSegments + this.radiusTop);
 
       for (x = 0; x <= this.radialSegments; x++) {
-
         var u = x / this.radialSegments;
 
         var theta = u * this.thetaLength + this.thetaStart;
@@ -196,7 +179,7 @@ export class CapsuleBufferGeometry extends BufferGeometry {
 
         // vertex
         vertex.x = radius * sinTheta;
-        vertex.y = this._halfHeight + cosAlpha * this.radiusTop - y * cone_height / this.heightSegments;
+        vertex.y = this._halfHeight + cosAlpha * this.radiusTop - (y * cone_height) / this.heightSegments;
         vertex.z = radius * cosTheta;
         this.vertices.setXYZ(this._index, vertex.x, vertex.y, vertex.z);
 
@@ -212,21 +195,18 @@ export class CapsuleBufferGeometry extends BufferGeometry {
 
         // increase index
         this._index++;
-
       }
 
       // now save vertices of the row in our index array
       this._indexArray.push(indexRow);
-
     }
 
     for (y = 1; y <= this.capsBottomSegments; y++) {
-
       var indexRow = [];
 
-      var a = (Math.PI / 2 - this.alpha) - (Math.PI - this.alpha) * (y / this.capsBottomSegments);
+      var a = Math.PI / 2 - this.alpha - (Math.PI - this.alpha) * (y / this.capsBottomSegments);
 
-      v += this.radiusBottom * this.alpha / this.capsBottomSegments;
+      v += (this.radiusBottom * this.alpha) / this.capsBottomSegments;
 
       var cosA = Math.cos(a);
       var sinA = Math.sin(a);
@@ -235,7 +215,6 @@ export class CapsuleBufferGeometry extends BufferGeometry {
       var radius = cosA * this.radiusBottom;
 
       for (x = 0; x <= this.radialSegments; x++) {
-
         var u = x / this.radialSegments;
 
         var theta = u * this.thetaLength + this.thetaStart;
@@ -261,20 +240,16 @@ export class CapsuleBufferGeometry extends BufferGeometry {
 
         // increase index
         this._index++;
-
       }
 
       // now save vertices of the row in our index array
       this._indexArray.push(indexRow);
-
     }
 
     // generate indices
 
     for (x = 0; x < this.radialSegments; x++) {
-
       for (y = 0; y < this.capsTopSegments + this.heightSegments + this.capsBottomSegments; y++) {
-
         // we use the index array to access the correct indices
         var i1 = this._indexArray[y][x];
         var i2 = this._indexArray[y + 1][x];
@@ -282,18 +257,21 @@ export class CapsuleBufferGeometry extends BufferGeometry {
         var i4 = this._indexArray[y][x + 1];
 
         // face one
-        this.indices.setX(this._indexOffset, i1); this._indexOffset++;
-        this.indices.setX(this._indexOffset, i2); this._indexOffset++;
-        this.indices.setX(this._indexOffset, i4); this._indexOffset++;
+        this.indices.setX(this._indexOffset, i1);
+        this._indexOffset++;
+        this.indices.setX(this._indexOffset, i2);
+        this._indexOffset++;
+        this.indices.setX(this._indexOffset, i4);
+        this._indexOffset++;
 
         // face two
-        this.indices.setX(this._indexOffset, i2); this._indexOffset++;
-        this.indices.setX(this._indexOffset, i3); this._indexOffset++;
-        this.indices.setX(this._indexOffset, i4); this._indexOffset++;
-
+        this.indices.setX(this._indexOffset, i2);
+        this._indexOffset++;
+        this.indices.setX(this._indexOffset, i3);
+        this._indexOffset++;
+        this.indices.setX(this._indexOffset, i4);
+        this._indexOffset++;
       }
-
     }
-
   }
 }
