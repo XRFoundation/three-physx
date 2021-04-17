@@ -71,14 +71,19 @@ export interface PhysXShapeConfig {
   };
 }
 
-export interface ShapeConfig {
-  id: number;
-  isTrigger?: boolean;
-  collisionId?: number;
-  collisionMask?: number;
+export interface MaterialConfig {
   staticFriction?: number;
   dynamicFriction?: number;
   restitution?: number;
+}
+
+export interface ShapeConfig {
+  id: number;
+  contactOffset?: number;
+  isTrigger?: boolean;
+  collisionLayer?: number;
+  collisionMask?: number;
+  material?: MaterialConfig;
 }
 
 export interface BodyConfig {
@@ -122,6 +127,9 @@ export interface ControllerConfig {
   invisibleWallHeight?: number;
   isCapsule?: boolean;
   resize?: number;
+  material?: MaterialConfig;
+  collisionLayer?: number;
+  collisionMask?: number;
   // capsule
   height?: number;
   radius?: number;
@@ -145,11 +153,11 @@ export interface Object3DBody extends Object3D {
   body: RigidBodyProxy;
 }
 
-
 export enum SceneQueryType {
+  // todo
   // Any,
   // Multiple,
-  Closest
+  Closest,
 }
 export interface SceneQuery {
   id?: number;

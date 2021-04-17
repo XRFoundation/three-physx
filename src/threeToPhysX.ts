@@ -56,7 +56,7 @@ const createShapes = (mesh, root): PhysXShapeConfig[] => {
       const id = PhysXInstance.instance._getNextAvailableShapeID();
       data.id = id;
       data.transform = transform;
-      data.config = getShapeConfig(shape.config ?? {});
+      data.config = getShapeConfig(shape ?? {});
       data.config.id = id;
       shapes.push(data);
     });
@@ -87,17 +87,17 @@ export const iterateGeometries = (function () {
 
 const getShapeConfig = (data) => {
   return {
-    isTrigger: data.isTrigger ?? false,
-    collisionId: data.collisionId ?? 1,
-    collisionMask: data.collisionMask ?? 1,
-    staticFriction: data.staticFriction ?? 0.2,
-    dynamicFriction: data.dynamicFriction ?? 0.2,
-    restitution: data.restitution ?? 0.2,
+    isTrigger: data.isTrigger,
+    collisionLayer: data.collisionLayer,
+    collisionMask: data.collisionMask,
+    material: data.material
   };
 };
 
 const getShapeData = (mesh, shape): any => {
-  console.log(mesh.geometry, shape);
+  if(!shape.type) {
+    return getThreeGeometryShape(mesh);
+  }
   switch (shape.type) {
     case PhysXModelShapes.Box:
       return {

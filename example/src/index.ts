@@ -1,8 +1,5 @@
-import { PhysXInstance } from '../../src';
-import { Mesh, TorusKnotBufferGeometry, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, CylinderBufferGeometry, Vector3, TorusBufferGeometry, BufferGeometry } from 'three';
-import { Object3DBody, PhysXBodyType, PhysXEvents, PhysXModelShapes, SceneQueryType, RigidBodyProxy } from '../../src/types/ThreePhysX';
-import { DebugRenderer } from '../../src/utils/DebugRenderer';
-import { CapsuleBufferGeometry } from '../../src/utils/CapsuleBufferGeometry';
+import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer , Object3DBody, PhysXBodyType, PhysXEvents, SceneQueryType, RigidBodyProxy, PhysXModelShapes, PhysXShapeConfig } from '../../src';
+import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3 } from 'three';
 
 const load = async () => {
   const renderer = await import('./renderer');
@@ -65,8 +62,14 @@ const load = async () => {
     renderer.addToScene(object);
   });
 
-  const floor = new Mesh(new BoxBufferGeometry(platformSize, 1, platformSize), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide })).translateY(-2);
-  floor.userData.physx = { type: PhysXBodyType.STATIC };
+  const floor = new Mesh(new BoxBufferGeometry(platformSize, 1, platformSize), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide })).translateY(-1);
+  floor.userData.physx = { 
+    type: PhysXBodyType.STATIC,
+    shapes: [ {
+      // collisionLayer: 1 << Math.round(Math.random() * 2),
+      // collisionMask: 1 << Math.round(Math.random() * 2),
+    } ] 
+  };
   const floorbody = await PhysXInstance.instance.addBody(floor);
   objects.set(floorbody.id, floor);
   renderer.addToScene(floor);
@@ -91,7 +94,7 @@ const load = async () => {
   });
 
   const debug = new DebugRenderer(renderer.scene);
-  debug.setEnabled(true);
+  // debug.setEnabled(true);
   let lastTime = Date.now() - (1 / 60);
   let lastDelta = 1 / 60;
 
@@ -110,7 +113,7 @@ const load = async () => {
     } else {
       characterBody.controller.velocity.y -= (0.2 / delta);
     }
-    Object.entries(keys).forEach(([key, value]) => {
+    Object.entries(keys).forEach(([key]) => {
       if (key === 'KeyW') {
         characterBody.controller.delta.z -= 2 / delta;
       }
@@ -140,7 +143,7 @@ const load = async () => {
     })
     characterBody.controller.delta.y += characterBody.controller.velocity.y;
     raycastQuery.origin = new Vector3().copy(character.position).add(new Vector3(0, -1, 0));
-    console.log(raycastQuery.hits);
+    // console.log(raycastQuery.hits);
     PhysXInstance.instance.update(delta);
     debug.update();
     renderer.update();
@@ -159,7 +162,10 @@ const createBalls = () => {
     mesh.position.copy(randomVector3OnPlatform());
     mesh.userData.physx = {
       type: PhysXBodyType.DYNAMIC,
-      // shapes: [ { type: PhysXModelShapes.TriangleMesh, } ]
+      shapes: [ {
+        // collisionLayer: 1 << Math.round(Math.random() * 2),
+        // collisionMask: 1 << Math.round(Math.random() * 2),
+      } ] 
     };
     meshes.push(mesh);
   }

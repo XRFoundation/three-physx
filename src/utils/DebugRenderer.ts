@@ -1,4 +1,22 @@
-import { Scene, Mesh, Points, SphereBufferGeometry, BoxBufferGeometry, PlaneBufferGeometry, BufferGeometry, MeshBasicMaterial, Vector3, SphereGeometry, BoxGeometry, PlaneGeometry, Object3D, Matrix4, Quaternion, LineBasicMaterial, Line } from 'three';
+import {
+  Scene,
+  Mesh,
+  Points,
+  SphereBufferGeometry,
+  BoxBufferGeometry,
+  PlaneBufferGeometry,
+  BufferGeometry,
+  MeshBasicMaterial,
+  Vector3,
+  SphereGeometry,
+  BoxGeometry,
+  PlaneGeometry,
+  Object3D,
+  Matrix4,
+  Quaternion,
+  LineBasicMaterial,
+  Line,
+} from 'three';
 import { PhysXInstance } from '..';
 import { Object3DBody, PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, SceneQuery, RigidBodyProxy } from '../types/ThreePhysX';
 import { CapsuleBufferGeometry } from './CapsuleBufferGeometry';
@@ -33,8 +51,8 @@ export class DebugRenderer {
       new MeshBasicMaterial({ color: 0x00aaff, wireframe: true }),
       new MeshBasicMaterial({ color: 0xffffff, wireframe: true }),
     ];
-    
-    this._lineMaterial = new LineBasicMaterial( { color: 0x0000ff } );
+
+    this._lineMaterial = new LineBasicMaterial({ color: 0x0000ff });
     this._sphereGeometry = new SphereBufferGeometry(1);
     this._boxGeometry = new BoxBufferGeometry();
     this._planeGeometry = new PlaneBufferGeometry();
@@ -87,7 +105,7 @@ export class DebugRenderer {
     });
     PhysXInstance.instance.raycasts.forEach((raycast, id) => {
       this._updateRaycast(raycast, id);
-    })
+    });
     this._meshes.forEach((mesh, id) => {
       if (mesh && !PhysXInstance.instance.bodies.get(id)) {
         this.scene.remove(mesh);
@@ -98,12 +116,12 @@ export class DebugRenderer {
 
   private _updateRaycast(raycast, id) {
     let line = this._raycasts.get(id);
-    if(!line) {
-      line = new Line(new BufferGeometry().setFromPoints([new Vector3().add(raycast.origin), new Vector3().add(raycast.origin).add(raycast.direction) ] ), this._lineMaterial);
+    if (!line) {
+      line = new Line(new BufferGeometry().setFromPoints([new Vector3().add(raycast.origin), new Vector3().add(raycast.origin).add(raycast.direction)]), this._lineMaterial);
       this.scene.add(line);
       this._raycasts.set(id, line);
     } else {
-      line.geometry.setFromPoints([new Vector3().add(raycast.origin), new Vector3().add(raycast.direction).multiplyScalar(raycast.maxDistance).add(raycast.origin)])
+      line.geometry.setFromPoints([new Vector3().add(raycast.origin), new Vector3().add(raycast.direction).multiplyScalar(raycast.maxDistance).add(raycast.origin)]);
     }
   }
 

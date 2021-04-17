@@ -106,7 +106,7 @@ export class PhysXManager {
     };
 
     this.scale = this.physics.getTolerancesScale();
-    if(config.lengthScale) {
+    if (config.lengthScale) {
       this.scale.length = config.lengthScale;
     }
     this.sceneDesc = PhysX.getDefaultSceneDesc(this.scale, 0, PhysX.PxSimulationEventCallback.implement(triggerCallback as any));
@@ -140,7 +140,7 @@ export class PhysXManager {
     this.raycasts.forEach((raycastQuery, id) => {
       const hits = this._getRaycastResults(raycastQuery);
       raycastResults[id] = hits;
-    })
+    });
     this.onUpdate({ raycastResults, bodyArray }); //, shapeArray);
     lastTick = now;
   };
@@ -169,17 +169,13 @@ export class PhysXManager {
       const id = controllerBodiesArray[offset];
       const controller = this.controllers.get(id) as PhysX.PxController;
       if (!controller) return;
-      // const position = controller.getPosition();
       const deltaPos = {
         x: controllerBodiesArray[offset + 1],
         y: controllerBodiesArray[offset + 2],
         z: controllerBodiesArray[offset + 3],
       };
       const deltaTime = controllerBodiesArray[offset + 4];
-      // TODO
-      // const filterData = new PhysX.PxFilterData(1, 1, 1, 1);
-      // const queryCallback = PhysX.PxQueryFilterCallback.implement({ preFilter: console.log, postFilter: console.log });
-      const filters = new PhysX.PxControllerFilters(null, null, null);
+      const filters = new PhysX.PxControllerFilters((controller as any)._filterData, (controller as any)._queryCallback, null);
       const collisionFlags = controller.move(deltaPos, 0.01, deltaTime, filters, null);
       const collisions = {
         down: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_DOWN) ? 1 : 0,
@@ -193,7 +189,7 @@ export class PhysXManager {
     while (offset < raycastQueryArray.length) {
       const id = raycastQueryArray[offset];
       const raycast = this.raycasts.get(id);
-      if(!raycast) return;
+      if (!raycast) return;
       const newOriginPos = {
         x: raycastQueryArray[offset + 1],
         y: raycastQueryArray[offset + 2],
@@ -233,9 +229,7 @@ export class PhysXManager {
         options,
       });
       if (!bodyShape) return;
-      bodyShape.setContactOffset(0.0000001);
-      // const filterData = new PhysX.PxFilterData(1, 1, 1, 1);
-      // bodyShape.setSimulationFilterData(filterData);
+      bodyShape.setContactOffset(config.contactOffset ?? 0.0000001);
       bodyShapes.push(bodyShape);
       rigidBody.attachShape(bodyShape);
       this.shapeIDByPointer.set(bodyShape.$$.ptr, shapeID);
@@ -297,12 +291,21 @@ export class PhysXManager {
     options.shapes?.forEach(this._updateShape);
   };
 
-  _updateShape({ id, isTrigger, collisionId, collisionMask, staticFriction, dynamicFriction, restitution }: ShapeConfig) {
+  _updateShape({ id, isTrigger, contactOffset, collisionLayer, collisionMask, material }: ShapeConfig) {
     const shape = this.shapes.get(id);
     if (!shape) return;
-    const filterData = new PhysX.PxFilterData(collisionId ?? 1, collisionMask ?? 1, 1, 1);
+    if(typeof material !== 'undefined') {
+      shape.setFlag(PhysX.PxShapeFlag.eTRIGGER_SHAPE, isTrigger);
+    }
+    const filterData = new PhysX.PxFilterData(collisionLayer ?? defaultMask, collisionMask ?? defaultMask, 0, 0);
     shape.setSimulationFilterData(filterData);
-    if (typeof staticFriction !== 'undefined' || typeof dynamicFriction !== 'undefined' || typeof restitution !== 'undefined') {
+    if (typeof material !== 'undefined') {
+      // TODO
+      // shape.setMaterial
+      // config.material?.staticFriction ?? 0.5, config.material?.dynamicFriction ?? 0.5, config.material?.restitution ?? 0.5
+    }
+    if (typeof contactOffset !== 'undefined') {
+      shape.setContactOffset(contactOffset);
     }
   }
 
@@ -369,7 +372,7 @@ export class PhysXManager {
         },
       }),
     );
-    controllerDesc.setMaterial(this.physics.createMaterial(0.5, 0.5, 0.5));
+    controllerDesc.setMaterial(this.physics.createMaterial(config.material?.staticFriction ?? 0.5, config.material?.dynamicFriction ?? 0.5, config.material?.restitution ?? 0.5));
     if (!controllerDesc.isValid()) {
       console.warn('[WARN] Controller Description invalid!');
     }
@@ -382,6 +385,9 @@ export class PhysXManager {
     this.shapeIDByPointer.set(shapes.$$.ptr, config.id);
     (controller as any)._collisions = [];
     (actor as any)._type = PhysXBodyType.CONTROLLER;
+    // todo
+    (controller as any)._filterData = null; //new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0);
+    (controller as any)._queryCallback = null; //PhysX.PxQueryFilterCallback.implement({ preFilter: () => {}, postFilter: () => {} });
   };
 
   updateController = async ({ id, config }: { id: number; config: ControllerConfig }) => {
@@ -444,15 +450,15 @@ export class PhysXManager {
 
   addRaycastQuery = async (query: SceneQuery) => {
     this.raycasts.set(query.id, query);
-  }
+  };
 
   updateRaycastQuery = async (id: number) => {
-    
-  }
+    // todo
+  };
 
   removeRaycastQuery = async (id: number) => {
     this.raycasts.delete(id);
-  }
+  };
 
   addConstraint = async () => {
     // todo
@@ -464,35 +470,40 @@ export class PhysXManager {
 
   _getRaycastResults = (raycastQuery: SceneQuery) => {
     const hits: RaycastHit[] = [];
-    if(raycastQuery.type === SceneQueryType.Closest) {
+    if (raycastQuery.type === SceneQueryType.Closest) {
       const buffer: PhysX.PxRaycastHit = new PhysX.PxRaycastHit();
       const filterData = new PhysX.PxQueryFilterData();
-      const queryCallback = PhysX.PxQueryFilterCallback.implement({ preFilter: console.log, postFilter: console.log });
+      // todo
+      const queryCallback = PhysX.PxQueryFilterCallback.implement({ preFilter: () => {}, postFilter: () => {} });
       const hasHit = this.scene.raycastSingle(raycastQuery.origin, raycastQuery.direction, raycastQuery.maxDistance, raycastQuery.flags, buffer, filterData, queryCallback, null);
-      if(hasHit) {
+      if (hasHit) {
         hits.push({
           distance: buffer.distance,
           normal: buffer.normal,
           position: buffer.position,
-        })
+        });
       }
     }
     // const buffer: PhysX.PxRaycastBuffer = PhysX.allocateRaycastHitBuffers(raycastQuery.maxHits);
+    // const hasHit = this.scene.raycast(raycastQuery.origin, raycastQuery.direction, raycastQuery.maxDistance, buffer);
+    // if (hasHit) {
+
     // if(raycastQuery.flags) {
-    //   for (let index = 0; index < result.getNbTouches(); index++) {
+    //   for (let index = 0; index < buffer.getNbTouches(); index++) {
 
     //   }
     // } else {
-    //   for (let index = 0; index < result.getNbAnyHits(); index++) {
-    //     const touch = result.getAnyHit(index);
+    //   for (let index = 0; index < buffer.getNbAnyHits(); index++) {
+    //     const touch = buffer.getAnyHit(index);
     //     const shape = this.shapeIDByPointer.get(touch.getShape().$$.ptr);
     //     hits.push({
     //       shape,
     //     });
     //   }
     // }
+    // }
     return hits;
-  }
+  };
 }
 function dec2bin(dec) {
   return (dec >>> 0).toString(2);
@@ -541,6 +552,8 @@ const mat4ToTransform = (matrix: Matrix4): PhysXBodyTransform => {
     },
   };
 };
+
+const defaultMask = 1 << 0
 
 export const receiveWorker = async (): Promise<void> => {
   const messageQueue = new MessageQueue(globalThis as any);

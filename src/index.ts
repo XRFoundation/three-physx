@@ -72,7 +72,7 @@ export class PhysXInstance {
       }
       this.raycasts.forEach((raycastQuery) => {
         raycastQuery.hits = raycastResults[raycastQuery.id] ?? [];
-      })
+      });
       this.onUpdate();
     });
     messageQueue.addEventListener('colliderEvent', ({ detail }) => {
@@ -143,8 +143,6 @@ export class PhysXInstance {
       addRaycastQuery: pipeRemoteFunction(messageQueue, 'addRaycastQuery'),
       updateRaycastQuery: pipeRemoteFunction(messageQueue, 'updateRaycastQuery'),
       removeRaycastQuery: pipeRemoteFunction(messageQueue, 'removeRaycastQuery'),
-      // addConstraint: pipeRemoteFunction(messageQueue, 'addConstraint'),
-      // removeConstraint: pipeRemoteFunction(messageQueue, 'removeConstraint'),
     };
 
     await this.physicsProxy.initPhysX([config]);
@@ -173,9 +171,9 @@ export class PhysXInstance {
     const raycastArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.RAYCAST_DATA_SIZE * this.raycasts.size));
     this.raycasts.forEach((raycast, id) => {
       const { x, y, z } = raycast.origin;
-      raycastArray.set([id, x, y, z])
+      raycastArray.set([id, x, y, z]);
       offset += BufferConfig.RAYCAST_DATA_SIZE;
-    })
+    });
     this.physicsProxy.update([kinematicArray, controllerArray, raycastArray], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);
   };
 
@@ -329,9 +327,9 @@ export class PhysXInstance {
   };
 
   addRaycastQuery = async (raycastQuery: SceneQuery) => {
-    if(typeof raycastQuery.type === 'undefined') throw new Error('Scene raycast query must have a type!');
-    if(typeof raycastQuery.origin === 'undefined') throw new Error('Scene raycast query must include origin!');
-    if(typeof raycastQuery.direction === 'undefined') throw new Error('Scene raycast query must include direction!');
+    if (typeof raycastQuery.type === 'undefined') throw new Error('Scene raycast query must have a type!');
+    if (typeof raycastQuery.origin === 'undefined') throw new Error('Scene raycast query must include origin!');
+    if (typeof raycastQuery.direction === 'undefined') throw new Error('Scene raycast query must include direction!');
 
     raycastQuery.flags = raycastQuery.flags ?? 1;
     raycastQuery.maxDistance = raycastQuery.maxDistance ?? 1;
@@ -342,12 +340,12 @@ export class PhysXInstance {
     raycastQuery.id = id;
     await this.physicsProxy.addRaycastQuery([raycastQuery]);
     return raycastQuery;
-  }
+  };
 
   updateRaycastQuery = async (raycastQuery: any) => {
     if (!this.raycasts.has(raycastQuery.id)) return;
-    this.raycasts.delete(raycastQuery.id);
-    await this.physicsProxy.updateRaycastQuery([raycastQuery.id]);
+    // todo
+    // await this.physicsProxy.updateRaycastQuery([raycastQuery.id]);
   };
 
   removeRaycastQuery = async (raycastQuery: SceneQuery) => {
@@ -403,3 +401,5 @@ const generateUUID = (): string => {
 
 export { CapsuleBufferGeometry } from './utils/CapsuleBufferGeometry';
 export { DebugRenderer } from './utils/DebugRenderer';
+export * from './types/ThreePhysX';
+export * from './threeToPhysX';

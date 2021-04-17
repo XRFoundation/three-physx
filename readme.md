@@ -4,6 +4,8 @@ Natively multithreaded physics for threejs with PhysX and an easy interface.
 
 Credit to [Milkshake inc](https://github.com/Milkshake-Inc/ecs/tree/library/src/engine/plugins/physics/physx), [physx-js](https://github.com/ashconnell/physx-js), [three-ammo](https://github.com/InfiniteLee/three-ammo), [three-to-cannon](https://github.com/donmccurdy/three-to-cannon), [engine-3-zjt](https://github.com/jiatuhao/engine-3-zjt/)
 
+DISCLAIMER: this is a work in progress and API & implementation is set to change
+
 Progress:
 - [x] Load WASM in webworker
 - [x] Set up message queue & function calls over events
@@ -15,14 +17,18 @@ Progress:
 - [x] new build with more bindings
 - [x] put body ids on arraybuffers for more efficient data transfer
 - [x] capsule
-- [ ] trimesh and convex
 - [x] character controller
-- [ ] vehicle controller
+- [x] collision filtering
 - [ ] raycasts (subscribe + promise)
+- [ ] trimesh and convex
+- [ ] vehicle controller
 - [ ] heightfield colliders
 - [ ] fix root object scaling bug
 - [ ] geometry per instance scaling
 - [ ] add subscribe for event listeners on worker to reduce redundant transfer overhead
+- [ ] advanced & customisable collision filtering
+- [ ] full api support (eventually)
+- [ ] move most stuff to WASM for improved performance
 
 ## Example
 
@@ -62,9 +68,6 @@ object.userData.physx = {
     {
       type: PhysXShapeType.Sphere,
       radius: 1
-    },
-    {
-      type: PhysXShapeType.Trimesh,
     },
   ]
 }

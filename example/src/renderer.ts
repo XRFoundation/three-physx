@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { DoubleSide, Mesh, MeshNormalMaterial, Object3D, PlaneBufferGeometry } from 'three';
 import { OrbitControls } from './OrbitControls';
 
 const container = document.createElement('div');
@@ -43,7 +42,7 @@ controls.maxDistance = 500;
 
 container.appendChild(renderer.domElement);
 
-export const addToScene = (entity: Object3D) => {
+export const addToScene = (entity) => {
   entity.castShadow = true;
   entity.receiveShadow = true;
   scene.add(entity);

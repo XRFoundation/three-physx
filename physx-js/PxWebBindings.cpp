@@ -227,7 +227,7 @@ PxSceneDesc *getDefaultSceneDesc(PxTolerancesScale &scale, int numThreads, PxSim
   PxSceneDesc *sceneDesc = new PxSceneDesc(scale);
   sceneDesc->gravity = PxVec3(0.0f, -9.81f, 0.0f);
   sceneDesc->cpuDispatcher = PxDefaultCpuDispatcherCreate(numThreads);
-  sceneDesc->filterShader = DefaultFilterShader;
+  sceneDesc->filterShader = LayerMaskFilterShader;
   sceneDesc->simulationEventCallback = callback;
   sceneDesc->kineKineFilteringMode = PxPairFilteringMode::eKEEP;
   sceneDesc->staticKineFilteringMode = PxPairFilteringMode::eKEEP;
@@ -815,6 +815,8 @@ EMSCRIPTEN_BINDINGS(physx)
                                     [](PxShape &shape, std::vector<PxMaterial *> materials) {
                                       return shape.setMaterials(materials.data(), materials.size());
                                     }))
+      .function("getMaterials", &PxShape::getMaterials, allow_raw_pointers())
+      .function("getNbMaterials", &PxShape::getNbMaterials, allow_raw_pointers())
       .function("getWorldBounds", optional_override(
                                       [](PxShape &shape, PxRigidActor &actor, float i) {
                                         return PxShapeExt::getWorldBounds(shape, actor, i);
