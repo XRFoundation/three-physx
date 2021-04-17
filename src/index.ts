@@ -1,7 +1,7 @@
 import * as BufferConfig from './BufferConfig';
 import { MessageQueue } from './utils/MessageQueue';
 
-import { PhysXConfig, PhysXBodyType, RigidBodyProxy, Object3DBody, PhysXShapeConfig, PhysXEvents, BodyConfig, ShapeConfig, ControllerConfig, SceneQuery, SceneQueryType } from './types/ThreePhysX';
+import { PhysXConfig, PhysXBodyType, RigidBodyProxy, Object3DBody, PhysXShapeConfig, BodyConfig, ShapeConfig, ControllerConfig, SceneQuery, SceneQueryType, CollisionEvents, ControllerEvents } from './types/ThreePhysX';
 import { Object3D, Quaternion, Scene, Vector3 } from 'three';
 import { createPhysXBody, createPhysXShapes, getTransformFromWorldPos } from './threeToPhysX';
 import { proxyEventListener } from './utils/proxyEventListener';
@@ -78,11 +78,11 @@ export class PhysXInstance {
     messageQueue.addEventListener('colliderEvent', ({ detail }) => {
       detail.forEach((collision) => {
         switch (collision.event) {
-          case PhysXEvents.COLLISION_START:
-          case PhysXEvents.COLLISION_PERSIST:
-          case PhysXEvents.COLLISION_END:
-          case PhysXEvents.TRIGGER_START:
-          case PhysXEvents.TRIGGER_END:
+          case CollisionEvents.COLLISION_START:
+          case CollisionEvents.COLLISION_PERSIST:
+          case CollisionEvents.COLLISION_END:
+          case CollisionEvents.TRIGGER_START:
+          case CollisionEvents.TRIGGER_END:
             {
               try {
                 const { event, idA, idB } = collision;
@@ -110,9 +110,9 @@ export class PhysXInstance {
               }
             }
             break;
-          case PhysXEvents.CONTROLLER_SHAPE_HIT:
-          case PhysXEvents.CONTROLLER_CONTROLLER_HIT:
-          case PhysXEvents.CONTROLLER_OBSTACLE_HIT:
+          case ControllerEvents.CONTROLLER_SHAPE_HIT:
+          case ControllerEvents.CONTROLLER_CONTROLLER_HIT:
+          case ControllerEvents.CONTROLLER_OBSTACLE_HIT:
             {
               const { event, controllerID, shapeID, position, normal, length } = collision;
               const controllerBody: RigidBodyProxy = this.bodies.get(controllerID);

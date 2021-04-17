@@ -1,4 +1,4 @@
-import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer , Object3DBody, PhysXBodyType, PhysXEvents, SceneQueryType, RigidBodyProxy, PhysXModelShapes, PhysXShapeConfig } from '../../src';
+import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer , Object3DBody, PhysXBodyType, SceneQueryType, RigidBodyProxy, PhysXModelShapes, PhysXShapeConfig, CollisionEvents, ControllerEvents } from '../../src';
 import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3 } from 'three';
 
 const load = async () => {
@@ -42,15 +42,15 @@ const load = async () => {
   }, 2000);
   objects.set(kinematicBody.id, kinematicObject);
   renderer.addToScene(kinematicObject);
-  kinematicBody.addEventListener(PhysXEvents.COLLISION_START, ({ bodySelf, bodyOther, shapeSelf, shapeOther }) => {
-    // console.log('COLLISION DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
+  kinematicBody.addEventListener(CollisionEvents.TRIGGER_START, ({ bodySelf, bodyOther, shapeSelf, shapeOther }) => {
+    // console.log('TRIGGER DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
   });
 
   const character = new Group();
   character.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
   const characterBody = await PhysXInstance.instance.addController(character, { isCapsule: true });
   objects.set(characterBody.id, character);
-  characterBody.addEventListener(PhysXEvents.CONTROLLER_SHAPE_HIT, (ev) => {
+  characterBody.addEventListener(ControllerEvents.CONTROLLER_SHAPE_HIT, (ev) => {
     // console.log('COLLISION DETECTED', ev);
   });
   const raycastQuery = await PhysXInstance.instance.addRaycastQuery({ type: SceneQueryType.Closest, origin: character.position, direction: new Vector3(0, -1, 0), maxDistance: 1 });
@@ -163,6 +163,7 @@ const createBalls = () => {
     mesh.userData.physx = {
       type: PhysXBodyType.DYNAMIC,
       shapes: [ {
+        // isTrigger: true
         // collisionLayer: 1 << Math.round(Math.random() * 2),
         // collisionMask: 1 << Math.round(Math.random() * 2),
       } ] 
