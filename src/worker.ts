@@ -230,6 +230,17 @@ export class PhysXManager {
       });
       if (!bodyShape) return;
       bodyShape.setContactOffset(config.contactOffset ?? 0.0000001);
+      let collisionLayer = defaultMask;
+      let collisionMask = defaultMask;
+      if (typeof config.collisionLayer !== 'undefined') {
+        collisionLayer = config.collisionLayer;
+        (shape as any)._collisionLayer = collisionLayer;
+      }
+      if (typeof config.collisionMask !== 'undefined') {
+        collisionMask = config.collisionMask;
+        (shape as any)._collisionMask = collisionMask;
+      }
+      bodyShape.setSimulationFilterData(new PhysX.PxFilterData(collisionLayer, collisionMask, 0, 0));
       bodyShapes.push(bodyShape);
       rigidBody.attachShape(bodyShape);
       this.shapeIDByPointer.set(bodyShape.$$.ptr, shapeID);
@@ -294,11 +305,17 @@ export class PhysXManager {
   _updateShape({ id, isTrigger, contactOffset, collisionLayer, collisionMask, material }: ShapeConfig) {
     const shape = this.shapes.get(id);
     if (!shape) return;
-    if(typeof material !== 'undefined') {
+    if (typeof material !== 'undefined') {
       shape.setFlag(PhysX.PxShapeFlag.eTRIGGER_SHAPE, isTrigger);
     }
-    const filterData = new PhysX.PxFilterData(collisionLayer ?? defaultMask, collisionMask ?? defaultMask, 0, 0);
-    shape.setSimulationFilterData(filterData);
+    if (typeof collisionLayer !== 'undefined') {
+      (shape as any)._collisionLayer = collisionLayer;
+      shape.setSimulationFilterData(new PhysX.PxFilterData((shape as any)._collisionLayer, (shape as any)._collisionMask, 0, 0));
+    }
+    if (typeof collisionMask !== 'undefined') {
+      (shape as any)._collisionMask = collisionMask;
+      shape.setSimulationFilterData(new PhysX.PxFilterData((shape as any)._collisionLayer, (shape as any)._collisionMask, 0, 0));
+    }
     if (typeof material !== 'undefined') {
       // TODO
       // shape.setMaterial
@@ -553,7 +570,7 @@ const mat4ToTransform = (matrix: Matrix4): PhysXBodyTransform => {
   };
 };
 
-const defaultMask = 1 << 0
+const defaultMask = 1 << 0;
 
 export const receiveWorker = async (): Promise<void> => {
   const messageQueue = new MessageQueue(globalThis as any);

@@ -90,12 +90,12 @@ const getShapeConfig = (data) => {
     isTrigger: data.isTrigger,
     collisionLayer: data.collisionLayer,
     collisionMask: data.collisionMask,
-    material: data.material
+    material: data.material,
   };
 };
 
 const getShapeData = (mesh, shape): any => {
-  if(!shape.type) {
+  if (!shape.type) {
     return getThreeGeometryShape(mesh);
   }
   switch (shape.type) {
