@@ -1,6 +1,6 @@
-import { Scene, Mesh, Points, SphereBufferGeometry, BoxBufferGeometry, PlaneBufferGeometry, BufferGeometry, MeshBasicMaterial, Vector3, SphereGeometry, BoxGeometry, PlaneGeometry, Object3D, Matrix4, Quaternion } from 'three';
+import { Scene, Mesh, Points, SphereBufferGeometry, BoxBufferGeometry, PlaneBufferGeometry, BufferGeometry, MeshBasicMaterial, Vector3, SphereGeometry, BoxGeometry, PlaneGeometry, Object3D, Matrix4, Quaternion, LineBasicMaterial, Line } from 'three';
 import { PhysXInstance } from '..';
-import { Object3DBody, PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy } from '../types/ThreePhysX';
+import { Object3DBody, PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, SceneQuery, RigidBodyProxy } from '../types/ThreePhysX';
 import { CapsuleBufferGeometry } from './CapsuleBufferGeometry';
 const parentMatrix = new Matrix4();
 const childMatrix = new Matrix4();
@@ -12,10 +12,12 @@ const scale2 = new Vector3(1, 1, 1);
 export class DebugRenderer {
   private scene: Scene;
   private _meshes: Map<number, any> = new Map<number, any>();
+  private _raycasts: Map<number, any> = new Map<number, any>();
   private _materials: MeshBasicMaterial[];
   private _sphereGeometry: SphereBufferGeometry;
   private _boxGeometry: BoxBufferGeometry;
   private _planeGeometry: PlaneBufferGeometry;
+  private _lineMaterial: LineBasicMaterial;
 
   public enabled: boolean;
 
@@ -31,6 +33,8 @@ export class DebugRenderer {
       new MeshBasicMaterial({ color: 0x00aaff, wireframe: true }),
       new MeshBasicMaterial({ color: 0xffffff, wireframe: true }),
     ];
+    
+    this._lineMaterial = new LineBasicMaterial( { color: 0x0000ff } );
     this._sphereGeometry = new SphereBufferGeometry(1);
     this._boxGeometry = new BoxBufferGeometry();
     this._planeGeometry = new PlaneBufferGeometry();
@@ -42,7 +46,11 @@ export class DebugRenderer {
       this._meshes.forEach((mesh) => {
         this.scene.remove(mesh);
       });
+      this._raycasts.forEach((mesh) => {
+        this.scene.remove(mesh);
+      });
       this._meshes.clear();
+      this._raycasts.clear();
     }
   }
 
@@ -77,12 +85,26 @@ export class DebugRenderer {
         }
       });
     });
+    PhysXInstance.instance.raycasts.forEach((raycast, id) => {
+      this._updateRaycast(raycast, id);
+    })
     this._meshes.forEach((mesh, id) => {
       if (mesh && !PhysXInstance.instance.bodies.get(id)) {
         this.scene.remove(mesh);
         this._meshes.delete(id);
       }
     });
+  }
+
+  private _updateRaycast(raycast, id) {
+    let line = this._raycasts.get(id);
+    if(!line) {
+      line = new Line(new BufferGeometry().setFromPoints([new Vector3().add(raycast.origin), new Vector3().add(raycast.origin).add(raycast.direction) ] ), this._lineMaterial);
+      this.scene.add(line);
+      this._raycasts.set(id, line);
+    } else {
+      line.geometry.setFromPoints([new Vector3().add(raycast.origin), new Vector3().add(raycast.direction).multiplyScalar(raycast.maxDistance).add(raycast.origin)])
+    }
   }
 
   private _updateController(body: RigidBodyProxy, id: number) {

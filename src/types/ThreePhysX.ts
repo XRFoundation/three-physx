@@ -4,6 +4,7 @@ export interface PhysXConfig {
   jsPath: string;
   wasmPath: string;
   tps?: number;
+  lengthScale?: number;
 }
 
 export enum PhysXModelShapes {
@@ -142,6 +143,29 @@ export const DefaultControllerConfig: ControllerConfig = {
 
 export interface Object3DBody extends Object3D {
   body: RigidBodyProxy;
+}
+
+
+export enum SceneQueryType {
+  // Any,
+  // Multiple,
+  Closest
+}
+export interface SceneQuery {
+  id?: number;
+  type: SceneQueryType;
+  flags?: number;
+  origin?: Vec3;
+  direction?: Vec3;
+  maxDistance?: number;
+  maxHits?: number;
+  hits?: RaycastHit[];
+}
+
+export interface RaycastHit {
+  distance: number;
+  position: Vec3;
+  normal: Vec3;
 }
 
 export enum PhysXEvents {

@@ -1,13 +1,14 @@
 import * as BufferConfig from './BufferConfig';
 import { MessageQueue } from './utils/MessageQueue';
 
-import { PhysXConfig, PhysXBodyType, RigidBodyProxy, Object3DBody, PhysXShapeConfig, PhysXEvents, BodyConfig, ShapeConfig, ControllerConfig } from './types/ThreePhysX';
+import { PhysXConfig, PhysXBodyType, RigidBodyProxy, Object3DBody, PhysXShapeConfig, PhysXEvents, BodyConfig, ShapeConfig, ControllerConfig, SceneQuery, SceneQueryType } from './types/ThreePhysX';
 import { Object3D, Quaternion, Scene, Vector3 } from 'three';
 import { createPhysXBody, createPhysXShapes, getTransformFromWorldPos } from './threeToPhysX';
 import { proxyEventListener } from './utils/proxyEventListener';
 
 let nextAvailableBodyIndex = 0;
-let nextAvailablShapeID = 0;
+let nextAvailableShapeID = 0;
+let nextAvailableRaycastID = 0;
 
 export class PhysXInstance {
   static instance: PhysXInstance;
@@ -19,6 +20,7 @@ export class PhysXInstance {
   shapes: Map<number, PhysXShapeConfig> = new Map<number, PhysXShapeConfig>();
   kinematicBodies: Map<number, Object3DBody> = new Map<number, Object3DBody>();
   controllerBodies: Map<number, RigidBodyProxy> = new Map<number, RigidBodyProxy>();
+  raycasts: Map<number, SceneQuery> = new Map<number, SceneQuery>();
   scene: Scene;
 
   constructor(worker: Worker, onUpdate: any, scene: Scene) {
@@ -37,36 +39,40 @@ export class PhysXInstance {
     });
     messageQueue.addEventListener('data', (ev) => {
       let offset = 0;
-      while (offset < ev.detail.length) {
-        const body = this.bodies.get(ev.detail[offset]);
+      const { raycastResults, bodyArray } = ev.detail;
+      while (offset < bodyArray.length) {
+        const body = this.bodies.get(bodyArray[offset]);
         if (body) {
           if (body.options.type === PhysXBodyType.CONTROLLER) {
-            body.transform.translation.x = ev.detail[offset + 1];
-            body.transform.translation.y = ev.detail[offset + 2];
-            body.transform.translation.z = ev.detail[offset + 3];
+            body.transform.translation.x = bodyArray[offset + 1];
+            body.transform.translation.y = bodyArray[offset + 2];
+            body.transform.translation.z = bodyArray[offset + 3];
             body.controller.collisions = {
-              down: Boolean(ev.detail[offset + 4]),
-              sides: Boolean(ev.detail[offset + 5]),
-              up: Boolean(ev.detail[offset + 6]),
+              down: Boolean(bodyArray[offset + 4]),
+              sides: Boolean(bodyArray[offset + 5]),
+              up: Boolean(bodyArray[offset + 6]),
             };
           } else if (body.options.type === PhysXBodyType.DYNAMIC) {
-            body.transform.translation.x = ev.detail[offset + 1];
-            body.transform.translation.y = ev.detail[offset + 2];
-            body.transform.translation.z = ev.detail[offset + 3];
-            body.transform.rotation.x = ev.detail[offset + 4];
-            body.transform.rotation.y = ev.detail[offset + 5];
-            body.transform.rotation.z = ev.detail[offset + 6];
-            body.transform.rotation.w = ev.detail[offset + 7];
-            body.transform.linearVelocity.x = ev.detail[offset + 8];
-            body.transform.linearVelocity.y = ev.detail[offset + 9];
-            body.transform.linearVelocity.z = ev.detail[offset + 10];
-            body.transform.angularVelocity.x = ev.detail[offset + 11];
-            body.transform.angularVelocity.y = ev.detail[offset + 12];
-            body.transform.angularVelocity.z = ev.detail[offset + 13];
+            body.transform.translation.x = bodyArray[offset + 1];
+            body.transform.translation.y = bodyArray[offset + 2];
+            body.transform.translation.z = bodyArray[offset + 3];
+            body.transform.rotation.x = bodyArray[offset + 4];
+            body.transform.rotation.y = bodyArray[offset + 5];
+            body.transform.rotation.z = bodyArray[offset + 6];
+            body.transform.rotation.w = bodyArray[offset + 7];
+            body.transform.linearVelocity.x = bodyArray[offset + 8];
+            body.transform.linearVelocity.y = bodyArray[offset + 9];
+            body.transform.linearVelocity.z = bodyArray[offset + 10];
+            body.transform.angularVelocity.x = bodyArray[offset + 11];
+            body.transform.angularVelocity.y = bodyArray[offset + 12];
+            body.transform.angularVelocity.z = bodyArray[offset + 13];
           }
         }
         offset += BufferConfig.BODY_DATA_SIZE;
       }
+      this.raycasts.forEach((raycastQuery) => {
+        raycastQuery.hits = raycastResults[raycastQuery.id] ?? [];
+      })
       this.onUpdate();
     });
     messageQueue.addEventListener('colliderEvent', ({ detail }) => {
@@ -134,11 +140,11 @@ export class PhysXInstance {
       addController: pipeRemoteFunction(messageQueue, 'addController'),
       updateController: pipeRemoteFunction(messageQueue, 'updateController'),
       removeController: pipeRemoteFunction(messageQueue, 'removeController'),
-      addConstraint: pipeRemoteFunction(messageQueue, 'addConstraint'),
-      removeConstraint: pipeRemoteFunction(messageQueue, 'removeConstraint'),
-      enableDebug: pipeRemoteFunction(messageQueue, 'enableDebug'),
-      resetDynamicBody: pipeRemoteFunction(messageQueue, 'resetDynamicBody'),
-      activateBody: pipeRemoteFunction(messageQueue, 'activateBody'),
+      addRaycastQuery: pipeRemoteFunction(messageQueue, 'addRaycastQuery'),
+      updateRaycastQuery: pipeRemoteFunction(messageQueue, 'updateRaycastQuery'),
+      removeRaycastQuery: pipeRemoteFunction(messageQueue, 'removeRaycastQuery'),
+      // addConstraint: pipeRemoteFunction(messageQueue, 'addConstraint'),
+      // removeConstraint: pipeRemoteFunction(messageQueue, 'removeConstraint'),
     };
 
     await this.physicsProxy.initPhysX([config]);
@@ -149,9 +155,7 @@ export class PhysXInstance {
     // TODO: make this rely on kinematicBodies.size instead of bodies.size
     let offset = 0;
     const kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.KINEMATIC_DATA_SIZE * this.kinematicBodies.size));
-    const kinematicIDs = [];
     this.kinematicBodies.forEach((obj, id) => {
-      kinematicIDs.push(id);
       obj.body.transform = getTransformFromWorldPos(obj);
       const transform = obj.body.transform;
       kinematicArray.set([id, transform.translation.x, transform.translation.y, transform.translation.z, transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w], offset);
@@ -159,15 +163,20 @@ export class PhysXInstance {
     });
     offset = 0;
     const controllerArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.CONTROLLER_DATA_SIZE * this.controllerBodies.size));
-    const controllerIDs = [];
     this.controllerBodies.forEach((body, id) => {
-      controllerIDs.push(id);
       const { x, y, z } = body.controller.delta;
       controllerArray.set([id, x, y, z, delta], offset);
       body.controller.delta = { x: 0, y: 0, z: 0 };
       offset += BufferConfig.CONTROLLER_DATA_SIZE;
     });
-    this.physicsProxy.update([kinematicArray, controllerArray], [kinematicArray.buffer, controllerArray.buffer]);
+    offset = 0;
+    const raycastArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.RAYCAST_DATA_SIZE * this.raycasts.size));
+    this.raycasts.forEach((raycast, id) => {
+      const { x, y, z } = raycast.origin;
+      raycastArray.set([id, x, y, z])
+      offset += BufferConfig.RAYCAST_DATA_SIZE;
+    })
+    this.physicsProxy.update([kinematicArray, controllerArray, raycastArray], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);
   };
 
   startPhysX = async (start: boolean) => {
@@ -317,7 +326,34 @@ export class PhysXInstance {
       this.controllerBodies.delete(id);
       this.bodies.delete(id);
     }
-    // todo
+  };
+
+  addRaycastQuery = async (raycastQuery: SceneQuery) => {
+    if(typeof raycastQuery.type === 'undefined') throw new Error('Scene raycast query must have a type!');
+    if(typeof raycastQuery.origin === 'undefined') throw new Error('Scene raycast query must include origin!');
+    if(typeof raycastQuery.direction === 'undefined') throw new Error('Scene raycast query must include direction!');
+
+    raycastQuery.flags = raycastQuery.flags ?? 1;
+    raycastQuery.maxDistance = raycastQuery.maxDistance ?? 1;
+    raycastQuery.maxHits = raycastQuery.maxHits ?? 1;
+
+    const id = this._getNextAvailableRaycastID();
+    this.raycasts.set(id, raycastQuery);
+    raycastQuery.id = id;
+    await this.physicsProxy.addRaycastQuery([raycastQuery]);
+    return raycastQuery;
+  }
+
+  updateRaycastQuery = async (raycastQuery: any) => {
+    if (!this.raycasts.has(raycastQuery.id)) return;
+    this.raycasts.delete(raycastQuery.id);
+    await this.physicsProxy.updateRaycastQuery([raycastQuery.id]);
+  };
+
+  removeRaycastQuery = async (raycastQuery: SceneQuery) => {
+    if (!this.raycasts.has(raycastQuery.id)) return;
+    this.raycasts.delete(raycastQuery.id);
+    await this.physicsProxy.removeRaycastQuery([raycastQuery.id]);
   };
 
   addConstraint = async () => {
@@ -329,13 +365,18 @@ export class PhysXInstance {
   };
 
   private _getNextAvailableBodyID = () => {
-    // todo, make this good
+    // todo, make this smart
     return nextAvailableBodyIndex++;
   };
 
   _getNextAvailableShapeID = () => {
-    // todo, make this good
-    return nextAvailablShapeID++;
+    // todo, make this smart
+    return nextAvailableShapeID++;
+  };
+
+  private _getNextAvailableRaycastID = () => {
+    // todo, make this smart
+    return nextAvailableRaycastID++;
   };
 }
 

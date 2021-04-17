@@ -302,7 +302,8 @@ declare namespace PhysX {
   class PxRaycastBuffer extends PxRaycastCallback {
     constructor();
     constructor();
-
+    getNbAnyHits(): number;
+    getAnyHit(index: number): PxRaycastHit;
     getNbTouches(): number;
     getTouch(index: number): PxRaycastHit;
   }
@@ -320,7 +321,10 @@ declare namespace PhysX {
     getActiveActors(len: number): Actor[];
     setGravity(value: PxVec3): void;
 
-    raycast(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, hit: PxRaycastBuffer): boolean;
+    raycast(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, hits: PxRaycastBuffer): boolean;
+    raycastSingle(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, flags: number, hit: PxRaycastHit, filterData: PxQueryFilterData, queryCallback: PxQueryFilterCallback, cache: null): boolean;
+    raycastAny(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, hit: PxRaycastHit, filterData: PxQueryFilterData, queryCallback: PxQueryFilterCallback, cache: null): boolean;
+    // raycastMultiple(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, flags: number, hits: PxRaycastHit[], hbsize: number, filterData: PxQueryFilterData, queryCallback: PxQueryFilterCallback, cache: null): boolean;
     sweep(geometry: PxGeometry, pose: PxTransform, unitDir: PxVec3, maxDistance: number /*PxReal*/, hit: PxRaycastBuffer): boolean;
   }
 
@@ -422,6 +426,10 @@ declare namespace PhysX {
     word3: number;
 
     constructor(word0: number, word1: number, word2: number, word3: number);
+  }
+
+  class PxQueryFilterData {
+    constructor();
   }
 
   class PxQueryFilterCallback {

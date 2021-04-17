@@ -1,6 +1,6 @@
 import { PhysXInstance } from '../../src';
 import { Mesh, TorusKnotBufferGeometry, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, CylinderBufferGeometry, Vector3, TorusBufferGeometry, BufferGeometry } from 'three';
-import { Object3DBody, PhysXBodyType, PhysXEvents, PhysXModelShapes, RigidBodyProxy } from '../../src/types/ThreePhysX';
+import { Object3DBody, PhysXBodyType, PhysXEvents, PhysXModelShapes, SceneQueryType, RigidBodyProxy } from '../../src/types/ThreePhysX';
 import { DebugRenderer } from '../../src/utils/DebugRenderer';
 import { CapsuleBufferGeometry } from '../../src/utils/CapsuleBufferGeometry';
 
@@ -56,6 +56,7 @@ const load = async () => {
   characterBody.addEventListener(PhysXEvents.CONTROLLER_SHAPE_HIT, (ev) => {
     // console.log('COLLISION DETECTED', ev);
   });
+  const raycastQuery = await PhysXInstance.instance.addRaycastQuery({ type: SceneQueryType.Closest, origin: character.position, direction: new Vector3(0, -1, 0), maxDistance: 1 });
 
   createBalls().forEach(async (object) => {
     const body = await PhysXInstance.instance.addBody(object);
@@ -123,7 +124,7 @@ const load = async () => {
         characterBody.controller.delta.x += 2 / delta;
       }
       if (key === 'Space' && characterBody.controller.collisions.down) {
-        characterBody.controller.velocity.y = 5 / delta;
+        characterBody.controller.velocity.y = 0.2;
       }
     })
     balls.forEach(async (object: Object3DBody, id) => {
@@ -138,6 +139,8 @@ const load = async () => {
       }
     })
     characterBody.controller.delta.y += characterBody.controller.velocity.y;
+    raycastQuery.origin = new Vector3().copy(character.position).add(new Vector3(0, -1, 0));
+    console.log(raycastQuery.hits);
     PhysXInstance.instance.update(delta);
     debug.update();
     renderer.update();

@@ -2,7 +2,7 @@
 
 import { Matrix4, Vector3, Quaternion } from 'three';
 import { getShape } from './getShape';
-import { PhysXConfig, PhysXBodyTransform, PhysXBodyType, PhysXEvents, BodyConfig, PhysXBodyData, RigidBodyProxy, ShapeConfig, PhysXShapeConfig, ControllerConfig, Vec3 } from './types/ThreePhysX';
+import { PhysXConfig, PhysXBodyTransform, PhysXBodyType, PhysXEvents, BodyConfig, PhysXBodyData, RigidBodyProxy, ShapeConfig, PhysXShapeConfig, ControllerConfig, Vec3, SceneQuery, SceneQueryType, RaycastHit } from './types/ThreePhysX';
 import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
 
@@ -43,6 +43,7 @@ export class PhysXManager {
   matrices: Map<number, Matrix4> = new Map<number, Matrix4>();
   indices: Map<number, number> = new Map<number, number>();
   controllers: Map<number, PhysX.PxController> = new Map<number, PhysX.PxController>();
+  raycasts: Map<number, SceneQuery> = new Map<number, SceneQuery>();
   // constraints: // TODO
 
   initPhysX = async (config: PhysXConfig): Promise<void> => {
@@ -105,6 +106,9 @@ export class PhysXManager {
     };
 
     this.scale = this.physics.getTolerancesScale();
+    if(config.lengthScale) {
+      this.scale.length = config.lengthScale;
+    }
     this.sceneDesc = PhysX.getDefaultSceneDesc(this.scale, 0, PhysX.PxSimulationEventCallback.implement(triggerCallback as any));
     this.sceneDesc.bounceThresholdVelocity = 0.001;
 
@@ -132,11 +136,16 @@ export class PhysXManager {
       }
       offset += BufferConfig.BODY_DATA_SIZE;
     });
-    this.onUpdate(bodyArray); //, shapeArray);
+    const raycastResults = {};
+    this.raycasts.forEach((raycastQuery, id) => {
+      const hits = this._getRaycastResults(raycastQuery);
+      raycastResults[id] = hits;
+    })
+    this.onUpdate({ raycastResults, bodyArray }); //, shapeArray);
     lastTick = now;
   };
 
-  update = async (kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array) => {
+  update = async (kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array, raycastQueryArray: Float32Array) => {
     let offset = 0;
     while (offset < kinematicBodiesArray.length) {
       const id = kinematicBodiesArray[offset];
@@ -168,8 +177,8 @@ export class PhysXManager {
       };
       const deltaTime = controllerBodiesArray[offset + 4];
       // TODO
-      const filterData = new PhysX.PxFilterData(1, 1, 1, 1);
-      const queryCallback = PhysX.PxQueryFilterCallback.implement({ preFilter: console.log, postFilter: console.log });
+      // const filterData = new PhysX.PxFilterData(1, 1, 1, 1);
+      // const queryCallback = PhysX.PxQueryFilterCallback.implement({ preFilter: console.log, postFilter: console.log });
       const filters = new PhysX.PxControllerFilters(null, null, null);
       const collisionFlags = controller.move(deltaPos, 0.01, deltaTime, filters, null);
       const collisions = {
@@ -179,6 +188,19 @@ export class PhysXManager {
       };
       (controller as any)._collisions = [collisions.down, collisions.sides, collisions.up];
       offset += BufferConfig.CONTROLLER_DATA_SIZE;
+    }
+    offset = 0;
+    while (offset < raycastQueryArray.length) {
+      const id = raycastQueryArray[offset];
+      const raycast = this.raycasts.get(id);
+      if(!raycast) return;
+      const newOriginPos = {
+        x: raycastQueryArray[offset + 1],
+        y: raycastQueryArray[offset + 2],
+        z: raycastQueryArray[offset + 3],
+      };
+      raycast.origin = newOriginPos;
+      offset += BufferConfig.RAYCAST_DATA_SIZE;
     }
   };
 
@@ -420,6 +442,18 @@ export class PhysXManager {
     // todo
   };
 
+  addRaycastQuery = async (query: SceneQuery) => {
+    this.raycasts.set(query.id, query);
+  }
+
+  updateRaycastQuery = async (id: number) => {
+    
+  }
+
+  removeRaycastQuery = async (id: number) => {
+    this.raycasts.delete(id);
+  }
+
   addConstraint = async () => {
     // todo
   };
@@ -427,6 +461,38 @@ export class PhysXManager {
   removeConstraint = async () => {
     // todo
   };
+
+  _getRaycastResults = (raycastQuery: SceneQuery) => {
+    const hits: RaycastHit[] = [];
+    if(raycastQuery.type === SceneQueryType.Closest) {
+      const buffer: PhysX.PxRaycastHit = new PhysX.PxRaycastHit();
+      const filterData = new PhysX.PxQueryFilterData();
+      const queryCallback = PhysX.PxQueryFilterCallback.implement({ preFilter: console.log, postFilter: console.log });
+      const hasHit = this.scene.raycastSingle(raycastQuery.origin, raycastQuery.direction, raycastQuery.maxDistance, raycastQuery.flags, buffer, filterData, queryCallback, null);
+      if(hasHit) {
+        hits.push({
+          distance: buffer.distance,
+          normal: buffer.normal,
+          position: buffer.position,
+        })
+      }
+    }
+    // const buffer: PhysX.PxRaycastBuffer = PhysX.allocateRaycastHitBuffers(raycastQuery.maxHits);
+    // if(raycastQuery.flags) {
+    //   for (let index = 0; index < result.getNbTouches(); index++) {
+
+    //   }
+    // } else {
+    //   for (let index = 0; index < result.getNbAnyHits(); index++) {
+    //     const touch = result.getAnyHit(index);
+    //     const shape = this.shapeIDByPointer.get(touch.getShape().$$.ptr);
+    //     hits.push({
+    //       shape,
+    //     });
+    //   }
+    // }
+    return hits;
+  }
 }
 function dec2bin(dec) {
   return (dec >>> 0).toString(2);
@@ -480,8 +546,8 @@ export const receiveWorker = async (): Promise<void> => {
   const messageQueue = new MessageQueue(globalThis as any);
   let latestCollisions = [];
   PhysXManager.instance = new PhysXManager();
-  PhysXManager.instance.onUpdate = (data: Uint8Array) => {
-    messageQueue.sendEvent('data', data, [data.buffer]);
+  PhysXManager.instance.onUpdate = ({ raycastResults, bodyArray }) => {
+    messageQueue.sendEvent('data', { raycastResults, bodyArray }, [bodyArray.buffer]);
     messageQueue.sendEvent('colliderEvent', [...latestCollisions]);
     latestCollisions = [];
   };

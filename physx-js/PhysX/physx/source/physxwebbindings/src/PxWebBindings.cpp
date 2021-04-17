@@ -34,9 +34,9 @@ struct PxRaycastCallbackWrapper : public wrapper<PxRaycastCallback>
   }
 };
 
-PxRaycastHit *allocateRaycastHitBuffers(PxU32 nb)
+PxRaycastBuffer *allocateRaycastHitBuffers(PxU32 nb)
 {
-  PxRaycastHit *myArray = new PxRaycastHit[nb];
+  PxRaycastBuffer *myArray = new PxRaycastBuffer[nb];
   return myArray;
 }
 
@@ -663,8 +663,7 @@ EMSCRIPTEN_BINDINGS(physx)
                                       return fetched;
                                     }))
       .function("raycast", optional_override(
-                               [](PxScene &scene, const PxVec3 &origin, const PxVec3 &unitDir, const PxReal distance,
-                                  PxRaycastCallback &hitCall) {
+                               [](PxScene &scene, const PxVec3 &origin, const PxVec3 &unitDir, const PxReal distance, PxRaycastCallback &hitCall) {
                                  bool fetched = scene.raycast(origin, unitDir, distance, hitCall);
                                  return fetched;
                                }))
@@ -693,6 +692,7 @@ EMSCRIPTEN_BINDINGS(physx)
       .property("position", &PxLocationHit::position)
       .property("normal", &PxLocationHit::normal)
       .property("distance", &PxLocationHit::distance);
+      
   class_<PxRaycastHit, base<PxLocationHit>>("PxRaycastHit")
       .constructor<>()
       .function("getShape", optional_override([](PxRaycastHit &block) {
@@ -705,7 +705,13 @@ EMSCRIPTEN_BINDINGS(physx)
       .property("block", &PxRaycastCallback::block)
       .property("hasBlock", &PxRaycastCallback::hasBlock)
       .allow_subclass<PxRaycastCallbackWrapper>("PxRaycastCallbackWrapper", constructor<PxRaycastHit *, PxU32>());
+
   class_<PxRaycastBuffer, base<PxRaycastCallback>>("PxRaycastBuffer")
+      .function("getNbAnyHits", &PxRaycastBuffer::getNbAnyHits)
+      .function("getAnyHit", &PxRaycastBuffer::getAnyHit)
+      .function("getTouches", &PxRaycastBuffer::getTouches, allow_raw_pointers())
+      .function("getTouch", &PxRaycastBuffer::getTouch)
+      .function("getNbTouches", &PxRaycastBuffer::getNbTouches)
       .constructor<>();
 
   function("allocateRaycastHitBuffers", &allocateRaycastHitBuffers, allow_raw_pointers());
@@ -1017,7 +1023,7 @@ EMSCRIPTEN_BINDINGS(physx)
   class_<PxActorFlags>("PxActorFlags")
       .constructor<int>()
       .function("isSet", &PxActorFlags::isSet);
-    
+
   enum_<PxActorFlag::Enum>("PxActorFlag")
       .value("eVISUALIZATION", PxActorFlag::Enum::eVISUALIZATION)
       .value("eDISABLE_GRAVITY", PxActorFlag::Enum::eDISABLE_GRAVITY)
@@ -1133,10 +1139,10 @@ EMSCRIPTEN_BINDINGS(physx)
                                  }))
       .function("setRigidBodyFlag", &PxRigidBody::setRigidBodyFlag)
       .function("setRigidBodyFlags", &PxRigidBody::setRigidBodyFlags)
-      .function("getRigidBodyFlags", &PxRigidBody::getRigidBodyFlags)//optional_override(
-                                        //  [](PxRigidBody &body) {
-                                        //    return (bool)(body.getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC);
-                                        //  }))
+      .function("getRigidBodyFlags", &PxRigidBody::getRigidBodyFlags) //optional_override(
+                                                                      //  [](PxRigidBody &body) {
+                                                                      //    return (bool)(body.getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC);
+                                                                      //  }))
       .function("setMassAndUpdateInertia", optional_override(
                                                [](PxRigidBody &body, PxReal mass) {
                                                  return PxRigidBodyExt::setMassAndUpdateInertia(body, mass, NULL, false);
