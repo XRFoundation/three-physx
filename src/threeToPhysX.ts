@@ -119,8 +119,32 @@ const getShapeData = (mesh, shape): any => {
     case PhysXModelShapes.TriangleMesh:
     default: {
       // const vertices = removeDuplicates(Array.from(mesh.geometry.attributes.position.array));
-      const vertices = Array.from(mesh.geometry.attributes.position.array);
-      const indices = mesh.geometry.index ? Array.from(mesh.geometry.index.array) : [];
+      // const vertices = Array.from(mesh.geometry.attributes.position.array);
+      // const vertices = [
+      //   [0, 0, 0],
+      //   [0, 0, 1],
+      //   [1, 0, 0],
+      //   [1, 0, 0],
+      //   [0, 0, 1],
+      //   [1, 0, 1],
+      // ]
+      // const indices = [
+      //   [0, 1, 2],
+      //   [3, 4, 5]
+      // ]
+      const vertices = [
+        0, 0, 0,
+        0, 0, 1,
+        1, 0, 0,
+        1, 0, 0,
+        0, 0, 1,
+        1, 1, 1,
+      ]
+      const indices = [
+        0, 1, 2,
+        3, 4, 5
+      ]
+      // const indices = mesh.geometry.index ? Array.from(mesh.geometry.index.array) : Object.keys(vertices).map(Number);
       return { shape: shape.type, options: { vertices, indices } };
     }
   }

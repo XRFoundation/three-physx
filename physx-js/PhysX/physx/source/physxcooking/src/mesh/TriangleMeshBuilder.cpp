@@ -45,6 +45,7 @@
 #include "PsFoundation.h"
 #include "PsHashMap.h"
 #include "PsSort.h"
+#include <string>
 
 namespace physx {
 
@@ -146,7 +147,10 @@ bool TriangleMeshBuilder::cleanMesh(bool validate, PxTriangleMeshCookingResult::
 	}
 	MeshCleaner cleaner(mMeshData.mNbVertices, mMeshData.mVertices, mMeshData.mNbTriangles, reinterpret_cast<const PxU32*>(mMeshData.mTriangles), meshWeldTolerance);
 	if(!cleaner.mNbTris)
-		return false;
+  {
+    Ps::getFoundation().error(PxErrorCode::eDEBUG_WARNING, __FILE__, __LINE__, "TriangleMesh: No triangles found after cleaning");
+    return false;
+  }
 
 	if(validate)
 	{
@@ -154,6 +158,7 @@ bool TriangleMeshBuilder::cleanMesh(bool validate, PxTriangleMeshCookingResult::
 		// such a mesh can be then directly used for cooking without clean flag
 		if((cleaner.mNbVerts != mMeshData.mNbVertices) || (cleaner.mNbTris != mMeshData.mNbTriangles))
 		{
+      Ps::getFoundation().error(PxErrorCode::eDEBUG_WARNING, __FILE__, __LINE__, "TriangleMesh: Vertices and triangles do not match after cleaning");
 			return false;
 		}
 	}

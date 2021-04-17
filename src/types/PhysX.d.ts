@@ -225,7 +225,7 @@ declare namespace PhysX {
     setSimulationFilterData(filterData: PxFilterData): void;
     setName(value: string): void;
     getName(): string;
-    // setFlag(flag: number, value: boolean): void;
+    setFlag(flag: PxShapeFlag, value: boolean): void;
   }
 
   class Actor extends Base {
