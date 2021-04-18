@@ -238,6 +238,9 @@ export class PhysXInstance {
     if (object.body.options.type === PhysXBodyType.KINEMATIC) {
       this.kinematicBodies.delete(object.body.id);
     }
+    object.body.shapes.forEach((shape) => {
+      this.shapes.delete(shape.id);
+    })
     const id = object.body.id;
     delete object.body;
     await this.physicsProxy.removeBody([{ id }]);

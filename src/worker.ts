@@ -115,7 +115,9 @@ export class PhysXManager {
     this.scene = this.physics.createScene(this.sceneDesc);
     this.controllerManager = PhysX.PxCreateControllerManager(this.scene, false);
 
-    this.startPhysX(true);
+    if(config.start) {
+      this.startPhysX(true);
+    }
   };
 
   simulate = async () => {

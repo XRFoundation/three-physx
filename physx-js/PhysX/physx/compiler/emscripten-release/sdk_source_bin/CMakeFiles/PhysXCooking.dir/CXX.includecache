@@ -935,8 +935,6 @@ PsHashMap.h
 /src/PhysX/physx/source/physxcooking/src/mesh/PsHashMap.h
 PsSort.h
 /src/PhysX/physx/source/physxcooking/src/mesh/PsSort.h
-string
--
 GrbTriangleMeshCooking.h
 /src/PhysX/physx/source/physxcooking/src/mesh/GrbTriangleMeshCooking.h
 stdio.h

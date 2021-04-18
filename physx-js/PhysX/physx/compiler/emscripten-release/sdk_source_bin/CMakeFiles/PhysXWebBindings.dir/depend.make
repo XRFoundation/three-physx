@@ -179,7 +179,22 @@ sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbi
 sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/include/vehicle/PxVehicleWheels.h
 sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/Ps.h
 sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/PsAllocator.h
+sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/PsArray.h
+sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/PsBasicTemplates.h
+sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/PsBitUtils.h
+sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/PsBroadcast.h
+sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/PsFoundation.h
+sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/PsHash.h
+sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/PsHashInternals.h
+sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/PsHashMap.h
+sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/PsInlineAllocator.h
+sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/PsInlineArray.h
+sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/PsIntrinsics.h
+sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/PsMutex.h
 sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/PsSocket.h
+sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/PsTempAllocator.h
 sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/PsUserAllocated.h
+sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/unix/PsUnixIntrinsics.h
+sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/foundation/include/windows/PsWindowsIntrinsics.h
 sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp.o: /src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp
 

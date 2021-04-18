@@ -1,5 +1,5 @@
 import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer , Object3DBody, PhysXBodyType, SceneQueryType, RigidBodyProxy, PhysXModelShapes, PhysXShapeConfig, CollisionEvents, ControllerEvents } from '../../src';
-import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry } from 'three';
+import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry } from 'three';
 import { scene } from './renderer';
 
 const load = async () => {
@@ -26,44 +26,25 @@ const load = async () => {
   // @ts-ignore
   new PhysXInstance(new Worker(new URL('../../src/worker.ts', import.meta.url)), onUpdate, renderer.scene);
   await PhysXInstance.instance.initPhysX({ jsPath: '/physx/physx.release.js', wasmPath: '/physx/physx.release.wasm' });
-  (globalThis as any).physx = PhysXInstance.instance;
-  const bufferGeom = new BufferGeometry().setFromPoints([
-    new Vector3(0, 0, 0),
-    new Vector3(0, 0, 1),
-    new Vector3(1, 0, 0),
-    new Vector3(1, 0, 0),
-    new Vector3(0, 0, 1),
-    new Vector3(1, 1, 1),
-  ]);
-  const mesh = new Mesh(bufferGeom, new MeshStandardMaterial({ color: randomColor(), side: DoubleSide }));
-  mesh.position.set(0, 5, 0)
-  mesh.userData.physx = {
-    type: PhysXBodyType.STATIC,
-    shapes: [ {
-      type: PhysXModelShapes.TriangleMesh
-    } ] 
-  };
-  scene.add(mesh);
-  await PhysXInstance.instance.addBody(mesh);
 
-  // const kinematicObject = new Group();//new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() })).translateY(-2.5).rotateZ(Math.PI / 2);
-  // // kinematicObject.scale.setScalar(2)
-  // kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateX(2).rotateY(Math.PI / 2));
-  // kinematicObject.children[0].scale.setScalar(2);
-  // kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
-  // kinematicObject.userData.physx = { type: PhysXBodyType.KINEMATIC };
+  const kinematicObject = new Group();//new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() })).translateY(-2.5).rotateZ(Math.PI / 2);
+  // kinematicObject.scale.setScalar(2)
+  kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateX(2).rotateY(Math.PI / 2));
+  kinematicObject.children[0].scale.setScalar(2);
+  kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
+  kinematicObject.userData.physx = { type: PhysXBodyType.KINEMATIC };
 
-  // const kinematicBody = await PhysXInstance.instance.addBody(kinematicObject); //, [{ id: undefined, shape: PhysXModelShapes.Sphere, options: { sphereRadius: 2 }}]);
+  const kinematicBody = await PhysXInstance.instance.addBody(kinematicObject); //, [{ id: undefined, shape: PhysXModelShapes.Sphere, options: { sphereRadius: 2 }}]);
   // let isKinematic = true;
   // setInterval(() => {
   //   isKinematic = !isKinematic;
   //   PhysXInstance.instance.updateBody(kinematicObject, { angularVelocity: { x: 0, y: 0, z: 0 }, linearVelocity: { x: 0, y: 0, z: 0 }, type: isKinematic ? PhysXBodyType.KINEMATIC : PhysXBodyType.DYNAMIC });
   // }, 2000);
-  // objects.set(kinematicBody.id, kinematicObject);
-  // renderer.addToScene(kinematicObject);
-  // kinematicBody.addEventListener(CollisionEvents.TRIGGER_START, ({ bodySelf, bodyOther, shapeSelf, shapeOther }) => {
-  //   // console.log('TRIGGER DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
-  // });
+  objects.set(kinematicBody.id, kinematicObject);
+  renderer.addToScene(kinematicObject);
+  kinematicBody.addEventListener(CollisionEvents.TRIGGER_START, ({ bodySelf, bodyOther, shapeSelf, shapeOther }) => {
+    // console.log('TRIGGER DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
+  });
 
   const character = new Group();
   character.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
@@ -74,12 +55,12 @@ const load = async () => {
   });
   const raycastQuery = await PhysXInstance.instance.addRaycastQuery({ type: SceneQueryType.Closest, origin: character.position, direction: new Vector3(0, -1, 0), maxDistance: 1 });
 
-  // createBalls().forEach(async (object) => {
-  //   const body = await PhysXInstance.instance.addBody(object);
-  //   objects.set(body.id, object);
-  //   balls.set(body.id, object);
-  //   renderer.addToScene(object);
-  // });
+  createBalls().forEach(async (object) => {
+    const body = await PhysXInstance.instance.addBody(object);
+    objects.set(body.id, object);
+    balls.set(body.id, object);
+    renderer.addToScene(object);
+  });
 
   const floor = new Mesh(new BoxBufferGeometry(platformSize, 1, platformSize), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide })).translateY(-1);
   floor.userData.physx = { 
@@ -113,19 +94,20 @@ const load = async () => {
   });
 
   const debug = new DebugRenderer(renderer.scene);
-  // debug.setEnabled(true);
+  debug.setEnabled(true);
   let lastTime = Date.now() - (1 / 60);
   let lastDelta = 1 / 60;
 
+  await PhysXInstance.instance.startPhysX(true);
   const update = () => {
     const time = Date.now();
     const timeSecs = time / 1000;
     const delta = time - lastTime;
 
-    // if ((kinematicObject as any)?.body?.options.type === PhysXBodyType.KINEMATIC) {
-    //   kinematicObject.position.set(Math.sin(timeSecs) * 10, 0, Math.cos(timeSecs) * 10);
-    //   kinematicObject.lookAt(0, 0, 0);
-    // }
+    if ((kinematicObject as any)?.body?.options.type === PhysXBodyType.KINEMATIC) {
+      kinematicObject.position.set(Math.sin(timeSecs) * 10, 0, Math.cos(timeSecs) * 10);
+      kinematicObject.lookAt(0, 0, 0);
+    }
     if (characterBody.controller.collisions.down) {
       if (characterBody.controller.velocity.y < 0)
         characterBody.controller.velocity.y = 0;
@@ -174,10 +156,17 @@ const load = async () => {
 };
 const platformSize = 50;
 const createBalls = () => {
-  const geoms = [new BoxBufferGeometry(), new SphereBufferGeometry(1), new CapsuleBufferGeometry(0.5, 0.5, 1)];
+  const geoms = [
+    new BoxBufferGeometry(),
+    new SphereBufferGeometry(1),
+    new CapsuleBufferGeometry(0.5, 0.5, 1),
+    // new DodecahedronBufferGeometry(),
+    // new TetrahedronBufferGeometry(),
+    // new CylinderBufferGeometry()
+  ];
   const meshes = [];
-  for (let i = 0; i < 100; i++) {
-    const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor() }));
+  for (let i = 0; i < 1000; i++) {
+    const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     mesh.userData.physx = {
       type: PhysXBodyType.DYNAMIC,

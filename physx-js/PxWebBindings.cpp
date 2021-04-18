@@ -13,7 +13,9 @@
 #include <unistd.h>
 #include <chrono>
 #include <ctime>
+#include <string>
 
+#include "PsFoundation.h"
 using namespace physx;
 using namespace emscripten;
 
@@ -250,17 +252,43 @@ PxConvexMesh *createConvexMeshFromVectors(std::vector<PxVec3> &vertices, PxCooki
   return convexMesh;
 }
 
-// this should work, but somehow threejs primitives fail
-PxConvexMesh *createConvexMesh(int vertices, PxU32 vertCount, int indices, PxU32 indexCount, PxCooking &cooking, PxPhysics &physics)
+PxConvexMesh *createConvexMesh(int vertices, PxU32 vertCount, PxCooking &cooking, PxPhysics &physics)
+{
+  PxConvexMeshDesc convexDesc;
+  convexDesc.points.count = vertCount;
+  convexDesc.points.stride = sizeof(PxVec3);
+  convexDesc.points.data = (PxVec3 *)vertices;
+  convexDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
+
+  cooking.validateConvexMesh(convexDesc);
+
+  PxConvexMesh *convexMesh = cooking.createConvexMesh(convexDesc, physics.getPhysicsInsertionCallback());
+
+  return convexMesh;
+}
+
+// TODO
+PxConvexMesh *createConvexMeshComputeHull(int vertices, PxU32 vertCount, int indices, PxU32 indexCount, PxCooking &cooking, PxPhysics &physics)
 {
   PxSimpleTriangleMesh triangleMesh;
   triangleMesh.points.count = vertCount;
   triangleMesh.points.stride = sizeof(PxVec3);
   triangleMesh.points.data = (PxVec3 *)vertices;
 
+  int len = indexCount * 3;
+  PxU32* intPtr = new PxU32[len];
+  PxF32* ptr = (PxF32 *)indices;
+
+  std::string str;
+  // Explicitly cast float values to unsigned int
+  for (int i = 0; i < len; i++)
+  {
+    intPtr[i] = static_cast<unsigned int>(ptr[i]);
+  }
+
   triangleMesh.triangles.count = indexCount;
   triangleMesh.triangles.stride = 3 * sizeof(PxU32);
-  triangleMesh.triangles.data = (PxU32 *)indices;
+  triangleMesh.triangles.data = (PxU32 *)intPtr;
 
   PxDefaultAllocator cb;
   PxU32 nbVerts;
@@ -286,13 +314,13 @@ PxConvexMesh *createConvexMesh(int vertices, PxU32 vertCount, int indices, PxU32
   convexDesc.points.stride = sizeof(PxVec3);
   convexDesc.points.data = &hullVertices;
 
-  convexDesc.points.count = nbIndices;
-  convexDesc.points.stride = sizeof(PxVec3);
-  convexDesc.points.data = &hullIndices;
+  convexDesc.indices.count = nbIndices;
+  convexDesc.indices.stride = sizeof(PxVec3);
+  convexDesc.indices.data = &hullIndices;
 
-  convexDesc.points.count = nbPolygons;
-  convexDesc.points.stride = sizeof(PxVec3);
-  convexDesc.points.data = &hullPolygons;
+  convexDesc.polygons.count = nbPolygons;
+  convexDesc.polygons.stride = sizeof(PxVec3);
+  convexDesc.polygons.data = &hullPolygons;
 
   convexDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
 
@@ -310,17 +338,31 @@ PxTriangleMesh *createTriMesh(int vertices, PxU32 vertCount, int indices, PxU32 
   meshDesc.points.stride = sizeof(PxVec3);
   meshDesc.points.data = (PxVec3 *)vertices;
 
-  meshDesc.triangles.count = indexCount;
-  if (isU16)
-  {
-    meshDesc.triangles.stride = 3 * sizeof(PxU16);
-    meshDesc.triangles.data = (PxU16 *)indices;
-    meshDesc.flags = PxMeshFlag::e16_BIT_INDICES;
-  }
-  else
-  {
-    meshDesc.triangles.stride = 3 * sizeof(PxU32);
-    meshDesc.triangles.data = (PxU32 *)indices;
+  if(indexCount > 0) {
+
+    int len = indexCount * 3;
+    PxU32* intPtr = new PxU32[len];
+    PxF32* ptr = (PxF32 *)indices;
+
+    std::string str;
+    // Explicitly cast float values to unsigned int
+    for (int i = 0; i < len; i++)
+    {
+      intPtr[i] = static_cast<unsigned int>(ptr[i]);
+    }
+
+    meshDesc.triangles.count = indexCount;
+    if (isU16)
+    {
+      meshDesc.triangles.stride = 3 * sizeof(PxU16);
+      meshDesc.triangles.data = (PxU16 *)intPtr;
+      meshDesc.flags = PxMeshFlag::e16_BIT_INDICES;
+    }
+    else
+    {
+      meshDesc.triangles.stride = 3 * sizeof(PxU32);
+      meshDesc.triangles.data = (PxU32 *)intPtr;
+    }
   }
 
   cooking.validateTriangleMesh(meshDesc);
@@ -913,12 +955,12 @@ EMSCRIPTEN_BINDINGS(physx)
       .function("cookHeightField", &PxCooking::cookHeightField, allow_raw_pointers())
       .function("cookTriangleMesh", &PxCooking::cookTriangleMesh, allow_raw_pointers())
       .function("createBVHStructure", &PxCooking::createBVHStructure, allow_raw_pointers())
-      .function("createConvexMesh", optional_override([](PxCooking &cooking, std::vector<PxVec3> &vertices, PxPhysics &physics) {
+      .function("createConvexMeshFromVectors", optional_override([](PxCooking &cooking, std::vector<PxVec3> &vertices, PxPhysics &physics) {
                   return createConvexMeshFromVectors(vertices, cooking, physics);
                 }),
                 allow_raw_pointers())
-      .function("createConvexMesh", optional_override([](PxCooking &cooking, int vertices, PxU32 vertCount, int indices, PxU32 indexCount, PxPhysics &physics) {
-                  return createConvexMesh(vertices, vertCount, indices, indexCount, cooking, physics);
+      .function("createConvexMesh", optional_override([](PxCooking &cooking, int vertices, PxU32 vertCount, PxPhysics &physics) {
+                  return createConvexMesh(vertices, vertCount, cooking, physics);
                 }),
                 allow_raw_pointers())
       .function("createTriMesh", optional_override([](PxCooking &cooking, int vertices, PxU32 vertCount, int indices, PxU32 indexCount, bool isU16, PxPhysics &physics) {

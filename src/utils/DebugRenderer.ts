@@ -107,7 +107,7 @@ export class DebugRenderer {
       this._updateRaycast(raycast, id);
     });
     this._meshes.forEach((mesh, id) => {
-      if (mesh && !PhysXInstance.instance.bodies.get(id)) {
+      if (!PhysXInstance.instance.shapes.has(id)) {
         this.scene.remove(mesh);
         this._meshes.delete(id);
       }

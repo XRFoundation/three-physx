@@ -5,6 +5,7 @@ export interface PhysXConfig {
   wasmPath: string;
   tps?: number;
   lengthScale?: number;
+  start?: boolean;
 }
 
 export enum PhysXModelShapes {

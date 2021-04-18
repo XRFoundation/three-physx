@@ -180,6 +180,21 @@ sdk_source_bin/CMakeFiles/PhysXWebBindings.dir/src/PhysX/physx/source/physxwebbi
  /src/PhysX/physx/include/vehicle/PxVehicleWheels.h
  /src/PhysX/physx/source/foundation/include/Ps.h
  /src/PhysX/physx/source/foundation/include/PsAllocator.h
+ /src/PhysX/physx/source/foundation/include/PsArray.h
+ /src/PhysX/physx/source/foundation/include/PsBasicTemplates.h
+ /src/PhysX/physx/source/foundation/include/PsBitUtils.h
+ /src/PhysX/physx/source/foundation/include/PsBroadcast.h
+ /src/PhysX/physx/source/foundation/include/PsFoundation.h
+ /src/PhysX/physx/source/foundation/include/PsHash.h
+ /src/PhysX/physx/source/foundation/include/PsHashInternals.h
+ /src/PhysX/physx/source/foundation/include/PsHashMap.h
+ /src/PhysX/physx/source/foundation/include/PsInlineAllocator.h
+ /src/PhysX/physx/source/foundation/include/PsInlineArray.h
+ /src/PhysX/physx/source/foundation/include/PsIntrinsics.h
+ /src/PhysX/physx/source/foundation/include/PsMutex.h
  /src/PhysX/physx/source/foundation/include/PsSocket.h
+ /src/PhysX/physx/source/foundation/include/PsTempAllocator.h
  /src/PhysX/physx/source/foundation/include/PsUserAllocated.h
+ /src/PhysX/physx/source/foundation/include/unix/PsUnixIntrinsics.h
+ /src/PhysX/physx/source/foundation/include/windows/PsWindowsIntrinsics.h
  /src/PhysX/physx/source/physxwebbindings/src/PxWebBindings.cpp

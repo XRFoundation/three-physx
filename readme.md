@@ -19,8 +19,8 @@ Progress:
 - [x] capsule
 - [x] character controller
 - [x] collision filtering
+- [x] trimesh and convex
 - [ ] raycasts (subscribe + promise)
-- [ ] trimesh and convex
 - [ ] vehicle controller
 - [ ] heightfield colliders
 - [ ] fix root object scaling bug

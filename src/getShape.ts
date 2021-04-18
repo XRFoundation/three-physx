@@ -50,46 +50,18 @@ const getGeometry = ({ shape, transform, options }): PhysX.PxGeometry => {
       geometry = new PhysX.PxPlaneGeometry();
       break;
     case PhysXModelShapes.TriangleMesh: geometry = createTrimesh(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices, indices); break;
-    // default: case PhysXModelShapes.ConvexMesh: geometry = createConvexMesh(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices, indices); break;
+    default: case PhysXModelShapes.ConvexMesh: geometry = createConvexMesh(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices); break;
   }
   return geometry;
 };
 
 const createTrimesh = (transform: PhysXBodyTransform, cooking: PhysX.PxCooking, physics: PhysX.PxPhysics, vertices: ArrayLike<number>, indices: ArrayLike<number>): PhysX.PxTriangleMeshGeometry => {
 
-  // const verts = []
-  // for (let i = 0; i < vertices.length; i++) {
-  //   const vert = {}
-  //   vert.x = vertices[i][0];
-  //   vert.y = vertices[i][1];
-  //   vert.z = vertices[i][2];
-  //   verts.push(vert);
-  // }
-  // const inds = []
-
-  // for (let i = 0; i < indices.length; i++) {
-  //   const ind = {};
-  //   ind.x = indices[i][0];
-  //   ind.y = indices[i][1];
-  //   ind.z = indices[i][2];
-  //   inds.push(ind);
-  // }
-  // console.log(verts)
-
-
-  // const verticesPtr = createArrayPointers(verts);
-  // const indicesPtr = createArrayPointers(inds);
-
-  // const trimesh = cooking.createTriMesh(verticesPtr, verts.length, indicesPtr, inds.length, false, physics);
-
   const verticesPtr = createArrayPointers(vertices);
   const indicesPtr = createArrayPointers(indices);
-  console.log(vertices, indices)
   const trimesh = cooking.createTriMesh(verticesPtr, vertices.length / 3, indicesPtr, indices.length / 3, false, physics);
 
   if (trimesh === null) return;
-
-  console.log(trimesh);
 
   const meshScale = new PhysX.PxMeshScale(
     { x: transform.scale.x, y: transform.scale.y, z: transform.scale.z },
@@ -104,11 +76,10 @@ const createTrimesh = (transform: PhysXBodyTransform, cooking: PhysX.PxCooking, 
   return geometry;
 };
 
-const createConvexMesh = (transform: PhysXBodyTransform, cooking: PhysX.PxCooking, physics: PhysX.PxPhysics, vertices: ArrayLike<number>, indices: ArrayLike<number>): PhysX.PxTriangleMeshGeometry => {
+const createConvexMesh = (transform: PhysXBodyTransform, cooking: PhysX.PxCooking, physics: PhysX.PxPhysics, vertices: ArrayLike<number>): PhysX.PxTriangleMeshGeometry => {
   const verticesPtr = createArrayPointers(vertices);
-  const indicesPtr = createArrayPointers(indices);
 
-  const convexMesh = cooking.createConvexMesh(verticesPtr, vertices.length / 3, indicesPtr, indices.length / 3, physics);
+  const convexMesh = cooking.createConvexMesh(verticesPtr, vertices.length / 3, physics);
 
   const meshScale = new PhysX.PxMeshScale(
     { x: transform.scale.x, y: transform.scale.y, z: transform.scale.z },

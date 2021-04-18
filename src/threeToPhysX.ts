@@ -116,35 +116,13 @@ const getShapeData = (mesh, shape): any => {
         options: { radius: shape.sphereRadius || getSphereRadius(mesh) },
       };
     case PhysXModelShapes.ConvexMesh:
+      const vertices = Array.from(mesh.geometry.attributes.position.array);
+      return { shape: shape.type, options: { vertices } };
     case PhysXModelShapes.TriangleMesh:
     default: {
       // const vertices = removeDuplicates(Array.from(mesh.geometry.attributes.position.array));
-      // const vertices = Array.from(mesh.geometry.attributes.position.array);
-      // const vertices = [
-      //   [0, 0, 0],
-      //   [0, 0, 1],
-      //   [1, 0, 0],
-      //   [1, 0, 0],
-      //   [0, 0, 1],
-      //   [1, 0, 1],
-      // ]
-      // const indices = [
-      //   [0, 1, 2],
-      //   [3, 4, 5]
-      // ]
-      const vertices = [
-        0, 0, 0,
-        0, 0, 1,
-        1, 0, 0,
-        1, 0, 0,
-        0, 0, 1,
-        1, 1, 1,
-      ]
-      const indices = [
-        0, 1, 2,
-        3, 4, 5
-      ]
-      // const indices = mesh.geometry.index ? Array.from(mesh.geometry.index.array) : Object.keys(vertices).map(Number);
+      const vertices = Array.from(mesh.geometry.attributes.position.array);
+      const indices = mesh.geometry.index ? Array.from(mesh.geometry.index.array) : Object.keys(vertices).map(Number);
       return { shape: shape.type, options: { vertices, indices } };
     }
   }
@@ -170,19 +148,18 @@ const getThreeGeometryShape = (mesh): any => {
         shape: PhysXModelShapes.Sphere,
         options: { radius: getSphereRadius(mesh) },
       };
-    // case 'ConvexGeometry': {
-    //   const vertices = Array.from(mesh.geometry.attributes.position.array);
-    //   return { shape: PhysXModelShapes.ConvexMesh, options: { vertices } };
-    // }
+    case 'ConvexGeometry': {
+      const vertices = Array.from(mesh.geometry.attributes.position.array);
+      return { shape: PhysXModelShapes.ConvexMesh, options: { vertices } };
+    }
     default:
-      console.log('threeToPhysX: geometry of type', mesh.geometry.type, 'not supported. No shape will be added.');
-      return;
-    // const vertices = Array.from(mesh.geometry.attributes.position.array);
-    // const indices = Array.from(mesh.geometry.index.array);
-    // return {
-    //   shape: PhysXModelShapes.ConvexMesh,
-    //   options: { vertices, indices },
-    // };
+      // console.log('threeToPhysX: geometry of type', mesh.geometry.type, 'not supported. No shape will be added.');
+      // return;
+      const vertices = Array.from(mesh.geometry.attributes.position.array);
+      return {
+        shape: PhysXModelShapes.ConvexMesh,
+        options: { vertices },
+      };
   }
 };
 
