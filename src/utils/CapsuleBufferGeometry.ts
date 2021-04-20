@@ -2,7 +2,7 @@
 
 import { BufferGeometry, BufferAttribute, Vector3, Vector2 } from 'three';
 
-// helper variables
+// helper letiables
 
 /**
  * @author maximequiblier
@@ -26,10 +26,10 @@ export class CapsuleBufferGeometry extends BufferGeometry {
   vertices: BufferAttribute;
   normals: BufferAttribute;
   uvs: BufferAttribute;
-  _index: number = 0;
-  _halfHeight: number = 0;
+  _index = 0;
+  _halfHeight = 0;
   _indexArray: number[][] = [];
-  _indexOffset: number = 0;
+  _indexOffset = 0;
 
   constructor(radiusTop?: number, radiusBottom?: number, height?: number, radialSegments?: number, heightSegments?: number, capsTopSegments?: number, capsBottomSegments?: number, thetaStart?: number, thetaLength?: number) {
     super();
@@ -87,53 +87,53 @@ export class CapsuleBufferGeometry extends BufferGeometry {
   // helper functions
 
   calculateVertexCount() {
-    var count = (this.radialSegments + 1) * (this.heightSegments + 1 + this.capsBottomSegments + this.capsTopSegments);
+    const count = (this.radialSegments + 1) * (this.heightSegments + 1 + this.capsBottomSegments + this.capsTopSegments);
     return count;
   }
 
   calculateIndexCount() {
-    var count = this.radialSegments * (this.heightSegments + this.capsBottomSegments + this.capsTopSegments) * 2 * 3;
+    const count = this.radialSegments * (this.heightSegments + this.capsBottomSegments + this.capsTopSegments) * 2 * 3;
     return count;
   }
 
   generateTorso() {
-    var x, y;
-    var normal = new Vector3();
-    var vertex = new Vector3();
+    let x, y;
+    const normal = new Vector3();
+    const vertex = new Vector3();
 
-    var cosAlpha = Math.cos(this.alpha);
-    var sinAlpha = Math.sin(this.alpha);
+    const cosAlpha = Math.cos(this.alpha);
+    const sinAlpha = Math.sin(this.alpha);
 
-    var cone_length = new Vector2(this.radiusTop * sinAlpha, this._halfHeight + this.radiusTop * cosAlpha).sub(new Vector2(this.radiusBottom * sinAlpha, -this._halfHeight + this.radiusBottom * cosAlpha)).length();
+    const cone_length = new Vector2(this.radiusTop * sinAlpha, this._halfHeight + this.radiusTop * cosAlpha).sub(new Vector2(this.radiusBottom * sinAlpha, -this._halfHeight + this.radiusBottom * cosAlpha)).length();
 
     // Total length for v texture coord
-    var vl = this.radiusTop * this.alpha + cone_length + this.radiusBottom * (Math.PI / 2 - this.alpha);
+    const vl = this.radiusTop * this.alpha + cone_length + this.radiusBottom * (Math.PI / 2 - this.alpha);
 
-    var groupCount = 0;
+    const groupCount = 0;
 
     // generate vertices, normals and uvs
 
-    var v = 0;
+    let v = 0;
     for (y = 0; y <= this.capsTopSegments; y++) {
-      var indexRow = [];
+      const indexRow = [];
 
-      var a = Math.PI / 2 - this.alpha * (y / this.capsTopSegments);
+      const a = Math.PI / 2 - this.alpha * (y / this.capsTopSegments);
 
       v += (this.radiusTop * this.alpha) / this.capsTopSegments;
 
-      var cosA = Math.cos(a);
-      var sinA = Math.sin(a);
+      const cosA = Math.cos(a);
+      const sinA = Math.sin(a);
 
       // calculate the radius of the current row
-      var radius = cosA * this.radiusTop;
+      const radius = cosA * this.radiusTop;
 
       for (x = 0; x <= this.radialSegments; x++) {
-        var u = x / this.radialSegments;
+        const u = x / this.radialSegments;
 
-        var theta = u * this.thetaLength + this.thetaStart;
+        const theta = u * this.thetaLength + this.thetaStart;
 
-        var sinTheta = Math.sin(theta);
-        var cosTheta = Math.cos(theta);
+        const sinTheta = Math.sin(theta);
+        const cosTheta = Math.cos(theta);
 
         // vertex
         vertex.x = radius * sinTheta;
@@ -159,23 +159,23 @@ export class CapsuleBufferGeometry extends BufferGeometry {
       this._indexArray.push(indexRow);
     }
 
-    var cone_height = this.height + cosAlpha * this.radiusTop - cosAlpha * this.radiusBottom;
-    var slope = (sinAlpha * (this.radiusBottom - this.radiusTop)) / cone_height;
+    const cone_height = this.height + cosAlpha * this.radiusTop - cosAlpha * this.radiusBottom;
+    const slope = (sinAlpha * (this.radiusBottom - this.radiusTop)) / cone_height;
     for (y = 1; y <= this.heightSegments; y++) {
-      var indexRow = [];
+      const indexRow = [];
 
       v += cone_length / this.heightSegments;
 
       // calculate the radius of the current row
-      var radius = sinAlpha * ((y * (this.radiusBottom - this.radiusTop)) / this.heightSegments + this.radiusTop);
+      const radius = sinAlpha * ((y * (this.radiusBottom - this.radiusTop)) / this.heightSegments + this.radiusTop);
 
       for (x = 0; x <= this.radialSegments; x++) {
-        var u = x / this.radialSegments;
+        const u = x / this.radialSegments;
 
-        var theta = u * this.thetaLength + this.thetaStart;
+        const theta = u * this.thetaLength + this.thetaStart;
 
-        var sinTheta = Math.sin(theta);
-        var cosTheta = Math.cos(theta);
+        const sinTheta = Math.sin(theta);
+        const cosTheta = Math.cos(theta);
 
         // vertex
         vertex.x = radius * sinTheta;
@@ -202,25 +202,25 @@ export class CapsuleBufferGeometry extends BufferGeometry {
     }
 
     for (y = 1; y <= this.capsBottomSegments; y++) {
-      var indexRow = [];
+      const indexRow = [];
 
-      var a = Math.PI / 2 - this.alpha - (Math.PI - this.alpha) * (y / this.capsBottomSegments);
+      const a = Math.PI / 2 - this.alpha - (Math.PI - this.alpha) * (y / this.capsBottomSegments);
 
       v += (this.radiusBottom * this.alpha) / this.capsBottomSegments;
 
-      var cosA = Math.cos(a);
-      var sinA = Math.sin(a);
+      const cosA = Math.cos(a);
+      const sinA = Math.sin(a);
 
       // calculate the radius of the current row
-      var radius = cosA * this.radiusBottom;
+      const radius = cosA * this.radiusBottom;
 
       for (x = 0; x <= this.radialSegments; x++) {
-        var u = x / this.radialSegments;
+        const u = x / this.radialSegments;
 
-        var theta = u * this.thetaLength + this.thetaStart;
+        const theta = u * this.thetaLength + this.thetaStart;
 
-        var sinTheta = Math.sin(theta);
-        var cosTheta = Math.cos(theta);
+        const sinTheta = Math.sin(theta);
+        const cosTheta = Math.cos(theta);
 
         // vertex
         vertex.x = radius * sinTheta;
@@ -251,10 +251,10 @@ export class CapsuleBufferGeometry extends BufferGeometry {
     for (x = 0; x < this.radialSegments; x++) {
       for (y = 0; y < this.capsTopSegments + this.heightSegments + this.capsBottomSegments; y++) {
         // we use the index array to access the correct indices
-        var i1 = this._indexArray[y][x];
-        var i2 = this._indexArray[y + 1][x];
-        var i3 = this._indexArray[y + 1][x + 1];
-        var i4 = this._indexArray[y][x + 1];
+        const i1 = this._indexArray[y][x];
+        const i2 = this._indexArray[y + 1][x];
+        const i3 = this._indexArray[y + 1][x + 1];
+        const i4 = this._indexArray[y][x + 1];
 
         // face one
         this.indices.setX(this._indexOffset, i1);
