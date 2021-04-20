@@ -1,4 +1,4 @@
-import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer , Object3DBody, PhysXBodyType, SceneQueryType, RigidBodyProxy, PhysXModelShapes, PhysXShapeConfig, CollisionEvents, ControllerEvents, getShapes, getTransformFromWorldPos } from '../../src';
+import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer , Object3DBody, PhysXBodyType, SceneQueryType, RigidBodyProxy, PhysXModelShapes, PhysXShapeConfig, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos } from '../../src';
 import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry } from 'three';
 const load = async () => {
   const renderer = await import('./renderer');
@@ -17,7 +17,7 @@ const load = async () => {
   kinematicObject.children[0].scale.setScalar(2);
   kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
   const kinematicBody = await PhysXInstance.instance.addBody({ 
-    shapes: getShapes(kinematicObject),
+    shapes: getShapesFromObject(kinematicObject),
     transform: getTransformFromWorldPos(kinematicObject),
     type: PhysXBodyType.KINEMATIC
   });
@@ -45,7 +45,7 @@ const load = async () => {
 
   createBalls().forEach(async (object) => {
     const body = await PhysXInstance.instance.addBody({ 
-      shapes: getShapes(object),
+      shapes: getShapesFromObject(object),
       transform: getTransformFromWorldPos(object),
       type: PhysXBodyType.DYNAMIC
     });
@@ -57,7 +57,7 @@ const load = async () => {
 
   const floor = new Mesh(new BoxBufferGeometry(platformSize, 1, platformSize), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide })).translateY(-1);
   const floorbody = await PhysXInstance.instance.addBody({ 
-    shapes: getShapes(floor), 
+    shapes: getShapesFromObject(floor), 
     transform: getTransformFromWorldPos(floor),
     type: PhysXBodyType.STATIC
   });
@@ -156,7 +156,7 @@ const load = async () => {
         object.updateWorldMatrix(true, true)
         const newbody = await PhysXInstance.instance.addBody({ 
           transform: getTransformFromWorldPos(object),
-          shapes: getShapes(object),
+          shapes: getShapesFromObject(object),
           type: PhysXBodyType.DYNAMIC
         });
         object.body = newbody;
@@ -186,14 +186,6 @@ const createBalls = () => {
   for (let i = 0; i < 1000; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
-    mesh.userData.physx = {
-      type: PhysXBodyType.DYNAMIC,
-      shapes: [ {
-        // isTrigger: true
-        // collisionLayer: 1 << Math.round(Math.random() * 2),
-        // collisionMask: 1 << Math.round(Math.random() * 2),
-      } ] 
-    };
     meshes.push(mesh);
   }
 

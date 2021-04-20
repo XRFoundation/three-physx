@@ -8,7 +8,7 @@ const pos = new Vector3();
 const rot = new Quaternion();
 const scale = new Vector3(1, 1, 1);
 
-export const getShapes = (object: any) => {
+export const getShapesFromObject = (object: any) => {
   const shapes: PhysXShapeConfig[] = [];
   object.updateMatrixWorld(true);
   iterateGeometries(object, { includeInvisible: true }, (data) => {
@@ -17,7 +17,17 @@ export const getShapes = (object: any) => {
   return shapes;
 };
 
-const createShapes = (mesh, root): PhysXShapeConfig[] => {
+export const createShapeFromConfig = (shape) => {
+  const transform = shape.transform || createNewTransform();
+  const id = PhysXInstance.instance._getNextAvailableShapeID();
+  shape.id = id;
+  shape.transform = transform;
+  shape.config = getShapeConfig(shape ?? {});
+  shape.config.id = id;
+  return shape;
+}
+
+const createShapesFromUserData = (mesh, root): PhysXShapeConfig[] => {
   if (!mesh.userData.physx) {
     mesh.userData.physx = {};
   }
@@ -55,7 +65,7 @@ export const iterateGeometries = (function () {
   return function (root, options, cb) {
     root.traverse((mesh: Mesh) => {
       if (mesh.isMesh && (options.includeInvisible || mesh.visible)) {
-        cb(createShapes(mesh, root));
+        cb(createShapesFromUserData(mesh, root));
       }
     });
   };

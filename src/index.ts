@@ -143,7 +143,7 @@ export class PhysXInstance {
   };
 
   // update kinematic bodies
-  update = async (delta: number) => {
+  update(delta: number) {
     // TODO: make this rely on kinematicBodies.size instead of bodies.size
     let offset = 0;
     const kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.KINEMATIC_DATA_SIZE * this.kinematicBodies.size));
@@ -171,25 +171,25 @@ export class PhysXInstance {
     this.physicsProxy.update([kinematicArray, controllerArray, raycastArray], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);
   };
 
-  startPhysX = async (start: boolean) => {
+  startPhysX(start: boolean) {
     return this.physicsProxy.startPhysX([start]);
   };
 
-  addBody = async ({ shapes, type, transform }: { shapes?: any, type?: PhysXBodyType, transform?: Transform } = {}) => {
+  addBody({ shapes, type, transform }: { shapes?: any, type?: PhysXBodyType, transform?: Transform } = {}) {
     const id = this._getNextAvailableBodyID();
     shapes?.forEach((shape) => {
       shape.id = this._getNextAvailableShapeID();
       this.shapes.set(shape.id, shape);
     });
-    const body: RigidBodyProxy = { 
-      id, 
-      transform: transform ?? createNewTransform(), 
+    const body: RigidBodyProxy = {
+      id,
+      transform: transform ?? createNewTransform(),
       shapes: shapes ?? [],
-      options: { 
+      options: {
         type: type ?? PhysXBodyType.DYNAMIC,
-      }, 
+      },
     }
-    await this.physicsProxy.addBody([body]);
+    this.physicsProxy.addBody([body]);
     body.shapes.forEach((shape) => {
       (shape as any).body = body;
     });
@@ -201,7 +201,7 @@ export class PhysXInstance {
     return body;
   };
 
-  updateBody = async (body: RigidBodyProxy | any, options: BodyConfig) => {
+  updateBody(body: RigidBodyProxy | any, options: BodyConfig) {
     if (typeof body === 'undefined') {
       throw new Error('three-physx! Tried to update a body that does not exist.');
     }
@@ -219,8 +219,7 @@ export class PhysXInstance {
     body.shapes.forEach((shape) => {
       shape._debugNeedsUpdate = true;
     });
-    await this.physicsProxy.updateBody([{ id, options }]);
-    return;
+    this.physicsProxy.updateBody([{ id, options }]);
   };
 
   removeBody = async (body: RigidBodyProxy) => {
@@ -235,15 +234,15 @@ export class PhysXInstance {
     return this.physicsProxy.removeBody([{ id }]);
   };
 
-  createController = async (options?: ControllerConfig) => {
+  createController(options?: ControllerConfig) {
     const id = this._getNextAvailableBodyID();
-    const body: RigidBodyProxy = { 
-      id, 
-      transform: createNewTransform(), 
+    const body: RigidBodyProxy = {
+      id,
+      transform: createNewTransform(),
       shapes: [],
-      options: { 
+      options: {
         type: PhysXBodyType.CONTROLLER,
-      }, 
+      },
     }
     const shape = options ?? {};
     if (typeof options !== 'undefined') {
@@ -257,7 +256,7 @@ export class PhysXInstance {
       }
     }
     shape.id = this._getNextAvailableShapeID();
-    await this.physicsProxy.createController([
+    this.physicsProxy.createController([
       {
         id: body.id,
         config: shape,
@@ -277,7 +276,7 @@ export class PhysXInstance {
     return body;
   };
 
-  updateController = async (body: RigidBodyProxy, config: ControllerConfig) => {
+  updateController(body: RigidBodyProxy, config: ControllerConfig) {
     if (typeof body?.id === 'undefined') return;
     if (!this.controllerBodies.has(body.id)) return;
     body.controller._debugNeedsUpdate = true;
@@ -315,15 +314,15 @@ export class PhysXInstance {
     ]);
   };
 
-  removeController = async (id) => {
-    await this.physicsProxy.removeController([{ id }])
+  removeController(id) {
+    this.physicsProxy.removeController([{ id }])
     const body = this.controllerBodies.get(id);
     this.shapes.delete(body.controller.config.id);
     this.controllerBodies.delete(id);
     this.bodies.delete(id);
   };
 
-  addRaycastQuery = async (raycastQuery: SceneQuery) => {
+  addRaycastQuery(raycastQuery: SceneQuery) {
     if (typeof raycastQuery.type === 'undefined') throw new Error('Scene raycast query must have a type!');
     if (typeof raycastQuery.origin === 'undefined') throw new Error('Scene raycast query must include origin!');
     if (typeof raycastQuery.direction === 'undefined') throw new Error('Scene raycast query must include direction!');
@@ -335,20 +334,20 @@ export class PhysXInstance {
     const id = this._getNextAvailableRaycastID();
     this.raycasts.set(id, raycastQuery);
     raycastQuery.id = id;
-    await this.physicsProxy.addRaycastQuery([raycastQuery]);
+    this.physicsProxy.addRaycastQuery([raycastQuery]);
     return raycastQuery;
   };
 
-  updateRaycastQuery = async (raycastQuery: any) => {
+  updateRaycastQuery(raycastQuery: any) {
     if (!this.raycasts.has(raycastQuery.id)) return;
     // todo
     // await this.physicsProxy.updateRaycastQuery([raycastQuery.id]);
   };
 
-  removeRaycastQuery = async (raycastQuery: SceneQuery) => {
+  removeRaycastQuery(raycastQuery: SceneQuery) {
     if (!this.raycasts.has(raycastQuery.id)) return;
     this.raycasts.delete(raycastQuery.id);
-    await this.physicsProxy.removeRaycastQuery([raycastQuery.id]);
+    this.physicsProxy.removeRaycastQuery([raycastQuery.id]);
   };
 
   addConstraint = async () => {
