@@ -115,7 +115,7 @@ export class PhysXManager {
     this.scene = this.physics.createScene(this.sceneDesc);
     this.controllerManager = PhysX.PxCreateControllerManager(this.scene, false);
 
-    if(config.start) {
+    if (config.start) {
       this.startPhysX(true);
     }
   };
@@ -406,7 +406,7 @@ export class PhysXManager {
     (controller as any)._collisions = [];
     (actor as any)._type = PhysXBodyType.CONTROLLER;
     // todo
-    (controller as any)._filterData = null;//new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0);
+    (controller as any)._filterData = null; //new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0);
     (controller as any)._queryCallback = null; //PhysX.PxQueryFilterCallback.implement({ preFilter: () => {}, postFilter: () => {} });
   };
 

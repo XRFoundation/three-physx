@@ -140,7 +140,7 @@ export class PhysXInstance {
       removeRaycastQuery: pipeRemoteFunction(messageQueue, 'removeRaycastQuery'),
     };
 
-    await this.physicsProxy.initPhysX([ clone(config) ]);
+    await this.physicsProxy.initPhysX([clone(config)]);
   };
 
   // update kinematic bodies
@@ -169,13 +169,13 @@ export class PhysXInstance {
       offset += BufferConfig.RAYCAST_DATA_SIZE;
     });
     this.physicsProxy.update([kinematicArray, controllerArray, raycastArray], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);
-  };
+  }
 
   startPhysX(start: boolean) {
-    return this.physicsProxy.startPhysX([ start ]);
-  };
+    return this.physicsProxy.startPhysX([start]);
+  }
 
-  addBody({ shapes, type, transform }: { shapes?: any, type?: PhysXBodyType, transform?: Transform } = {}) {
+  addBody({ shapes, type, transform }: { shapes?: any; type?: PhysXBodyType; transform?: Transform } = {}) {
     const id = this._getNextAvailableBodyID();
     shapes?.forEach((shape) => {
       shape.id = this._getNextAvailableShapeID();
@@ -188,8 +188,8 @@ export class PhysXInstance {
       options: {
         type: type ?? PhysXBodyType.DYNAMIC,
       },
-    }
-    this.physicsProxy.addBody([ clone(body) ]);
+    };
+    this.physicsProxy.addBody([clone(body)]);
     body.shapes.forEach((shape) => {
       (shape as any).body = body;
     });
@@ -199,7 +199,7 @@ export class PhysXInstance {
       this.kinematicBodies.set(body.id, body);
     }
     return body;
-  };
+  }
 
   updateBody(body: RigidBodyProxy | any, options: BodyConfig) {
     if (typeof body === 'undefined') {
@@ -219,8 +219,8 @@ export class PhysXInstance {
     body.shapes.forEach((shape) => {
       shape._debugNeedsUpdate = true;
     });
-    this.physicsProxy.updateBody([ clone({ id, options }) ]);
-  };
+    this.physicsProxy.updateBody([clone({ id, options })]);
+  }
 
   removeBody = async (body: RigidBodyProxy) => {
     this.bodies.delete(body.id);
@@ -229,7 +229,7 @@ export class PhysXInstance {
     }
     body.shapes.forEach((shape) => {
       this.shapes.delete(shape.id);
-    })
+    });
     const id = body.id;
     return this.physicsProxy.removeBody([{ id }]);
   };
@@ -243,7 +243,7 @@ export class PhysXInstance {
       options: {
         type: PhysXBodyType.CONTROLLER,
       },
-    }
+    };
     const shape = options ?? {};
     if (typeof options !== 'undefined') {
       if (options.isCapsule) {
@@ -274,7 +274,7 @@ export class PhysXInstance {
     proxyEventListener(body);
     this.bodies.set(id, body);
     return body;
-  };
+  }
 
   updateController(body: RigidBodyProxy, config: ControllerConfig) {
     if (typeof body?.id === 'undefined') return;
@@ -312,15 +312,15 @@ export class PhysXInstance {
         config,
       }),
     ]);
-  };
+  }
 
   removeController(id) {
-    this.physicsProxy.removeController([ { id } ])
+    this.physicsProxy.removeController([{ id }]);
     const body = this.controllerBodies.get(id);
     this.shapes.delete(body.controller.config.id);
     this.controllerBodies.delete(id);
     this.bodies.delete(id);
-  };
+  }
 
   addRaycastQuery(raycastQuery: SceneQuery) {
     if (typeof raycastQuery.type === 'undefined') throw new Error('Scene raycast query must have a type!');
@@ -334,21 +334,21 @@ export class PhysXInstance {
     const id = this._getNextAvailableRaycastID();
     this.raycasts.set(id, raycastQuery);
     raycastQuery.id = id;
-    this.physicsProxy.addRaycastQuery([ clone(raycastQuery) ]);
+    this.physicsProxy.addRaycastQuery([clone(raycastQuery)]);
     return raycastQuery;
-  };
+  }
 
   updateRaycastQuery(raycastQuery: any) {
     if (!this.raycasts.has(raycastQuery.id)) return;
     // todo
     // await this.physicsProxy.updateRaycastQuery([raycastQuery.id]);
-  };
+  }
 
   removeRaycastQuery(raycastQuery: SceneQuery) {
     if (!this.raycasts.has(raycastQuery.id)) return;
     this.raycasts.delete(raycastQuery.id);
-    this.physicsProxy.removeRaycastQuery([ raycastQuery.id ]);
-  };
+    this.physicsProxy.removeRaycastQuery([raycastQuery.id]);
+  }
 
   addConstraint = async () => {
     // todo

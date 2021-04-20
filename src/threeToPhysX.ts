@@ -25,7 +25,7 @@ export const createShapeFromConfig = (shape) => {
   shape.config = getShapeConfig(shape ?? {});
   shape.config.id = id;
   return shape;
-}
+};
 
 const createShapesFromUserData = (mesh, root): PhysXShapeConfig[] => {
   if (!mesh.userData.physx) {
@@ -45,8 +45,7 @@ const createShapesFromUserData = (mesh, root): PhysXShapeConfig[] => {
       data.config.id = id;
       shapes.push(data);
     });
-  } 
-  else {
+  } else {
     const data = getThreeGeometryShape(mesh);
     if (!data) return [];
     const transform = getTransformRelativeToRoot(mesh, root);
