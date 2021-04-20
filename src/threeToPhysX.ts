@@ -166,6 +166,7 @@ const getBoxExtents = function (mesh: Mesh) {
 };
 const matrix = new Matrix4();
 export const getTransformFromWorldPos = (obj: Object3D) => {
+  obj.updateWorldMatrix(true, true);
   obj.matrixWorld.decompose(pos, rot, scale);
   return {
     translation: { x: pos.x, y: pos.y, z: pos.z },

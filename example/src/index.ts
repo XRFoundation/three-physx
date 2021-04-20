@@ -16,7 +16,7 @@ const load = async () => {
   kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateX(2).rotateY(Math.PI / 2));
   kinematicObject.children[0].scale.setScalar(2);
   kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
-  const kinematicBody = await PhysXInstance.instance.addBody({ 
+  const kinematicBody = PhysXInstance.instance.addBody({ 
     shapes: getShapesFromObject(kinematicObject),
     transform: getTransformFromWorldPos(kinematicObject),
     type: PhysXBodyType.KINEMATIC
@@ -35,16 +35,17 @@ const load = async () => {
 
   const character = new Group();
   character.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
-  const characterBody = await PhysXInstance.instance.createController({ isCapsule: true });
+  const characterBody = PhysXInstance.instance.createController({ isCapsule: true });
+  console.log(characterBody);
   (character as any).body = characterBody;
   objects.set(characterBody.id, character);
   characterBody.addEventListener(ControllerEvents.CONTROLLER_SHAPE_HIT, (ev) => {
-    // console.log('COLLISION DETECTED', ev);
+    console.log('COLLISION DETECTED', ev);
   });
-  const raycastQuery = await PhysXInstance.instance.addRaycastQuery({ type: SceneQueryType.Closest, origin: character.position, direction: new Vector3(0, -1, 0), maxDistance: 1 });
+  const raycastQuery = PhysXInstance.instance.addRaycastQuery({ type: SceneQueryType.Closest, origin: character.position, direction: new Vector3(0, -1, 0), maxDistance: 1 });
 
   createBalls().forEach(async (object) => {
-    const body = await PhysXInstance.instance.addBody({ 
+    const body = PhysXInstance.instance.addBody({ 
       shapes: getShapesFromObject(object),
       transform: getTransformFromWorldPos(object),
       type: PhysXBodyType.DYNAMIC
@@ -55,8 +56,8 @@ const load = async () => {
     renderer.addToScene(object);
   });
 
-  const floor = new Mesh(new BoxBufferGeometry(platformSize, 1, platformSize), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide })).translateY(-1);
-  const floorbody = await PhysXInstance.instance.addBody({ 
+  const floor = new Mesh(new BoxBufferGeometry(platformSize, 1, platformSize), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide })) ;
+  const floorbody = PhysXInstance.instance.addBody({ 
     shapes: getShapesFromObject(floor), 
     transform: getTransformFromWorldPos(floor),
     type: PhysXBodyType.STATIC
@@ -89,7 +90,7 @@ const load = async () => {
   let lastTime = Date.now() - (1 / 60);
   let lastDelta = 1 / 60;
 
-  await PhysXInstance.instance.startPhysX(true);
+  PhysXInstance.instance.startPhysX(true);
   const update = () => {
     const time = Date.now();
     const timeSecs = time / 1000;
@@ -149,12 +150,12 @@ const load = async () => {
       const { body } = object;
       if (object.position.y < -10 && body) {
         delete object.body;
-        await PhysXInstance.instance.removeBody(body);
+        PhysXInstance.instance.removeBody(body);
         balls.delete(id);
         objects.delete(id);
         object.position.copy(randomVector3OnPlatform());
         object.updateWorldMatrix(true, true)
-        const newbody = await PhysXInstance.instance.addBody({ 
+        const newbody = PhysXInstance.instance.addBody({ 
           transform: getTransformFromWorldPos(object),
           shapes: getShapesFromObject(object),
           type: PhysXBodyType.DYNAMIC

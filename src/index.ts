@@ -4,6 +4,7 @@ import { MessageQueue } from './utils/MessageQueue';
 import { PhysXConfig, PhysXBodyType, RigidBodyProxy, PhysXShapeConfig, BodyConfig, ControllerConfig, SceneQuery, CollisionEvents, ControllerEvents, Transform } from './types/ThreePhysX';
 import { createNewTransform } from './threeToPhysX';
 import { proxyEventListener } from './utils/proxyEventListener';
+import { clone } from './utils/misc';
 
 let nextAvailableBodyIndex = 0;
 let nextAvailableShapeID = 0;
@@ -149,7 +150,6 @@ export class PhysXInstance {
     const kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.KINEMATIC_DATA_SIZE * this.kinematicBodies.size));
     this.kinematicBodies.forEach((body, id) => {
       const { translation, rotation } = body.transform;
-      console.log(translation)
       kinematicArray.set([id, translation.x, translation.y, translation.z, rotation.x, rotation.y, rotation.z, rotation.w], offset);
       offset += BufferConfig.KINEMATIC_DATA_SIZE;
     });
@@ -189,7 +189,7 @@ export class PhysXInstance {
         type: type ?? PhysXBodyType.DYNAMIC,
       },
     }
-    this.physicsProxy.addBody([body]);
+    this.physicsProxy.addBody([ body ]);
     body.shapes.forEach((shape) => {
       (shape as any).body = body;
     });
@@ -383,7 +383,7 @@ const pipeRemoteFunction = (messageQueue: MessageQueue, id: string) => {
         resolve(detail.returnValue);
       };
       messageQueue.addEventListener(uuid, callback);
-      messageQueue.sendEvent(id, { args, uuid }, transferables);
+      messageQueue.sendEvent(id, { args: clone(args), uuid }, transferables);
     });
   };
 };
