@@ -406,7 +406,7 @@ export class PhysXManager {
     (controller as any)._collisions = [];
     (actor as any)._type = PhysXBodyType.CONTROLLER;
     // todo
-    (controller as any)._filterData = null; //new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0);
+    (controller as any)._filterData = null;//new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0);
     (controller as any)._queryCallback = null; //PhysX.PxQueryFilterCallback.implement({ preFilter: () => {}, postFilter: () => {} });
   };
 

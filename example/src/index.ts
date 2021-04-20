@@ -35,12 +35,11 @@ const load = async () => {
 
   const character = new Group();
   character.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
-  const characterBody = PhysXInstance.instance.createController({ isCapsule: true });
-  console.log(characterBody);
+  const characterBody = PhysXInstance.instance.createController({ isCapsule: true, position: { y: 5 } });
   (character as any).body = characterBody;
   objects.set(characterBody.id, character);
   characterBody.addEventListener(ControllerEvents.CONTROLLER_SHAPE_HIT, (ev) => {
-    console.log('COLLISION DETECTED', ev);
+    // console.log('COLLISION DETECTED', ev);
   });
   const raycastQuery = PhysXInstance.instance.addRaycastQuery({ type: SceneQueryType.Closest, origin: character.position, direction: new Vector3(0, -1, 0), maxDistance: 1 });
 

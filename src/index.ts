@@ -140,7 +140,7 @@ export class PhysXInstance {
       removeRaycastQuery: pipeRemoteFunction(messageQueue, 'removeRaycastQuery'),
     };
 
-    await this.physicsProxy.initPhysX([config]);
+    await this.physicsProxy.initPhysX([ clone(config) ]);
   };
 
   // update kinematic bodies
@@ -172,7 +172,7 @@ export class PhysXInstance {
   };
 
   startPhysX(start: boolean) {
-    return this.physicsProxy.startPhysX([start]);
+    return this.physicsProxy.startPhysX([ start ]);
   };
 
   addBody({ shapes, type, transform }: { shapes?: any, type?: PhysXBodyType, transform?: Transform } = {}) {
@@ -189,7 +189,7 @@ export class PhysXInstance {
         type: type ?? PhysXBodyType.DYNAMIC,
       },
     }
-    this.physicsProxy.addBody([ body ]);
+    this.physicsProxy.addBody([ clone(body) ]);
     body.shapes.forEach((shape) => {
       (shape as any).body = body;
     });
@@ -219,7 +219,7 @@ export class PhysXInstance {
     body.shapes.forEach((shape) => {
       shape._debugNeedsUpdate = true;
     });
-    this.physicsProxy.updateBody([{ id, options }]);
+    this.physicsProxy.updateBody([ clone({ id, options }) ]);
   };
 
   removeBody = async (body: RigidBodyProxy) => {
@@ -257,10 +257,10 @@ export class PhysXInstance {
     }
     shape.id = this._getNextAvailableShapeID();
     this.physicsProxy.createController([
-      {
+      clone({
         id: body.id,
         config: shape,
-      },
+      }),
     ]);
     shape.body = body;
     body.controller = {
@@ -307,15 +307,15 @@ export class PhysXInstance {
       body.controller.config.halfSideExtent = config.halfSideExtent;
     }
     return this.physicsProxy.updateController([
-      {
+      clone({
         id: body.id,
         config,
-      },
+      }),
     ]);
   };
 
   removeController(id) {
-    this.physicsProxy.removeController([{ id }])
+    this.physicsProxy.removeController([ { id } ])
     const body = this.controllerBodies.get(id);
     this.shapes.delete(body.controller.config.id);
     this.controllerBodies.delete(id);
@@ -334,7 +334,7 @@ export class PhysXInstance {
     const id = this._getNextAvailableRaycastID();
     this.raycasts.set(id, raycastQuery);
     raycastQuery.id = id;
-    this.physicsProxy.addRaycastQuery([raycastQuery]);
+    this.physicsProxy.addRaycastQuery([ clone(raycastQuery) ]);
     return raycastQuery;
   };
 
@@ -347,7 +347,7 @@ export class PhysXInstance {
   removeRaycastQuery(raycastQuery: SceneQuery) {
     if (!this.raycasts.has(raycastQuery.id)) return;
     this.raycasts.delete(raycastQuery.id);
-    this.physicsProxy.removeRaycastQuery([raycastQuery.id]);
+    this.physicsProxy.removeRaycastQuery([ raycastQuery.id ]);
   };
 
   addConstraint = async () => {
@@ -383,7 +383,7 @@ const pipeRemoteFunction = (messageQueue: MessageQueue, id: string) => {
         resolve(detail.returnValue);
       };
       messageQueue.addEventListener(uuid, callback);
-      messageQueue.sendEvent(id, { args: clone(args), uuid }, transferables);
+      messageQueue.sendEvent(id, { args, uuid }, transferables);
     });
   };
 };
