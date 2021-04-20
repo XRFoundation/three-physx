@@ -8,35 +8,13 @@ const pos = new Vector3();
 const rot = new Quaternion();
 const scale = new Vector3(1, 1, 1);
 
-// TODO: set root to the scene in case objects are parented already
-
-export const createPhysXShapes = (object: any) => {
+export const getShapes = (object: any) => {
   const shapes: PhysXShapeConfig[] = [];
   object.updateMatrixWorld(true);
   iterateGeometries(object, { includeInvisible: true }, (data) => {
     shapes.push(...data);
   });
   return shapes;
-};
-
-export const createPhysXBody = (object, id, shapes?) => {
-  const transform = getTransformFromWorldPos(object);
-  if (!object.userData.physx) {
-    object.userData.physx = {
-      type: PhysXBodyType.STATIC,
-    };
-  }
-  const type = object.userData.physx.type;
-
-  const body: RigidBodyProxy = {
-    id,
-    shapes,
-    transform,
-    options: {
-      type,
-    },
-  };
-  object.body = body;
 };
 
 const createShapes = (mesh, root): PhysXShapeConfig[] => {
@@ -57,7 +35,8 @@ const createShapes = (mesh, root): PhysXShapeConfig[] => {
       data.config.id = id;
       shapes.push(data);
     });
-  } else {
+  } 
+  else {
     const data = getThreeGeometryShape(mesh);
     if (!data) return [];
     const transform = getTransformRelativeToRoot(mesh, root);
@@ -178,9 +157,6 @@ const getBoxExtents = function (mesh: Mesh) {
 const matrix = new Matrix4();
 export const getTransformFromWorldPos = (obj: Object3D) => {
   obj.matrixWorld.decompose(pos, rot, scale);
-  // obj.getWorldPosition(pos);
-  // obj.getWorldQuaternion(rot);
-  // obj.getWorldScale(scale);
   return {
     translation: { x: pos.x, y: pos.y, z: pos.z },
     rotation: { x: rot.x, y: rot.y, z: rot.z, w: rot.w },
@@ -190,10 +166,20 @@ export const getTransformFromWorldPos = (obj: Object3D) => {
   };
 };
 
+export const createNewTransform = () => {
+  return {
+    translation: { x: 0, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0, w: 1 },
+    scale: { x: 1, y: 1, z: 1 },
+    linearVelocity: { x: 0, y: 0, z: 0 },
+    angularVelocity: { x: 0, y: 0, z: 0 },
+  };
+};
+
 const getTransformRelativeToRoot = (mesh: Object3D, root: Object3D) => {
-  console.log(mesh, root)
+  // console.log(mesh, root)
   const worldScale = root.getWorldScale(scale);
-  console.log(worldScale)
+  // console.log(worldScale)
   // no local transformation
   if (mesh === root) {
     return {
@@ -204,22 +190,22 @@ const getTransformRelativeToRoot = (mesh: Object3D, root: Object3D) => {
   }
 
   // local transformation
-  // if (mesh.parent === root) {
-  //   return {
-  //     translation: {
-  //       x: mesh.position.x,
-  //       y: mesh.position.y,
-  //       z: mesh.position.z,
-  //     },
-  //     rotation: {
-  //       x: mesh.quaternion.x,
-  //       y: mesh.quaternion.y,
-  //       z: mesh.quaternion.z,
-  //       w: mesh.quaternion.w,
-  //     },
-  //     scale: { x: worldScale.x, y: worldScale.y, z: worldScale.z },
-  //   };
-  // }
+  if (mesh.parent === root) {
+    return {
+      translation: {
+        x: mesh.position.x,
+        y: mesh.position.y,
+        z: mesh.position.z,
+      },
+      rotation: {
+        x: mesh.quaternion.x,
+        y: mesh.quaternion.y,
+        z: mesh.quaternion.z,
+        w: mesh.quaternion.w,
+      },
+      scale: { x: worldScale.x, y: worldScale.y, z: worldScale.z },
+    };
+  }
   mesh.updateMatrixWorld(true);
   mesh.updateWorldMatrix(true, true);
 

@@ -2,7 +2,7 @@
 
 import { Matrix4, Vector3, Quaternion } from 'three';
 import { getShape } from './getShape';
-import { PhysXConfig, PhysXBodyTransform, PhysXBodyType, BodyConfig, PhysXBodyData, RigidBodyProxy, ShapeConfig, PhysXShapeConfig, ControllerConfig, Vec3, SceneQuery, SceneQueryType, RaycastHit, CollisionEvents, ControllerEvents } from './types/ThreePhysX';
+import { PhysXConfig, PhysXBodyType, BodyConfig, Transform, RigidBodyProxy, ShapeConfig, PhysXShapeConfig, ControllerConfig, Vec3, SceneQuery, SceneQueryType, RaycastHit, CollisionEvents, ControllerEvents } from './types/ThreePhysX';
 import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
 
@@ -341,7 +341,7 @@ export class PhysXManager {
     }
   };
 
-  addController = async ({ id, config }: { id: number; config: ControllerConfig }) => {
+  createController = async ({ id, config }: { id: number; config: ControllerConfig }) => {
     const controllerDesc = config.isCapsule ? new PhysX.PxCapsuleControllerDesc() : new PhysX.PxBoxControllerDesc();
     controllerDesc.position = (config.position as Vec3) ?? { x: 0, y: 0, z: 0 };
     if (config.isCapsule) {
@@ -549,28 +549,6 @@ const getBodyData = (body: PhysX.PxRigidActor) => {
   const linVel = body.getLinearVelocity();
   const angVel = body.getAngularVelocity();
   return [transform.translation.x, transform.translation.y, transform.translation.z, transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w, linVel.x, linVel.y, linVel.z, angVel.x, angVel.y, angVel.z];
-};
-
-const mat4ToTransform = (matrix: Matrix4): PhysXBodyTransform => {
-  matrix.decompose(pos, quat, scale);
-  return {
-    translation: {
-      x: pos.x,
-      y: pos.y,
-      z: pos.z,
-    },
-    rotation: {
-      x: quat.x,
-      y: quat.y,
-      z: quat.z,
-      w: quat.w,
-    },
-    scale: {
-      x: scale.x,
-      y: scale.y,
-      z: scale.z,
-    },
-  };
 };
 
 const defaultMask = 1 << 0;

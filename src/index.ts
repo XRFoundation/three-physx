@@ -1,9 +1,8 @@
 import * as BufferConfig from './BufferConfig';
 import { MessageQueue } from './utils/MessageQueue';
 
-import { PhysXConfig, PhysXBodyType, RigidBodyProxy, Object3DBody, PhysXShapeConfig, BodyConfig, ShapeConfig, ControllerConfig, SceneQuery, SceneQueryType, CollisionEvents, ControllerEvents } from './types/ThreePhysX';
-import { Object3D, Quaternion, Scene, Vector3 } from 'three';
-import { createPhysXBody, createPhysXShapes, getTransformFromWorldPos } from './threeToPhysX';
+import { PhysXConfig, PhysXBodyType, RigidBodyProxy, PhysXShapeConfig, BodyConfig, ControllerConfig, SceneQuery, CollisionEvents, ControllerEvents, Transform } from './types/ThreePhysX';
+import { createNewTransform } from './threeToPhysX';
 import { proxyEventListener } from './utils/proxyEventListener';
 
 let nextAvailableBodyIndex = 0;
@@ -17,7 +16,7 @@ export class PhysXInstance {
 
   bodies: Map<number, RigidBodyProxy> = new Map<number, RigidBodyProxy>();
   shapes: Map<number, PhysXShapeConfig> = new Map<number, PhysXShapeConfig>();
-  kinematicBodies: Map<number, Object3DBody> = new Map<number, Object3DBody>();
+  kinematicBodies: Map<number, RigidBodyProxy> = new Map<number, RigidBodyProxy>();
   controllerBodies: Map<number, RigidBodyProxy> = new Map<number, RigidBodyProxy>();
   raycasts: Map<number, SceneQuery> = new Map<number, SceneQuery>();
 
@@ -132,7 +131,7 @@ export class PhysXInstance {
       addBody: pipeRemoteFunction(messageQueue, 'addBody'),
       updateBody: pipeRemoteFunction(messageQueue, 'updateBody'),
       removeBody: pipeRemoteFunction(messageQueue, 'removeBody'),
-      addController: pipeRemoteFunction(messageQueue, 'addController'),
+      createController: pipeRemoteFunction(messageQueue, 'createController'),
       updateController: pipeRemoteFunction(messageQueue, 'updateController'),
       removeController: pipeRemoteFunction(messageQueue, 'removeController'),
       addRaycastQuery: pipeRemoteFunction(messageQueue, 'addRaycastQuery'),
@@ -148,10 +147,10 @@ export class PhysXInstance {
     // TODO: make this rely on kinematicBodies.size instead of bodies.size
     let offset = 0;
     const kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.KINEMATIC_DATA_SIZE * this.kinematicBodies.size));
-    this.kinematicBodies.forEach((obj, id) => {
-      obj.body.transform = getTransformFromWorldPos(obj);
-      const transform = obj.body.transform;
-      kinematicArray.set([id, transform.translation.x, transform.translation.y, transform.translation.z, transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w], offset);
+    this.kinematicBodies.forEach((body, id) => {
+      const { translation, rotation } = body.transform;
+      console.log(translation)
+      kinematicArray.set([id, translation.x, translation.y, translation.z, rotation.x, rotation.y, rotation.z, rotation.w], offset);
       offset += BufferConfig.KINEMATIC_DATA_SIZE;
     });
     offset = 0;
@@ -176,74 +175,76 @@ export class PhysXInstance {
     return this.physicsProxy.startPhysX([start]);
   };
 
-  addBody = async (object: Object3D, shapes?: PhysXShapeConfig[]) => {
+  addBody = async ({ shapes, type, transform }: { shapes?: any, type?: PhysXBodyType, transform?: Transform } = {}) => {
     const id = this._getNextAvailableBodyID();
-    if (shapes) {
-      shapes.forEach((shape) => {
-        shape.id = this._getNextAvailableShapeID();
-        this.shapes.set(shape.id, shape);
-      });
-    }
-    createPhysXBody(object, id, shapes || this.addShapes(object));
-    await this.physicsProxy.addBody([(object as Object3DBody).body]);
-    (object as Object3DBody).body.shapes.forEach((shape) => {
-      (shape as any).body = (object as Object3DBody).body;
-    });
-    proxyEventListener((object as Object3DBody).body);
-    this.bodies.set(id, (object as Object3DBody).body);
-    if ((object as Object3DBody).body.options.type === PhysXBodyType.KINEMATIC) {
-      this.kinematicBodies.set(id, object as Object3DBody);
-    }
-    return (object as Object3DBody).body;
-  };
-
-  addShapes = (object) => {
-    const shapes = createPhysXShapes(object);
-    shapes.forEach((shape) => {
+    shapes?.forEach((shape) => {
+      shape.id = this._getNextAvailableShapeID();
       this.shapes.set(shape.id, shape);
     });
-    return shapes;
+    const body: RigidBodyProxy = { 
+      id, 
+      transform: transform ?? createNewTransform(), 
+      shapes: shapes ?? [],
+      options: { 
+        type: type ?? PhysXBodyType.DYNAMIC,
+      }, 
+    }
+    await this.physicsProxy.addBody([body]);
+    body.shapes.forEach((shape) => {
+      (shape as any).body = body;
+    });
+    proxyEventListener(body);
+    this.bodies.set(body.id, body);
+    if (body.options.type === PhysXBodyType.KINEMATIC) {
+      this.kinematicBodies.set(body.id, body);
+    }
+    return body;
   };
 
-  updateBody = async (object: Object3DBody | any, options: BodyConfig) => {
-    if (typeof object.body === 'undefined') {
+  updateBody = async (body: RigidBodyProxy | any, options: BodyConfig) => {
+    if (typeof body === 'undefined') {
       throw new Error('three-physx! Tried to update a body that does not exist.');
     }
-    if (object.body.options.type === PhysXBodyType.STATIC && typeof options.type !== 'undefined') {
+    if (body.options.type === PhysXBodyType.STATIC && typeof options.type !== 'undefined') {
       throw new Error('three-physx! Tried to change the type of a static object. This is not allowed, instead remove the body and create a new one.');
     }
-    if (object.body.options.type === PhysXBodyType.DYNAMIC && options.type === PhysXBodyType.KINEMATIC) {
-      this.kinematicBodies.set(object.body.id, object as Object3DBody);
-      object.body.options.type = PhysXBodyType.KINEMATIC;
-    } else if (object.body.options.type === PhysXBodyType.KINEMATIC && options.type === PhysXBodyType.DYNAMIC) {
-      this.kinematicBodies.delete(object.body.id);
-      object.body.options.type = PhysXBodyType.DYNAMIC;
+    if (body.options.type === PhysXBodyType.DYNAMIC && options.type === PhysXBodyType.KINEMATIC) {
+      this.kinematicBodies.set(body.id, body);
+      body.options.type = PhysXBodyType.KINEMATIC;
+    } else if (body.options.type === PhysXBodyType.KINEMATIC && options.type === PhysXBodyType.DYNAMIC) {
+      this.kinematicBodies.delete(body.id);
+      body.options.type = PhysXBodyType.DYNAMIC;
     }
-    const id = (object as Object3DBody).body.id;
-    (object as Object3DBody).body.shapes.forEach((shape) => {
+    const id = body.id;
+    body.shapes.forEach((shape) => {
       shape._debugNeedsUpdate = true;
     });
     await this.physicsProxy.updateBody([{ id, options }]);
     return;
   };
 
-  removeBody = async (object: Object3DBody) => {
-    if (!object.body) return;
-    this.bodies.delete(object.body.id);
-    if (object.body.options.type === PhysXBodyType.KINEMATIC) {
-      this.kinematicBodies.delete(object.body.id);
+  removeBody = async (body: RigidBodyProxy) => {
+    this.bodies.delete(body.id);
+    if (body.options.type === PhysXBodyType.KINEMATIC) {
+      this.kinematicBodies.delete(body.id);
     }
-    object.body.shapes.forEach((shape) => {
+    body.shapes.forEach((shape) => {
       this.shapes.delete(shape.id);
     })
-    const id = object.body.id;
-    delete object.body;
-    await this.physicsProxy.removeBody([{ id }]);
+    const id = body.id;
+    return this.physicsProxy.removeBody([{ id }]);
   };
 
-  addController = async (object: Object3D, options?: ControllerConfig) => {
+  createController = async (options?: ControllerConfig) => {
     const id = this._getNextAvailableBodyID();
-    createPhysXBody(object, id, []);
+    const body: RigidBodyProxy = { 
+      id, 
+      transform: createNewTransform(), 
+      shapes: [],
+      options: { 
+        type: PhysXBodyType.CONTROLLER,
+      }, 
+    }
     const shape = options ?? {};
     if (typeof options !== 'undefined') {
       if (options.isCapsule) {
@@ -256,72 +257,70 @@ export class PhysXInstance {
       }
     }
     shape.id = this._getNextAvailableShapeID();
-    shape.body = (object as Object3DBody).body;
-    (object as Object3DBody).body.controller = {
+    await this.physicsProxy.createController([
+      {
+        id: body.id,
+        config: shape,
+      },
+    ]);
+    shape.body = body;
+    body.controller = {
       config: shape,
       collisions: { down: false, sides: false, up: false },
       delta: { x: 0, y: 0, z: 0 },
       velocity: { x: 0, y: 0, z: 0 },
     };
     this.shapes.set(shape.id, shape as any);
-    await this.physicsProxy.addController([
-      {
-        id: (object as Object3DBody).body.id,
-        config: shape,
-      },
-    ]);
-    (object as Object3DBody).body.options.type = PhysXBodyType.CONTROLLER;
-    this.controllerBodies.set(id, (object as Object3DBody).body);
-    proxyEventListener((object as Object3DBody).body);
-    this.bodies.set(id, (object as Object3DBody).body);
-    return (object as Object3DBody).body;
+    this.controllerBodies.set(id, body);
+    proxyEventListener(body);
+    this.bodies.set(id, body);
+    return body;
   };
 
-  updateController = async (object: Object3DBody, config: ControllerConfig) => {
-    if (typeof object?.body?.id === 'undefined') return;
-    if (!this.controllerBodies.has(object.body.id)) return;
-    object.body.controller._debugNeedsUpdate = true;
+  updateController = async (body: RigidBodyProxy, config: ControllerConfig) => {
+    if (typeof body?.id === 'undefined') return;
+    if (!this.controllerBodies.has(body.id)) return;
+    body.controller._debugNeedsUpdate = true;
     if (typeof config.height !== 'undefined') {
-      object.body.controller.config.height = config.height;
+      body.controller.config.height = config.height;
     }
     if (typeof config.resize !== 'undefined') {
-      if (typeof object.body.controller.config.height !== 'undefined') {
-        object.body.controller.config.height = config.resize;
+      if (typeof body.controller.config.height !== 'undefined') {
+        body.controller.config.height = config.resize;
       }
-      if (typeof object.body.controller.config.halfHeight !== 'undefined') {
-        object.body.controller.config.halfHeight = config.resize * 2;
+      if (typeof body.controller.config.halfHeight !== 'undefined') {
+        body.controller.config.halfHeight = config.resize * 2;
       }
     }
     if (typeof config.radius !== 'undefined') {
-      object.body.controller.config.radius = config.radius;
+      body.controller.config.radius = config.radius;
     }
     if (typeof config.climbingMode !== 'undefined') {
-      object.body.controller.config.climbingMode = config.climbingMode;
+      body.controller.config.climbingMode = config.climbingMode;
     }
     if (typeof config.halfForwardExtent !== 'undefined') {
-      object.body.controller.config.halfForwardExtent = config.halfForwardExtent;
+      body.controller.config.halfForwardExtent = config.halfForwardExtent;
     }
     if (typeof config.halfHeight !== 'undefined') {
-      object.body.controller.config.halfHeight = config.halfHeight;
+      body.controller.config.halfHeight = config.halfHeight;
     }
     if (typeof config.halfSideExtent !== 'undefined') {
-      object.body.controller.config.halfSideExtent = config.halfSideExtent;
+      body.controller.config.halfSideExtent = config.halfSideExtent;
     }
-    await this.physicsProxy.updateController([
+    return this.physicsProxy.updateController([
       {
-        id: object.body.id,
+        id: body.id,
         config,
       },
     ]);
   };
 
   removeController = async (id) => {
-    if (await this.physicsProxy.removeController([{ id }])) {
-      const body = this.controllerBodies.get(id);
-      this.shapes.delete(body.controller.config.id);
-      this.controllerBodies.delete(id);
-      this.bodies.delete(id);
-    }
+    await this.physicsProxy.removeController([{ id }])
+    const body = this.controllerBodies.get(id);
+    this.shapes.delete(body.controller.config.id);
+    this.controllerBodies.delete(id);
+    this.bodies.delete(id);
   };
 
   addRaycastQuery = async (raycastQuery: SceneQuery) => {

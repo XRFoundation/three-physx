@@ -37,13 +37,7 @@ export interface Quat {
   w: number;
 }
 
-export interface PhysXBodyTransform {
-  translation: Vec3;
-  rotation: Quat;
-  scale: Vec3;
-}
-
-export interface PhysXBodyData {
+export interface Transform {
   translation: Vec3;
   rotation: Quat;
   scale: Vec3;
@@ -61,7 +55,7 @@ export enum PhysXBodyType {
 export interface PhysXShapeConfig {
   id: number;
   shape: PhysXModelShapes;
-  transform: PhysXBodyTransform;
+  transform: Transform;
   config: ShapeConfig;
   _debugNeedsUpdate?: any;
   options?: {
@@ -95,13 +89,13 @@ export interface BodyConfig {
   angularDamping?: number;
   linearVelocity?: Vec3;
   angularVelocity?: Vec3;
-  transform?: PhysXBodyData;
+  transform?: Transform;
   shapes?: ShapeConfig[]; // only use in updates, initial is set from PhysXShapeConfig
 }
 
 export interface RigidBodyProxy {
   id: number;
-  transform: PhysXBodyData;
+  transform: Transform;
   shapes: PhysXShapeConfig[];
   options: BodyConfig;
   controller?: {

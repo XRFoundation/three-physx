@@ -1,4 +1,4 @@
-import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer , Object3DBody, PhysXBodyType, SceneQueryType, RigidBodyProxy, PhysXModelShapes, PhysXShapeConfig, CollisionEvents, ControllerEvents } from '../../src';
+import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer , Object3DBody, PhysXBodyType, SceneQueryType, RigidBodyProxy, PhysXModelShapes, PhysXShapeConfig, CollisionEvents, ControllerEvents, getShapes, getTransformFromWorldPos } from '../../src';
 import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry } from 'three';
 const load = async () => {
   const renderer = await import('./renderer');
@@ -11,28 +11,32 @@ const load = async () => {
   new PhysXInstance(new Worker(new URL('../../src/worker.ts', import.meta.url)));
   await PhysXInstance.instance.initPhysX({ jsPath: '/physx/physx.release.js', wasmPath: '/physx/physx.release.wasm' });
 
-  const kinematicObject = new Group().translateY(-2.5).rotateZ(Math.PI / 2);
-  kinematicObject.scale.setScalar(2)
+  const kinematicObject = new Group()//.translateY(-2.5).rotateZ(Math.PI / 2);
+  // kinematicObject.scale.setScalar(2)
   kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateX(2).rotateY(Math.PI / 2));
   kinematicObject.children[0].scale.setScalar(2);
   kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
-  kinematicObject.userData.physx = { type: PhysXBodyType.KINEMATIC };
-
-  const kinematicBody = await PhysXInstance.instance.addBody(kinematicObject); //, [{ id: undefined, shape: PhysXModelShapes.Sphere, options: { sphereRadius: 2 }}]);
-  // let isKinematic = true;
-  // setInterval(() => {
-  //   isKinematic = !isKinematic;
-  //   PhysXInstance.instance.updateBody(kinematicObject, { angularVelocity: { x: 0, y: 0, z: 0 }, linearVelocity: { x: 0, y: 0, z: 0 }, type: isKinematic ? PhysXBodyType.KINEMATIC : PhysXBodyType.DYNAMIC });
-  // }, 2000);
+  const kinematicBody = await PhysXInstance.instance.addBody({ 
+    shapes: getShapes(kinematicObject),
+    transform: getTransformFromWorldPos(kinematicObject),
+    type: PhysXBodyType.KINEMATIC
+  });
+  let isKinematic = true;
+  setInterval(() => {
+    isKinematic = !isKinematic;
+    PhysXInstance.instance.updateBody(kinematicBody, { angularVelocity: { x: 0, y: 0, z: 0 }, linearVelocity: { x: 0, y: 0, z: 0 }, type: isKinematic ? PhysXBodyType.KINEMATIC : PhysXBodyType.DYNAMIC });
+  }, 2000);
   objects.set(kinematicBody.id, kinematicObject);
   renderer.addToScene(kinematicObject);
+  (kinematicObject as any).body = kinematicBody;
   kinematicBody.addEventListener(CollisionEvents.TRIGGER_START, ({ bodySelf, bodyOther, shapeSelf, shapeOther }) => {
     // console.log('TRIGGER DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
   });
 
   const character = new Group();
   character.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
-  const characterBody = await PhysXInstance.instance.addController(character, { isCapsule: true });
+  const characterBody = await PhysXInstance.instance.createController({ isCapsule: true });
+  (character as any).body = characterBody;
   objects.set(characterBody.id, character);
   characterBody.addEventListener(ControllerEvents.CONTROLLER_SHAPE_HIT, (ev) => {
     // console.log('COLLISION DETECTED', ev);
@@ -40,21 +44,24 @@ const load = async () => {
   const raycastQuery = await PhysXInstance.instance.addRaycastQuery({ type: SceneQueryType.Closest, origin: character.position, direction: new Vector3(0, -1, 0), maxDistance: 1 });
 
   createBalls().forEach(async (object) => {
-    const body = await PhysXInstance.instance.addBody(object);
+    const body = await PhysXInstance.instance.addBody({ 
+      shapes: getShapes(object),
+      transform: getTransformFromWorldPos(object),
+      type: PhysXBodyType.DYNAMIC
+    });
+    object.body = body;
     objects.set(body.id, object);
     balls.set(body.id, object);
     renderer.addToScene(object);
   });
 
   const floor = new Mesh(new BoxBufferGeometry(platformSize, 1, platformSize), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide })).translateY(-1);
-  floor.userData.physx = { 
-    type: PhysXBodyType.STATIC,
-    shapes: [ {
-      // collisionLayer: 1 << Math.round(Math.random() * 2),
-      // collisionMask: 1 << Math.round(Math.random() * 2),
-    } ] 
-  };
-  const floorbody = await PhysXInstance.instance.addBody(floor);
+  const floorbody = await PhysXInstance.instance.addBody({ 
+    shapes: getShapes(floor), 
+    transform: getTransformFromWorldPos(floor),
+    type: PhysXBodyType.STATIC
+  });
+  (floor as any).body = floorbody;
   objects.set(floorbody.id, floor);
   renderer.addToScene(floor);
 
@@ -90,6 +97,13 @@ const load = async () => {
 
     if ((kinematicObject as any)?.body?.options.type === PhysXBodyType.KINEMATIC) {
       kinematicObject.position.set(Math.sin(timeSecs) * 10, 0, Math.cos(timeSecs) * 10);
+      kinematicBody.transform.translation.x = kinematicObject.position.x;
+      kinematicBody.transform.translation.y = kinematicObject.position.y;
+      kinematicBody.transform.translation.z = kinematicObject.position.z;
+      kinematicBody.transform.rotation.x = kinematicObject.quaternion.x;
+      kinematicBody.transform.rotation.y = kinematicObject.quaternion.y;
+      kinematicBody.transform.rotation.z = kinematicObject.quaternion.z;
+      kinematicBody.transform.rotation.w = kinematicObject.quaternion.w;
       kinematicObject.lookAt(0, 0, 0);
     }
     if (characterBody.controller.collisions.down) {
@@ -115,17 +129,6 @@ const load = async () => {
         characterBody.controller.velocity.y = 0.2;
       }
     })
-    balls.forEach(async (object: Object3DBody, id) => {
-      if (object.position.y < -10 && object.body) {
-        await PhysXInstance.instance.removeBody(object);
-        balls.delete(id);
-        objects.delete(id);
-        object.position.copy(randomVector3OnPlatform());
-        const body = await PhysXInstance.instance.addBody(object);
-        balls.set(body.id, object);
-        objects.set(body.id, object);
-      }
-    })
     characterBody.controller.delta.y += characterBody.controller.velocity.y;
     raycastQuery.origin = new Vector3().copy(character.position).add(new Vector3(0, -1, 0));
     // console.log(raycastQuery.hits);
@@ -142,6 +145,25 @@ const load = async () => {
         obj.position.set(translation.x, translation.y, translation.z);
       }
     });
+    balls.forEach(async (object: Object3DBody, id) => {
+      const { body } = object;
+      if (object.position.y < -10 && body) {
+        delete object.body;
+        await PhysXInstance.instance.removeBody(body);
+        balls.delete(id);
+        objects.delete(id);
+        object.position.copy(randomVector3OnPlatform());
+        object.updateWorldMatrix(true, true)
+        const newbody = await PhysXInstance.instance.addBody({ 
+          transform: getTransformFromWorldPos(object),
+          shapes: getShapes(object),
+          type: PhysXBodyType.DYNAMIC
+        });
+        object.body = newbody;
+        balls.set(newbody.id, object);
+        objects.set(newbody.id, object);
+      }
+    })
     debug.update();
     renderer.update();
     lastDelta = delta;
@@ -161,7 +183,7 @@ const createBalls = () => {
     // new CylinderBufferGeometry()
   ];
   const meshes = [];
-  for (let i = 0; i < 0; i++) {
+  for (let i = 0; i < 1000; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     mesh.userData.physx = {
