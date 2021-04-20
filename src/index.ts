@@ -13,7 +13,6 @@ let nextAvailableRaycastID = 0;
 export class PhysXInstance {
   static instance: PhysXInstance;
   worker: Worker;
-  onUpdate: any;
   physicsProxy: any;
 
   bodies: Map<number, RigidBodyProxy> = new Map<number, RigidBodyProxy>();
@@ -21,13 +20,10 @@ export class PhysXInstance {
   kinematicBodies: Map<number, Object3DBody> = new Map<number, Object3DBody>();
   controllerBodies: Map<number, RigidBodyProxy> = new Map<number, RigidBodyProxy>();
   raycasts: Map<number, SceneQuery> = new Map<number, SceneQuery>();
-  scene: Scene;
 
-  constructor(worker: Worker, onUpdate: any, scene: Scene) {
+  constructor(worker: Worker) {
     PhysXInstance.instance = this;
-    this.scene = scene;
     this.worker = worker;
-    this.onUpdate = onUpdate;
   }
 
   initPhysX = async (config: PhysXConfig): Promise<void> => {
@@ -73,7 +69,6 @@ export class PhysXInstance {
       this.raycasts.forEach((raycastQuery) => {
         raycastQuery.hits = raycastResults[raycastQuery.id] ?? [];
       });
-      this.onUpdate();
     });
     messageQueue.addEventListener('colliderEvent', ({ detail }) => {
       detail.forEach((collision) => {

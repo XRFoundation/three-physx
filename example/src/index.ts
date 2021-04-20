@@ -1,7 +1,5 @@
 import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer , Object3DBody, PhysXBodyType, SceneQueryType, RigidBodyProxy, PhysXModelShapes, PhysXShapeConfig, CollisionEvents, ControllerEvents } from '../../src';
-import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry } from 'three';
-import { scene } from './renderer';
-
+import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry } from 'three';
 const load = async () => {
   const renderer = await import('./renderer');
 
@@ -9,26 +7,12 @@ const load = async () => {
   const balls = new Map<number, Object3D>();
   (globalThis as any).objects = objects;
 
-  const onUpdate = () => {
-    objects.forEach((obj: Object3DBody, id) => {
-      if (!obj.body) return;
-      if ((obj.body as RigidBodyProxy).options.type === PhysXBodyType.DYNAMIC) {
-        const translation = (obj.body as RigidBodyProxy).transform.translation;
-        const rotation = (obj.body as RigidBodyProxy).transform.rotation;
-        obj.position.set(translation.x, translation.y, translation.z);
-        obj.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
-      } else if ((obj.body as RigidBodyProxy).options.type === PhysXBodyType.CONTROLLER) {
-        const translation = (obj.body as RigidBodyProxy).transform.translation;
-        obj.position.set(translation.x, translation.y, translation.z);
-      }
-    });
-  };
   // @ts-ignore
-  new PhysXInstance(new Worker(new URL('../../src/worker.ts', import.meta.url)), onUpdate, renderer.scene);
+  new PhysXInstance(new Worker(new URL('../../src/worker.ts', import.meta.url)));
   await PhysXInstance.instance.initPhysX({ jsPath: '/physx/physx.release.js', wasmPath: '/physx/physx.release.wasm' });
 
-  const kinematicObject = new Group();//new Mesh(new TorusKnotBufferGeometry(), new MeshBasicMaterial({ color: randomColor() })).translateY(-2.5).rotateZ(Math.PI / 2);
-  // kinematicObject.scale.setScalar(2)
+  const kinematicObject = new Group().translateY(-2.5).rotateZ(Math.PI / 2);
+  kinematicObject.scale.setScalar(2)
   kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateX(2).rotateY(Math.PI / 2));
   kinematicObject.children[0].scale.setScalar(2);
   kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
@@ -146,6 +130,18 @@ const load = async () => {
     raycastQuery.origin = new Vector3().copy(character.position).add(new Vector3(0, -1, 0));
     // console.log(raycastQuery.hits);
     PhysXInstance.instance.update(delta);
+    objects.forEach((obj: Object3DBody) => {
+      if (!obj.body) return;
+      if ((obj.body as RigidBodyProxy).options.type === PhysXBodyType.DYNAMIC) {
+        const translation = (obj.body as RigidBodyProxy).transform.translation;
+        const rotation = (obj.body as RigidBodyProxy).transform.rotation;
+        obj.position.set(translation.x, translation.y, translation.z);
+        obj.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+      } else if ((obj.body as RigidBodyProxy).options.type === PhysXBodyType.CONTROLLER) {
+        const translation = (obj.body as RigidBodyProxy).transform.translation;
+        obj.position.set(translation.x, translation.y, translation.z);
+      }
+    });
     debug.update();
     renderer.update();
     lastDelta = delta;
@@ -165,7 +161,7 @@ const createBalls = () => {
     // new CylinderBufferGeometry()
   ];
   const meshes = [];
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < 0; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     mesh.userData.physx = {

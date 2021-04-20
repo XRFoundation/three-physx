@@ -1,9 +1,6 @@
 import { Vector3, Matrix4, Mesh, Quaternion, Object3D, SphereGeometry, BufferGeometry } from 'three';
-import { BufferGeometryUtils } from 'three/examples/jsm/utils/BufferGeometryUtils';
-import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry';
 import { PhysXInstance } from '.';
 import { PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy, ShapeConfig } from './types/ThreePhysX';
-import { quickhull } from './utils/quickhull';
 
 const matrixA = new Matrix4();
 const matrixB = new Matrix4();
@@ -194,7 +191,9 @@ export const getTransformFromWorldPos = (obj: Object3D) => {
 };
 
 const getTransformRelativeToRoot = (mesh: Object3D, root: Object3D) => {
-  const worldScale = mesh.getWorldScale(scale);
+  console.log(mesh, root)
+  const worldScale = root.getWorldScale(scale);
+  console.log(worldScale)
   // no local transformation
   if (mesh === root) {
     return {
@@ -205,22 +204,24 @@ const getTransformRelativeToRoot = (mesh: Object3D, root: Object3D) => {
   }
 
   // local transformation
-  if (mesh.parent === root) {
-    return {
-      translation: {
-        x: mesh.position.x,
-        y: mesh.position.y,
-        z: mesh.position.z,
-      },
-      rotation: {
-        x: mesh.quaternion.x,
-        y: mesh.quaternion.y,
-        z: mesh.quaternion.z,
-        w: mesh.quaternion.w,
-      },
-      scale: { x: worldScale.x, y: worldScale.y, z: worldScale.z },
-    };
-  }
+  // if (mesh.parent === root) {
+  //   return {
+  //     translation: {
+  //       x: mesh.position.x,
+  //       y: mesh.position.y,
+  //       z: mesh.position.z,
+  //     },
+  //     rotation: {
+  //       x: mesh.quaternion.x,
+  //       y: mesh.quaternion.y,
+  //       z: mesh.quaternion.z,
+  //       w: mesh.quaternion.w,
+  //     },
+  //     scale: { x: worldScale.x, y: worldScale.y, z: worldScale.z },
+  //   };
+  // }
+  mesh.updateMatrixWorld(true);
+  mesh.updateWorldMatrix(true, true);
 
   // world transformation
   matrixB.copy(mesh.matrixWorld);

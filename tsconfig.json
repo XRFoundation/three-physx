@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "declaration": true,
+    "declarationDir": "dist",
     "target": "esnext",
     "lib": [
       "esnext",
@@ -20,7 +22,7 @@
     "jsx": "preserve",
     "isolatedModules": true,
     "experimentalDecorators": true,
-    "outDir": "./lib"
+    "outDir": "./dist"
   },
   "include": [
     "./src/**/*.ts",
