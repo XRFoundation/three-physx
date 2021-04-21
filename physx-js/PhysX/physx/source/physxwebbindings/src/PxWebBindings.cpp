@@ -19,6 +19,26 @@
 using namespace physx;
 using namespace emscripten;
 
+	class CustomQueryFilter : public PxSceneQueryFilterCallback
+	{
+	public:
+		PxQueryHitType::Enum	preFilter(const PxFilterData& filterData, const PxShape* shape, const PxRigidActor* actor, PxHitFlags& queryFlags)
+		{
+      physx::shdfnd::getFoundation().error(PxErrorCode::eDEBUG_INFO, __FILE__, __LINE__, "prefilter");
+			// PT: ignore triggers
+			if(shape->getFlags() & physx::PxShapeFlag::eTRIGGER_SHAPE)
+				return PxQueryHitType::eNONE;
+
+			return PxQueryHitType::eBLOCK;
+		}
+
+		PxQueryHitType::Enum	postFilter(const PxFilterData& filterData, const PxQueryHit& hit)
+		{
+      physx::shdfnd::getFoundation().error(PxErrorCode::eDEBUG_INFO, __FILE__, __LINE__, "postFilter");
+			return PxQueryHitType::eBLOCK;
+		}
+	};
+
 struct PxRaycastCallbackWrapper : public wrapper<PxRaycastCallback>
 {
   EMSCRIPTEN_WRAPPER(PxRaycastCallbackWrapper)
@@ -710,7 +730,8 @@ EMSCRIPTEN_BINDINGS(physx)
                                  return fetched;
                                }))
       .function("raycastSingle", optional_override([](PxScene &scene, const PxVec3 &origin, const PxVec3 &unitDir, const PxReal distance, PxU16 flags, PxRaycastHit &hit, const PxSceneQueryFilterData &filterData, PxSceneQueryFilterCallback *filterCall, const PxSceneQueryCache *cache) {
-                  bool result = PxSceneQueryExt::raycastSingle(scene, origin, unitDir, distance, PxHitFlags(flags), hit, filterData, filterCall, cache);
+                  CustomQueryFilter filterCallback;
+                  bool result = PxSceneQueryExt::raycastSingle(scene, origin, unitDir, distance, PxHitFlags(flags), hit, filterData, &filterCallback, cache);
                   return result;
                 }),
                 allow_raw_pointers())

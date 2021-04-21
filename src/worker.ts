@@ -479,7 +479,7 @@ export class PhysXManager {
     (query as any)._filterData.setWords(query.collisionLayer ?? 1, 0);
     (query as any)._filterData.setWords(query.collisionMask ?? 1, 1);
     if(typeof query.flags === 'undefined') {
-      query.flags = PhysX.PxQueryFlag.eSTATIC.value | PhysX.PxQueryFlag.eDYNAMIC.value | PhysX.PxQueryFlag.ePREFILTER.value | PhysX.PxQueryFlag.ePOSTFILTER.value // | PhysX.PxQueryFlag.eANY_HIT.value | PhysX.PxQueryFlag.eNO_BLOCK.value;
+      query.flags = PhysX.PxQueryFlag.eSTATIC.value | PhysX.PxQueryFlag.eDYNAMIC.value | PhysX.PxQueryFlag.ePREFILTER.value | PhysX.PxQueryFlag.ePOSTFILTER.value | PhysX.PxQueryFlag.eANY_HIT.value | PhysX.PxQueryFlag.eNO_BLOCK.value;
     }
     (query as any)._filterData.setFlags(query.flags);
     this.raycasts.set(query.id, query);
@@ -526,11 +526,11 @@ export class PhysXManager {
       const buffer: PhysX.PxRaycastHit = new PhysX.PxRaycastHit();
       const filterData: PhysX.PxQueryFilterData = (raycastQuery as any)._filterData;
       // todo - implement query filter bindings
-      const queryCallback = PhysX.PxQueryFilterCallback.implement({ 
-        preFilter: (filterData, shape, actor) => { return PhysX.PxQueryHitType.eBLOCK }, 
-        postFilter: (filterData, hit) => { return PhysX.PxQueryHitType.eBLOCK  }
-      });
-      const hasHit = this.scene.raycastSingle(raycastQuery.origin, raycastQuery.direction, raycastQuery.maxDistance, raycastQuery.flags, buffer, filterData, queryCallback, null);
+      // const queryCallback = PhysX.PxQueryFilterCallback.implement({ 
+      //   preFilter: (filterData, shape, actor) => { return PhysX.PxQueryHitType.eBLOCK }, 
+      //   postFilter: (filterData, hit) => { return PhysX.PxQueryHitType.eBLOCK  }
+      // });
+      const hasHit = this.scene.raycastSingle(raycastQuery.origin, raycastQuery.direction, raycastQuery.maxDistance, raycastQuery.flags, buffer, filterData, null, null);
       if (hasHit) {
         hits.push({
           distance: buffer.distance,

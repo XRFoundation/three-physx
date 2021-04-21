@@ -60,8 +60,8 @@ const load = async () => {
     origin: character.position,
     direction: new Vector3(0, -1, 0),
     maxDistance: 1,
-    collisionLayer: COLLISIONS.NONE, // this only works if both are COLLISIONS.NONE
-    collisionMask: COLLISIONS.NONE
+    collisionLayer: COLLISIONS.ALL, // this only works if both are COLLISIONS.NONE
+    collisionMask: COLLISIONS.ALL
   });
 
   createBalls().forEach(async (object) => {
