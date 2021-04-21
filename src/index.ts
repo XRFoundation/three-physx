@@ -1,7 +1,7 @@
 import * as BufferConfig from './BufferConfig';
 import { MessageQueue } from './utils/MessageQueue';
 
-import { PhysXConfig, PhysXBodyType, RigidBodyProxy, PhysXShapeConfig, BodyConfig, ControllerConfig, SceneQuery, CollisionEvents, ControllerEvents, Transform } from './types/ThreePhysX';
+import { PhysXConfig, PhysXBodyType, RigidBodyProxy, PhysXShapeConfig, BodyConfig, ControllerConfig, SceneQuery, CollisionEvents, ControllerEvents, Transform, Quat, QuatFragment, Vec3, Vec3Fragment } from './types/ThreePhysX';
 import { createNewTransform } from './threeToPhysX';
 import { proxyEventListener } from './utils/proxyEventListener';
 import { clone } from './utils/misc';
@@ -11,8 +11,7 @@ let nextAvailableShapeID = 0;
 let nextAvailableRaycastID = 0;
 
 export class PhysXInstance {
-  static instance: PhysXInstance;
-  worker: Worker;
+  static instance: PhysXInstance = new PhysXInstance();
   physicsProxy: any;
 
   bodies: Map<number, RigidBodyProxy> = new Map<number, RigidBodyProxy>();
@@ -21,13 +20,8 @@ export class PhysXInstance {
   controllerBodies: Map<number, RigidBodyProxy> = new Map<number, RigidBodyProxy>();
   raycasts: Map<number, SceneQuery> = new Map<number, SceneQuery>();
 
-  constructor(worker: Worker) {
-    PhysXInstance.instance = this;
-    this.worker = worker;
-  }
-
-  initPhysX = async (config: PhysXConfig): Promise<void> => {
-    const messageQueue = new MessageQueue(this.worker);
+  initPhysX = async (worker: Worker, config: PhysXConfig): Promise<void> => {
+    const messageQueue = new MessageQueue(worker);
     await new Promise((resolve) => {
       messageQueue.addEventListener('init', () => {
         resolve(true);
@@ -195,6 +189,13 @@ export class PhysXInstance {
       (shape as any).body = body;
     });
     proxyEventListener(body);
+    body.updateTransform = (newTransform) => {
+      if(this.controllerBodies.has(id)) {
+        this.updateController(body, { position: newTransform.translation })
+      } else {
+        this.updateBody(body, mergeTransformFragments(body.transform, newTransform))
+      }
+    }
     this.bodies.set(body.id, body);
     if (body.options.type === PhysXBodyType.KINEMATIC) {
       this.kinematicBodies.set(body.id, body);
@@ -385,6 +386,31 @@ export class PhysXInstance {
     // todo, make this smart
     return nextAvailableRaycastID++;
   };
+}
+
+const mergeTransformFragments = (original: Transform, fragments: any): Transform => {
+  return {
+    translation: fragments.translation ? mergeTranslationFragments(original.translation, fragments.translation) : original.translation,
+    rotation: fragments.rotation ? mergeRotationFragments(original.rotation, fragments.rotation) : original.rotation,
+    scale: original.scale
+  }
+}
+
+const mergeTranslationFragments = (original: Vec3, fragments: Vec3Fragment): Vec3 => {
+  return {
+    x: fragments.x ?? original.x,
+    y: fragments.y ?? original.y,
+    z: fragments.z ?? original.z,
+  }
+}
+
+const mergeRotationFragments = (original: Quat, fragments: QuatFragment): Quat => {
+  return {
+    x: fragments.x ?? original.x,
+    y: fragments.y ?? original.y,
+    z: fragments.z ?? original.z,
+    w: fragments.w ?? original.w,
+  }
 }
 
 const pipeRemoteFunction = (messageQueue: MessageQueue, id: string) => {

@@ -1,4 +1,4 @@
-import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, Object3DBody, PhysXBodyType, SceneQueryType, RigidBodyProxy, PhysXModelShapes, PhysXShapeConfig, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos } from '../../src';
+import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, Object3DBody, PhysXBodyType, SceneQueryType, RigidBodyProxy, PhysXModelShapes, PhysXShapeConfig, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos } from '../../';
 import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry } from 'three';
 
 enum COLLISIONS {
@@ -18,8 +18,7 @@ const load = async () => {
   (globalThis as any).objects = objects;
 
   // @ts-ignore
-  new PhysXInstance(new Worker(new URL('../../src/worker.ts', import.meta.url)));
-  await PhysXInstance.instance.initPhysX({ jsPath: '/physx/physx.release.js', wasmPath: '/physx/physx.release.wasm' });
+  await PhysXInstance.instance.initPhysX(new Worker(new URL('../../src/worker.ts', import.meta.url)), { jsPath: '/physx/physx.release.js', wasmPath: '/physx/physx.release.wasm' });
 
   const kinematicObject = new Group()//.translateY(-2.5).rotateZ(Math.PI / 2);
   // kinematicObject.scale.setScalar(2)

@@ -419,9 +419,6 @@ export class PhysXManager {
   updateController = async ({ id, config }: { id: number; config: ControllerConfig }) => {
     const controller = this.controllers.get(id);
     if (!controller) return;
-    if (typeof config.position !== 'undefined') {
-      controller.setPosition(config.position as Vec3);
-    }
     if (typeof config.positionDelta !== 'undefined') {
       const currentPos = controller.getPosition();
       controller.setPosition({
