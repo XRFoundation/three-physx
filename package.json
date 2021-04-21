@@ -3,15 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "exports": "./dist/three-physx.es.js",
-  "main": "./dist/three-physx.es.js",
+  "main": "./dist",
+  "entry": "./src",
   "module": "./dist/three-physx.es.js",
   "types": "./dist/index.d.ts",
   "typescript": {
     "definition": "./dist/index.d.ts"
   },
   "scripts": {
-    "example": "cd example && npm install && npm run build",
-    "test": "echo \"This template does not include a test runner by default.\" && exit 1",
     "format": "prettier --write \"src/**/*.{ts,js}\" ",
     "lint": "prettier --check \"src/**/*.{ts,js}\" ",
     "dist": "rimraf dist && tsc && vite build"
@@ -28,14 +27,6 @@
   },
   "homepage": "https://github.com/HexaField/three-physx#readme",
   "devDependencies": {
-    "@babel/core": "^7.13.15",
-    "@babel/plugin-proposal-object-rest-spread": "^7.13.8",
-    "@babel/plugin-syntax-dynamic-import": "^7.8.3",
-    "@babel/plugin-transform-runtime": "^7.13.15",
-    "@babel/preset-env": "^7.13.15",
-    "@babel/preset-react": "^7.13.13",
-    "@babel/preset-typescript": "^7.13.0",
-    "@babel/runtime-corejs3": "^7.13.10",
     "@rollup/plugin-commonjs": "18.0.0",
     "@rollup/plugin-json": "4.1.0",
     "@rollup/plugin-node-resolve": "11.2.1",
