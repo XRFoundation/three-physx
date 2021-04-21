@@ -164,8 +164,9 @@ export class PhysXInstance {
     offset = 0;
     const raycastArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.RAYCAST_DATA_SIZE * this.raycasts.size));
     this.raycasts.forEach((raycast, id) => {
-      const { x, y, z } = raycast.origin;
-      raycastArray.set([id, x, y, z]);
+      const ori = raycast.origin;
+      const dir = raycast.direction;
+      raycastArray.set([id, ori.x, ori.y, ori.z, dir.x, dir.y, dir.z]);
       offset += BufferConfig.RAYCAST_DATA_SIZE;
     });
     this.physicsProxy.update([kinematicArray, controllerArray, raycastArray], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);
@@ -327,21 +328,33 @@ export class PhysXInstance {
     if (typeof raycastQuery.origin === 'undefined') throw new Error('Scene raycast query must include origin!');
     if (typeof raycastQuery.direction === 'undefined') throw new Error('Scene raycast query must include direction!');
 
-    raycastQuery.flags = raycastQuery.flags ?? 1;
     raycastQuery.maxDistance = raycastQuery.maxDistance ?? 1;
     raycastQuery.maxHits = raycastQuery.maxHits ?? 1;
 
     const id = this._getNextAvailableRaycastID();
     this.raycasts.set(id, raycastQuery);
     raycastQuery.id = id;
+    raycastQuery.hits = []; // init
     this.physicsProxy.addRaycastQuery([clone(raycastQuery)]);
     return raycastQuery;
   }
 
-  updateRaycastQuery(raycastQuery: any) {
-    if (!this.raycasts.has(raycastQuery.id)) return;
-    // todo
-    // await this.physicsProxy.updateRaycastQuery([raycastQuery.id]);
+  updateRaycastQuery(id, newArgs: any) {
+    const raycast = this.raycasts.get(id);
+    if(!raycast) return;
+    if(typeof newArgs.flags !== 'undefined') {
+      raycast.flags = newArgs.flags;
+    }
+    if(typeof newArgs.maxDistance !== 'undefined') {
+      raycast.maxDistance = newArgs.maxDistance;
+    }
+    if(typeof newArgs.maxHits !== 'undefined') {
+      raycast.maxHits = newArgs.maxHits;
+    }
+    if(typeof newArgs.collisionMask !== 'undefined') {
+      raycast.collisionMask = newArgs.collisionMask;
+    }
+    this.physicsProxy.updateRaycastQuery([ clone({ id, ...newArgs }) ]);
   }
 
   removeRaycastQuery(raycastQuery: SceneQuery) {

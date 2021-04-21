@@ -800,16 +800,17 @@ EMSCRIPTEN_BINDINGS(physx)
                   else if (i == 3)
                     qf.data.word3 = f;
                 }))
-      .property("data", &PxQueryFilterData::data);
+      .property("data", &PxQueryFilterData::data)
+      .property("flags", &PxQueryFilterData::flags);
   class_<PxQueryFlags>("PxQueryFlags")
       .constructor<int>()
       .function("isSet", &PxQueryFlags::isSet);
   enum_<PxQueryFlag::Enum>("PxQueryFlag")
-      .value("eANY_HIT", PxQueryFlag::Enum::eANY_HIT)
-      .value("eDYNAMIC", PxQueryFlag::Enum::eDYNAMIC)
       .value("eSTATIC", PxQueryFlag::Enum::eSTATIC)
+      .value("eDYNAMIC", PxQueryFlag::Enum::eDYNAMIC)
       .value("ePREFILTER", PxQueryFlag::Enum::ePREFILTER)
       .value("ePOSTFILTER", PxQueryFlag::Enum::ePOSTFILTER)
+      .value("eANY_HIT", PxQueryFlag::Enum::eANY_HIT)
       .value("eNO_BLOCK", PxQueryFlag::Enum::eNO_BLOCK);
   enum_<PxQueryHitType::Enum>("PxQueryHitType")
       .value("eNONE", PxQueryHitType::Enum::eNONE)

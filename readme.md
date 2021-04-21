@@ -20,7 +20,8 @@ Progress:
 - [x] character controller
 - [x] collision filtering
 - [x] trimesh and convex
-- [ ] raycasts (subscribe + promise)
+- [x] raycasts
+- [ ] raycasts ignore backface option
 - [ ] vehicle controller
 - [ ] heightfield colliders
 - [ ] fix root object scaling bug

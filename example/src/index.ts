@@ -1,5 +1,15 @@
-import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer , Object3DBody, PhysXBodyType, SceneQueryType, RigidBodyProxy, PhysXModelShapes, PhysXShapeConfig, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos } from '../../src';
+import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, Object3DBody, PhysXBodyType, SceneQueryType, RigidBodyProxy, PhysXModelShapes, PhysXShapeConfig, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos } from '../../src';
 import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry } from 'three';
+
+enum COLLISIONS {
+  NONE = 0,
+  FLOOR = 1 << 0,
+  CHARACTER = 1 << 1,
+  BALL = 1 << 2,
+  HAMMER = 1 << 3,
+  ALL = FLOOR | CHARACTER | BALL | HAMMER,
+}
+
 const load = async () => {
   const renderer = await import('./renderer');
 
@@ -16,16 +26,20 @@ const load = async () => {
   kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateX(2).rotateY(Math.PI / 2));
   kinematicObject.children[0].scale.setScalar(2);
   kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
-  const kinematicBody = PhysXInstance.instance.addBody({ 
-    shapes: getShapesFromObject(kinematicObject),
+  const kinematicBody = PhysXInstance.instance.addBody({
+    shapes: getShapesFromObject(kinematicObject).map((shape: PhysXShapeConfig) => { 
+      shape.config.collisionLayer = COLLISIONS.HAMMER; 
+      shape.config.collisionMask = COLLISIONS.BALL;
+      return shape;
+    }),
     transform: getTransformFromWorldPos(kinematicObject),
-    type: PhysXBodyType.KINEMATIC
+    type: PhysXBodyType.KINEMATIC,
   });
   let isKinematic = true;
-  setInterval(() => {
-    isKinematic = !isKinematic;
-    PhysXInstance.instance.updateBody(kinematicBody, { angularVelocity: { x: 0, y: 0, z: 0 }, linearVelocity: { x: 0, y: 0, z: 0 }, type: isKinematic ? PhysXBodyType.KINEMATIC : PhysXBodyType.DYNAMIC });
-  }, 2000);
+  // setInterval(() => {
+  //   isKinematic = !isKinematic;
+  //   PhysXInstance.instance.updateBody(kinematicBody, { angularVelocity: { x: 0, y: 0, z: 0 }, linearVelocity: { x: 0, y: 0, z: 0 }, type: isKinematic ? PhysXBodyType.KINEMATIC : PhysXBodyType.DYNAMIC });
+  // }, 2000);
   objects.set(kinematicBody.id, kinematicObject);
   renderer.addToScene(kinematicObject);
   (kinematicObject as any).body = kinematicBody;
@@ -41,11 +55,22 @@ const load = async () => {
   characterBody.addEventListener(ControllerEvents.CONTROLLER_SHAPE_HIT, (ev) => {
     // console.log('COLLISION DETECTED', ev);
   });
-  const raycastQuery = PhysXInstance.instance.addRaycastQuery({ type: SceneQueryType.Closest, origin: character.position, direction: new Vector3(0, -1, 0), maxDistance: 1 });
+  const raycastQuery = PhysXInstance.instance.addRaycastQuery({
+    type: SceneQueryType.Closest,
+    origin: character.position,
+    direction: new Vector3(0, -1, 0),
+    maxDistance: 1,
+    collisionLayer: COLLISIONS.NONE, // this only works if both are COLLISIONS.NONE
+    collisionMask: COLLISIONS.NONE
+  });
 
   createBalls().forEach(async (object) => {
-    const body = PhysXInstance.instance.addBody({ 
-      shapes: getShapesFromObject(object),
+    const body = PhysXInstance.instance.addBody({
+      shapes: getShapesFromObject(object).map((shape: PhysXShapeConfig) => { 
+        shape.config.collisionLayer = COLLISIONS.BALL; 
+        shape.config.collisionMask = COLLISIONS.FLOOR | COLLISIONS.HAMMER | COLLISIONS.BALL;
+        return shape;
+      }),
       transform: getTransformFromWorldPos(object),
       type: PhysXBodyType.DYNAMIC
     });
@@ -55,9 +80,13 @@ const load = async () => {
     renderer.addToScene(object);
   });
 
-  const floor = new Mesh(new BoxBufferGeometry(platformSize, 1, platformSize), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide })) ;
-  const floorbody = PhysXInstance.instance.addBody({ 
-    shapes: getShapesFromObject(floor), 
+  const floor = new Mesh(new BoxBufferGeometry(platformSize, 1, platformSize), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide })).translateY(-2);
+  const floorbody = PhysXInstance.instance.addBody({
+    shapes: getShapesFromObject(floor).map((shape: PhysXShapeConfig) => { 
+      shape.config.collisionLayer = COLLISIONS.FLOOR; 
+      shape.config.collisionMask = COLLISIONS.CHARACTER | COLLISIONS.BALL;
+      return shape;
+    }),
     transform: getTransformFromWorldPos(floor),
     type: PhysXBodyType.STATIC
   });
@@ -131,7 +160,7 @@ const load = async () => {
     })
     characterBody.controller.delta.y += characterBody.controller.velocity.y;
     raycastQuery.origin = new Vector3().copy(character.position).add(new Vector3(0, -1, 0));
-    // console.log(raycastQuery.hits);
+    console.log(raycastQuery.hits);
     PhysXInstance.instance.update(delta);
     objects.forEach((obj: Object3DBody) => {
       if (!obj.body) return;
@@ -154,9 +183,13 @@ const load = async () => {
         objects.delete(id);
         object.position.copy(randomVector3OnPlatform());
         object.updateWorldMatrix(true, true)
-        const newbody = PhysXInstance.instance.addBody({ 
+        const newbody = PhysXInstance.instance.addBody({
           transform: getTransformFromWorldPos(object),
-          shapes: getShapesFromObject(object),
+          shapes: getShapesFromObject(object).map((shape: PhysXShapeConfig) => { 
+            shape.config.collisionLayer = COLLISIONS.BALL; 
+            shape.config.collisionMask = COLLISIONS.FLOOR | COLLISIONS.HAMMER | COLLISIONS.BALL;
+            return shape;
+          }),
           type: PhysXBodyType.DYNAMIC
         });
         object.body = newbody;
@@ -183,7 +216,7 @@ const createBalls = () => {
     // new CylinderBufferGeometry()
   ];
   const meshes = [];
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < 0; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     meshes.push(mesh);
