@@ -39,29 +39,6 @@ export default defineConfig(() => {
           }),
           commonjs({
             include: /node_modules/,
-          }),
-          babel({
-            extensions,
-            exclude: /node_modules/,
-            babelrc: false,
-            runtimeHelpers: true,
-            presets: [
-              '@babel/preset-env',
-              '@babel/preset-react',
-              '@babel/preset-typescript',
-            ],
-            plugins: [
-              '@babel/plugin-syntax-dynamic-import',
-              ['@babel/plugin-proposal-object-rest-spread', {
-                useBuiltIns: true,
-              }],
-              ['@babel/plugin-transform-runtime', {
-                corejs: 3,
-                helpers: true,
-                regenerator: true,
-                useESModules: false,
-              }],
-            ],
           })
         ],
       }
