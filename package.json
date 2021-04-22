@@ -11,6 +11,7 @@
     "definition": "./dist/index.d.ts"
   },
   "scripts": {
+    "example": "cd example && npm install && npm run build",
     "format": "prettier --write \"src/**/*.{ts,js}\" ",
     "lint": "prettier --check \"src/**/*.{ts,js}\" ",
     "dist": "rimraf dist && tsc && vite build"
