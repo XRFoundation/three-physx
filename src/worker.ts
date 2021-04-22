@@ -45,18 +45,16 @@ export class PhysXManager {
   controllers: Map<number, PhysX.PxController> = new Map<number, PhysX.PxController>();
   raycasts: Map<number, SceneQuery> = new Map<number, SceneQuery>();
   // constraints: // TODO
+  physx: any;
+
+  constructor(physx) {
+    (globalThis as any).PhysX = physx;
+  }
 
   initPhysX = async (config: PhysXConfig): Promise<void> => {
-    //@ts-ignore
-    importScripts(config.jsPath);
     if (config?.tps) {
       this.tps = config.tps;
     }
-    (globalThis as any).PhysX = await new (globalThis as any).PHYSX({
-      locateFile: () => {
-        return config.wasmPath;
-      },
-    });
     this.physxVersion = PhysX.PX_PHYSICS_VERSION;
     this.defaultErrorCallback = new PhysX.PxDefaultErrorCallback();
     this.allocator = new PhysX.PxDefaultAllocator();
@@ -585,10 +583,12 @@ const getBodyData = (body: PhysX.PxRigidActor) => {
 
 const defaultMask = 1 << 0;
 
-export const receiveWorker = async (): Promise<void> => {
+export const receiveWorker = async (physx): Promise<void> => {
   const messageQueue = new MessageQueue(globalThis as any);
+  globalThis.messageQueue = messageQueue;
   let latestCollisions = [];
-  PhysXManager.instance = new PhysXManager();
+  PhysXManager.instance = new PhysXManager(physx);
+  globalThis.physXManager = PhysXManager.instance;
   PhysXManager.instance.onUpdate = ({ raycastResults, bodyArray }) => {
     messageQueue.sendEvent('data', { raycastResults, bodyArray }, [bodyArray.buffer]);
     messageQueue.sendEvent('colliderEvent', [...latestCollisions]);
@@ -611,5 +611,3 @@ export const receiveWorker = async (): Promise<void> => {
   });
   messageQueue.sendEvent('init', {});
 };
-
-receiveWorker();

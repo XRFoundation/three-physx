@@ -1,3 +1,5 @@
+import { EventDispatcher } from 'three';
+
 export enum MessageType {
   ADD_EVENT,
   REMOVE_EVENT,
@@ -13,7 +15,6 @@ export interface Message {
 export class EventDispatcherProxy {
   //extends ExtendableProxy {
   [x: string]: any;
-  eventTarget: EventTarget = new EventTarget();
   eventListener: any;
   messageTypeFunctions: Map<MessageType | string, any>;
   _listeners: any;
@@ -81,7 +82,7 @@ export class MessageQueue extends EventDispatcherProxy {
   messagePort: any;
   queue: Message[];
   interval: any;
-  eventTarget: EventTarget = new EventTarget();
+  eventTarget: EventDispatcher = new EventDispatcher();
   toTransfer: Transferable[] = [];
 
   constructor(messagePort: any) {

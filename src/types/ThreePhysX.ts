@@ -2,8 +2,6 @@ import type { Object3D } from 'three';
 ///<reference path="./PhysX.d.ts"/>
 
 export interface PhysXConfig {
-  jsPath: string;
-  wasmPath: string;
   tps?: number;
   lengthScale?: number;
   start?: boolean;

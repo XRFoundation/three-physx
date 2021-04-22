@@ -438,3 +438,4 @@ export { CapsuleBufferGeometry } from './utils/CapsuleBufferGeometry';
 export { DebugRenderer } from './utils/DebugRenderer';
 export * from './types/ThreePhysX';
 export * from './threeToPhysX';
+export { PhysXManager, receiveWorker } from './worker';

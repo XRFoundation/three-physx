@@ -1,6 +1,6 @@
 {
   "name": "@xr3ngine/three-physx",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Multithreaded PhysX simulation for threejs.",
   "exports": "./dist/three-physx.es.js",
   "main": "./dist",
@@ -18,7 +18,7 @@
     "format": "prettier --write \"src/**/*.{ts,js}\" ",
     "lint": "prettier --check \"src/**/*.{ts,js}\" ",
     "dist": "rimraf dist && tsc && vite build",
-    "publish": "yarn dist && npm publish"
+    "build-publish": "yarn dist && npm publish --access public"
   },
   "pre-push": [
     "lint"

@@ -18,7 +18,7 @@ const load = async () => {
   (globalThis as any).objects = objects;
 
   // @ts-ignore
-  await PhysXInstance.instance.initPhysX(new Worker(new URL('../../src/worker.ts', import.meta.url)), { jsPath: '/physx/physx.release.js', wasmPath: '/physx/physx.release.wasm' });
+  await PhysXInstance.instance.initPhysX(new Worker(new URL('./worker.ts', import.meta.url), { type: "module" }), { jsPath: '/physx/physx.release.js', wasmPath: '/physx/physx.release.wasm' });
 
   const kinematicObject = new Group()//.translateY(-2.5).rotateZ(Math.PI / 2);
   // kinematicObject.scale.setScalar(2)
