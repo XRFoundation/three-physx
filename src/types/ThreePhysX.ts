@@ -30,7 +30,6 @@ export interface QuatFragment {
   w?: number;
 }
 
-
 export interface Vec3 {
   x: number;
   y: number;
@@ -103,7 +102,7 @@ export interface BodyConfig {
 export interface RigidBodyProxy {
   id: number;
   transform: Transform;
-  updateTransform?: ({ translation, rotation }: { translation?: Vec3Fragment, rotation?: QuatFragment }) => void;
+  updateTransform?: ({ translation, rotation }: { translation?: Vec3Fragment; rotation?: QuatFragment }) => void;
   shapes: PhysXShapeConfig[];
   options: BodyConfig;
   controller?: {

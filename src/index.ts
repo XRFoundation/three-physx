@@ -190,12 +190,12 @@ export class PhysXInstance {
     });
     proxyEventListener(body);
     body.updateTransform = (newTransform) => {
-      if(this.controllerBodies.has(id)) {
-        this.updateController(body, { position: newTransform.translation })
+      if (this.controllerBodies.has(id)) {
+        this.updateController(body, { position: newTransform.translation });
       } else {
-        this.updateBody(body, mergeTransformFragments(body.transform, newTransform))
+        this.updateBody(body, mergeTransformFragments(body.transform, newTransform));
       }
-    }
+    };
     this.bodies.set(body.id, body);
     if (body.options.type === PhysXBodyType.KINEMATIC) {
       this.kinematicBodies.set(body.id, body);
@@ -342,20 +342,20 @@ export class PhysXInstance {
 
   updateRaycastQuery(id, newArgs: any) {
     const raycast = this.raycasts.get(id);
-    if(!raycast) return;
-    if(typeof newArgs.flags !== 'undefined') {
+    if (!raycast) return;
+    if (typeof newArgs.flags !== 'undefined') {
       raycast.flags = newArgs.flags;
     }
-    if(typeof newArgs.maxDistance !== 'undefined') {
+    if (typeof newArgs.maxDistance !== 'undefined') {
       raycast.maxDistance = newArgs.maxDistance;
     }
-    if(typeof newArgs.maxHits !== 'undefined') {
+    if (typeof newArgs.maxHits !== 'undefined') {
       raycast.maxHits = newArgs.maxHits;
     }
-    if(typeof newArgs.collisionMask !== 'undefined') {
+    if (typeof newArgs.collisionMask !== 'undefined') {
       raycast.collisionMask = newArgs.collisionMask;
     }
-    this.physicsProxy.updateRaycastQuery([ clone({ id, ...newArgs }) ]);
+    this.physicsProxy.updateRaycastQuery([clone({ id, ...newArgs })]);
   }
 
   removeRaycastQuery(raycastQuery: SceneQuery) {
@@ -392,17 +392,17 @@ const mergeTransformFragments = (original: Transform, fragments: any): Transform
   return {
     translation: fragments.translation ? mergeTranslationFragments(original.translation, fragments.translation) : original.translation,
     rotation: fragments.rotation ? mergeRotationFragments(original.rotation, fragments.rotation) : original.rotation,
-    scale: original.scale
-  }
-}
+    scale: original.scale,
+  };
+};
 
 const mergeTranslationFragments = (original: Vec3, fragments: Vec3Fragment): Vec3 => {
   return {
     x: fragments.x ?? original.x,
     y: fragments.y ?? original.y,
     z: fragments.z ?? original.z,
-  }
-}
+  };
+};
 
 const mergeRotationFragments = (original: Quat, fragments: QuatFragment): Quat => {
   return {
@@ -410,8 +410,8 @@ const mergeRotationFragments = (original: Quat, fragments: QuatFragment): Quat =
     y: fragments.y ?? original.y,
     z: fragments.z ?? original.z,
     w: fragments.w ?? original.w,
-  }
-}
+  };
+};
 
 const pipeRemoteFunction = (messageQueue: MessageQueue, id: string) => {
   return (args, transferables) => {

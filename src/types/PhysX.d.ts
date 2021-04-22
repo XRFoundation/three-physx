@@ -16,7 +16,7 @@ declare namespace PhysX {
     static eNONE: { value: number };
     static eBLOCK: { value: number };
     static eTOUCH: { value: number };
-  } 
+  }
 
   class PxShapeFlag {
     static eSIMULATION_SHAPE: { value: number };

@@ -475,7 +475,7 @@ export class PhysXManager {
     (query as any)._filterData = new PhysX.PxQueryFilterData();
     (query as any)._filterData.setWords(query.collisionLayer ?? 1, 0);
     (query as any)._filterData.setWords(query.collisionMask ?? 1, 1);
-    if(typeof query.flags === 'undefined') {
+    if (typeof query.flags === 'undefined') {
       query.flags = PhysX.PxQueryFlag.eSTATIC.value | PhysX.PxQueryFlag.eDYNAMIC.value | PhysX.PxQueryFlag.ePREFILTER.value | PhysX.PxQueryFlag.ePOSTFILTER.value | PhysX.PxQueryFlag.eANY_HIT.value | PhysX.PxQueryFlag.eNO_BLOCK.value;
     }
     (query as any)._filterData.setFlags(query.flags);
@@ -485,21 +485,21 @@ export class PhysXManager {
   updateRaycastQuery = async (newArgs: SceneQuery) => {
     const { id, flags, maxDistance, maxHits, collisionMask, collisionLayer } = newArgs;
     const raycast = this.raycasts.get(id);
-    if(!raycast) return;
-    if(typeof flags !== 'undefined') {
+    if (!raycast) return;
+    if (typeof flags !== 'undefined') {
       raycast.flags = flags;
     }
-    if(typeof maxDistance !== 'undefined') {
+    if (typeof maxDistance !== 'undefined') {
       raycast.maxDistance = maxDistance;
     }
-    if(typeof maxHits !== 'undefined') {
+    if (typeof maxHits !== 'undefined') {
       raycast.maxHits = maxHits;
     }
-    if(typeof collisionLayer !== 'undefined') {
+    if (typeof collisionLayer !== 'undefined') {
       raycast.collisionLayer = collisionLayer;
       (raycast as any)._filterData.setWords(raycast.collisionLayer ?? 1, 0);
     }
-    if(typeof collisionMask !== 'undefined') {
+    if (typeof collisionMask !== 'undefined') {
       raycast.collisionMask = collisionMask;
       (raycast as any)._filterData.setWords(raycast.collisionMask ?? 1, 1);
     }
@@ -523,8 +523,8 @@ export class PhysXManager {
       const buffer: PhysX.PxRaycastHit = new PhysX.PxRaycastHit();
       const filterData: PhysX.PxQueryFilterData = (raycastQuery as any)._filterData;
       // todo - implement query filter bindings
-      // const queryCallback = PhysX.PxQueryFilterCallback.implement({ 
-      //   preFilter: (filterData, shape, actor) => { return PhysX.PxQueryHitType.eBLOCK }, 
+      // const queryCallback = PhysX.PxQueryFilterCallback.implement({
+      //   preFilter: (filterData, shape, actor) => { return PhysX.PxQueryHitType.eBLOCK },
       //   postFilter: (filterData, hit) => { return PhysX.PxQueryHitType.eBLOCK  }
       // });
       const hasHit = this.scene.raycastSingle(raycastQuery.origin, raycastQuery.direction, raycastQuery.maxDistance, raycastQuery.flags, buffer, filterData, null, null);

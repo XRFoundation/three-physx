@@ -1,3 +1,5 @@
-/example
+.vscode/
 .prettierrc
-/physx-js
+
+example/
+physx-js/
