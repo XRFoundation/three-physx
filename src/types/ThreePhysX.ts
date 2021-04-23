@@ -148,7 +148,6 @@ export interface SceneQuery {
   id?: number;
   type: SceneQueryType;
   flags?: number;
-  collisionLayer?: number;
   collisionMask?: number;
   origin?: Vec3;
   direction?: Vec3;

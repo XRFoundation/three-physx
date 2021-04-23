@@ -729,20 +729,20 @@ EMSCRIPTEN_BINDINGS(physx)
                                  bool fetched = scene.raycast(origin, unitDir, distance, hitCall);
                                  return fetched;
                                }))
-      .function("raycastSingle", optional_override([](PxScene &scene, const PxVec3 &origin, const PxVec3 &unitDir, const PxReal distance, PxU16 flags, PxRaycastHit &hit, const PxSceneQueryFilterData &filterData, PxSceneQueryFilterCallback *filterCall, const PxSceneQueryCache *cache) {
-                  CustomQueryFilter filterCallback;
-                  bool result = PxSceneQueryExt::raycastSingle(scene, origin, unitDir, distance, PxHitFlags(flags), hit, filterData, &filterCallback, cache);
+      .function("raycastSingle", optional_override([](PxScene &scene, const PxVec3 &origin, const PxVec3 &unitDir, const PxReal distance, PxU16 flags, PxRaycastHit &hit, const PxSceneQueryFilterData &filterData) {
+                  // CustomQueryFilter filterCallback;
+                  bool result = PxSceneQueryExt::raycastSingle(scene, origin, unitDir, distance, PxHitFlags(flags), hit, filterData, NULL, NULL);
                   return result;
                 }),
                 allow_raw_pointers())
-      .function("raycastAny", optional_override([](PxScene &scene, const PxVec3 &origin, const PxVec3 &unitDir, const PxReal distance, PxRaycastHit &hit, const PxSceneQueryFilterData &filterData, PxSceneQueryFilterCallback *filterCall, const PxSceneQueryCache *cache) {
-                  return PxSceneQueryExt::raycastAny(scene, origin, unitDir, distance, hit, filterData, filterCall, cache);
+      .function("raycastAny", optional_override([](PxScene &scene, const PxVec3 &origin, const PxVec3 &unitDir, const PxReal distance, PxRaycastHit &hit, const PxSceneQueryFilterData &filterData) {
+                  return PxSceneQueryExt::raycastAny(scene, origin, unitDir, distance, hit, filterData, NULL, NULL);
                   ;
                 }),
                 allow_raw_pointers())
-      .function("raycastMultiple", optional_override([](PxScene &scene, const PxVec3 &origin, const PxVec3 &unitDir, const PxReal distance, PxU16 flags, std::vector<PxRaycastHit> &hitBuffer, PxU32 hbsize, const PxSceneQueryFilterData &filterData, PxSceneQueryFilterCallback *filterCall, const PxSceneQueryCache *cache) {
+      .function("raycastMultiple", optional_override([](PxScene &scene, const PxVec3 &origin, const PxVec3 &unitDir, const PxReal distance, PxU16 flags, std::vector<PxRaycastHit> &hitBuffer, PxU32 hbsize, const PxSceneQueryFilterData &filterData) {
                   bool hitBlock = false;
-                  return PxSceneQueryExt::raycastMultiple(scene, origin, unitDir, distance, PxHitFlags(flags), hitBuffer.data(), hbsize, hitBlock, filterData, filterCall, cache);
+                  return PxSceneQueryExt::raycastMultiple(scene, origin, unitDir, distance, PxHitFlags(flags), hitBuffer.data(), hbsize, hitBlock, filterData, NULL, NULL);
                 }),
                 allow_raw_pointers())
       .function("sweep", &PxScene::sweep, allow_raw_pointers());

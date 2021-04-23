@@ -247,11 +247,11 @@ export class PhysXManager {
         (bodyShape as any)._collisionMask = collisionMask;
       }
       bodyShape.setSimulationFilterData(new PhysX.PxFilterData(collisionLayer, collisionMask, 0, 0));
+      bodyShape.setQueryFilterData(new PhysX.PxFilterData(collisionLayer, collisionMask, 0, 0));
       bodyShapes.push(bodyShape);
       rigidBody.attachShape(bodyShape);
       this.shapeIDByPointer.set(bodyShape.$$.ptr, shapeID);
       this.shapes.set(shapeID, bodyShape);
-      this._updateShape(config);
     });
 
     this.bodyShapes.set(id, bodyShapes);
@@ -321,12 +321,16 @@ export class PhysXManager {
       }
     }
     if (typeof collisionLayer !== 'undefined') {
+      console.log('collisionLayer', collisionLayer);
       (shape as any)._collisionLayer = collisionLayer;
       shape.setSimulationFilterData(new PhysX.PxFilterData((shape as any)._collisionLayer, (shape as any)._collisionMask, 0, 0));
+      shape.setQueryFilterData(new PhysX.PxFilterData((shape as any)._collisionLayer, (shape as any)._collisionMask, 0, 0));
     }
     if (typeof collisionMask !== 'undefined') {
+      console.log('collisionMask', collisionMask);
       (shape as any)._collisionMask = collisionMask;
       shape.setSimulationFilterData(new PhysX.PxFilterData((shape as any)._collisionLayer, (shape as any)._collisionMask, 0, 0));
+      shape.setQueryFilterData(new PhysX.PxFilterData((shape as any)._collisionLayer, (shape as any)._collisionMask, 0, 0));
     }
     if (typeof material !== 'undefined') {
       // TODO
@@ -477,17 +481,16 @@ export class PhysXManager {
 
   addRaycastQuery = async (query: SceneQuery) => {
     (query as any)._filterData = new PhysX.PxQueryFilterData();
-    (query as any)._filterData.setWords(query.collisionLayer ?? 1, 0);
-    (query as any)._filterData.setWords(query.collisionMask ?? 1, 1);
+    (query as any)._filterData.setWords(query.collisionMask ?? 1, 0);
     if (typeof query.flags === 'undefined') {
-      query.flags = PhysX.PxQueryFlag.eSTATIC.value | PhysX.PxQueryFlag.eDYNAMIC.value | PhysX.PxQueryFlag.ePREFILTER.value | PhysX.PxQueryFlag.ePOSTFILTER.value | PhysX.PxQueryFlag.eANY_HIT.value | PhysX.PxQueryFlag.eNO_BLOCK.value;
+      query.flags = PhysX.PxQueryFlag.eSTATIC.value | PhysX.PxQueryFlag.eDYNAMIC.value | PhysX.PxQueryFlag.eANY_HIT.value;
     }
     (query as any)._filterData.setFlags(query.flags);
     this.raycasts.set(query.id, query);
   };
 
   updateRaycastQuery = async (newArgs: SceneQuery) => {
-    const { id, flags, maxDistance, maxHits, collisionMask, collisionLayer } = newArgs;
+    const { id, flags, maxDistance, maxHits, collisionMask } = newArgs;
     const raycast = this.raycasts.get(id);
     if (!raycast) return;
     if (typeof flags !== 'undefined') {
@@ -498,10 +501,6 @@ export class PhysXManager {
     }
     if (typeof maxHits !== 'undefined') {
       raycast.maxHits = maxHits;
-    }
-    if (typeof collisionLayer !== 'undefined') {
-      raycast.collisionLayer = collisionLayer;
-      (raycast as any)._filterData.setWords(raycast.collisionLayer ?? 1, 0);
     }
     if (typeof collisionMask !== 'undefined') {
       raycast.collisionMask = collisionMask;
@@ -531,7 +530,8 @@ export class PhysXManager {
       //   preFilter: (filterData, shape, actor) => { return PhysX.PxQueryHitType.eBLOCK },
       //   postFilter: (filterData, hit) => { return PhysX.PxQueryHitType.eBLOCK  }
       // });
-      const hasHit = this.scene.raycastSingle(raycastQuery.origin, raycastQuery.direction, raycastQuery.maxDistance, raycastQuery.flags, buffer, filterData, null, null);
+      const hasHit = this.scene.raycastSingle(raycastQuery.origin, raycastQuery.direction, raycastQuery.maxDistance, raycastQuery.flags, buffer, filterData);
+      // console.log(buffer.distance)
       if (hasHit) {
         hits.push({
           distance: buffer.distance,

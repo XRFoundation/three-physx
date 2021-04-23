@@ -1,6 +1,6 @@
 {
   "name": "@xr3ngine/three-physx",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Multithreaded PhysX simulation for threejs.",
   "exports": "./dist/three-physx.es.js",
   "main": "./dist",

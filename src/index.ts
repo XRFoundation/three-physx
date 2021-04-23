@@ -300,6 +300,8 @@ const mergeTransformFragments = (original: Transform, fragments: any): Transform
     translation: fragments.translation ? mergeTranslationFragments(original.translation, fragments.translation) : original.translation,
     rotation: fragments.rotation ? mergeRotationFragments(original.rotation, fragments.rotation) : original.rotation,
     scale: original.scale,
+    linearVelocity: fragments.linearVelocity ? mergeTranslationFragments(original.linearVelocity, fragments.linearVelocity) : original.linearVelocity,
+    angularVelocity: fragments.angularVelocity ? mergeTranslationFragments(original.angularVelocity, fragments.angularVelocity) : original.angularVelocity,
   };
 };
 

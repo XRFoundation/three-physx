@@ -237,6 +237,7 @@ declare namespace PhysX {
   class PxShape extends Base {
     setContactOffset(contactOffset: number): void;
     setSimulationFilterData(filterData: PxFilterData): void;
+    setQueryFilterData(filterData: PxFilterData): void;
     setName(value: string): void;
     getName(): string;
     setFlag(flag: PxShapeFlag, value: boolean): void;
@@ -336,9 +337,9 @@ declare namespace PhysX {
     setGravity(value: PxVec3): void;
 
     raycast(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, hits: PxRaycastBuffer): boolean;
-    raycastSingle(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, flags: number, hit: PxRaycastHit, filterData: PxQueryFilterData, queryCallback: PxQueryFilterCallback, cache: null): boolean;
-    raycastAny(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, hit: PxRaycastHit, filterData: PxQueryFilterData, queryCallback: PxQueryFilterCallback, cache: null): boolean;
-    // raycastMultiple(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, flags: number, hits: PxRaycastHit[], hbsize: number, filterData: PxQueryFilterData, queryCallback: PxQueryFilterCallback, cache: null): boolean;
+    raycastSingle(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, flags: number, hit: PxRaycastHit, filterData: PxQueryFilterData): boolean;
+    raycastAny(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, hit: PxRaycastHit, filterData: PxQueryFilterData): boolean;
+    // raycastMultiple(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, flags: number, hits: PxRaycastHit[], hbsize: number, filterData: PxQueryFilterData): boolean;
     sweep(geometry: PxGeometry, pose: PxTransform, unitDir: PxVec3, maxDistance: number /*PxReal*/, hit: PxRaycastBuffer): boolean;
   }
 

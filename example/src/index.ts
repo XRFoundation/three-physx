@@ -34,10 +34,10 @@ const load = async () => {
     transform: getTransformFromWorldPos(kinematicObject),
     type: BodyType.KINEMATIC,
   }));
-  let isKinematic = true;
+  // let isKinematic = true;
   // setInterval(() => {
   //   isKinematic = !isKinematic;
-  //   PhysXInstance.instance.updateBody(kinematicBody, { angularVelocity: { x: 0, y: 0, z: 0 }, linearVelocity: { x: 0, y: 0, z: 0 }, type: isKinematic ? BodyType.KINEMATIC : BodyType.DYNAMIC });
+  //   kinematicBody.type = isKinematic ? BodyType.KINEMATIC : BodyType.DYNAMIC;
   // }, 2000);
   objects.set(kinematicBody.id, kinematicObject);
   renderer.addToScene(kinematicObject);
@@ -60,7 +60,6 @@ const load = async () => {
     origin: character.position,
     direction: new Vector3(0, -1, 0),
     maxDistance: 1,
-    collisionLayer: COLLISIONS.ALL, // this only works if both are COLLISIONS.NONE
     collisionMask: COLLISIONS.ALL
   });
 
@@ -158,6 +157,7 @@ const load = async () => {
     })
     characterBody.delta.y += characterBody.velocity.y;
     raycastQuery.origin = new Vector3().copy(character.position).add(new Vector3(0, -1, 0));
+    // console.log(raycastQuery.hits)
     PhysXInstance.instance.update(delta);
     objects.forEach((obj: Object3DBody) => {
       if (!obj.body) return;
@@ -213,7 +213,7 @@ const createBalls = () => {
     // new CylinderBufferGeometry()
   ];
   const meshes = [];
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < 250; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     meshes.push(mesh);

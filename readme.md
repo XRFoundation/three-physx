@@ -41,6 +41,7 @@ https://three-physx.netlify.app/
 ## API
 
 *-work in progress-*
+(outdated)
 
 This multithreaded PhysX API uses a singleton approach. This way the PhysX interface is accessible globally once instantiated.
 
