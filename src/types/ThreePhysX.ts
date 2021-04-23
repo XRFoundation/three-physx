@@ -57,7 +57,7 @@ export enum BodyType {
 }
 
 export interface Shape {
-  id: number;
+  id?: number;
   shape: SHAPES;
   transform: Transform;
   config: ShapeConfig;
@@ -78,7 +78,7 @@ export interface MaterialConfig {
 }
 
 export interface ShapeConfig {
-  id: number;
+  id?: number;
   contactOffset?: number;
   isTrigger?: boolean;
   collisionLayer?: number;

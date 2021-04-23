@@ -55,7 +55,7 @@ export class DebugRenderer {
     this._lineMaterial = new LineBasicMaterial({ color: 0x0000ff });
     this._sphereGeometry = new SphereBufferGeometry(1);
     this._boxGeometry = new BoxBufferGeometry();
-    this._planeGeometry = new PlaneBufferGeometry();
+    this._planeGeometry = new PlaneBufferGeometry(10000, 10000, 100, 100);
   }
 
   public setEnabled(enabled) {

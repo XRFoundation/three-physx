@@ -175,7 +175,7 @@ export class PhysXManager {
         z: controllerBodiesArray[offset + 3],
       };
       const deltaTime = controllerBodiesArray[offset + 4];
-      const filters = new PhysX.PxControllerFilters((controller as any)._filterData, (controller as any)._queryCallback, null);
+      const filters = new PhysX.PxControllerFilters((controller as any)._filterData, null, null);
       const collisionFlags = controller.move(deltaPos, 0.01, deltaTime, filters, null);
       const collisions = {
         down: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_DOWN) ? 1 : 0,
@@ -228,6 +228,7 @@ export class PhysXManager {
     (rigidBody as any)._type = type;
 
     const bodyShapes: PhysX.PxShape[] = [];
+    // console.log(shapes)
     shapes.forEach(({ id: shapeID, shape, transform, options, config }: Shape) => {
       const bodyShape = getShape({
         shape,
@@ -419,8 +420,9 @@ export class PhysXManager {
     (controller as any)._collisions = [];
     (actor as any)._type = BodyType.CONTROLLER;
     // todo
-    (controller as any)._filterData = null; //new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0);
-    (controller as any)._queryCallback = null; //PhysX.PxQueryFilterCallback.implement({ preFilter: () => {}, postFilter: () => {} });
+    shapes.setSimulationFilterData(new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0));
+    shapes.setQueryFilterData(new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0));
+    (controller as any)._filterData = new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0);
   };
 
   updateController = async (config: ControllerConfig) => {

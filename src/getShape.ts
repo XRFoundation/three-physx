@@ -4,7 +4,7 @@ import { PhysXManager } from './worker';
 
 const quat1 = new Quaternion();
 const quat2 = new Quaternion();
-const vec3 = new Vector3();
+const yVec = new Vector3(0, 1, 0);
 const zVec = new Vector3(0, 0, 1);
 const halfPI = Math.PI / 2;
 
@@ -19,6 +19,18 @@ export const getShape = ({ shape, transform, options }): PhysX.PxShape => {
   // rotate 90 degrees on Z axis as PhysX capsule extend along X axis not the Y axis
   if (shape === SHAPES.Capsule) {
     quat1.setFromAxisAngle(zVec, halfPI);
+    quat2.set(transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w);
+    quat2.multiply(quat1);
+    transform.rotation = {
+      x: quat2.x,
+      y: quat2.y,
+      z: quat2.z,
+      w: quat2.w,
+    };
+  }
+  // rotate -90 degrees on Y axis as PhysX plane is X+ normaled
+  if (shape === SHAPES.Plane) {
+    quat1.setFromAxisAngle(yVec, -halfPI);
     quat2.set(transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w);
     quat2.multiply(quat1);
     transform.rotation = {

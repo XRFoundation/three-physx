@@ -1,5 +1,5 @@
-import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, Object3DBody, SceneQueryType, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos, Body, Shape, BodyType, Controller, SHAPES } from '../../src';
-import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry } from 'three';
+import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, Object3DBody, SceneQueryType, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos, Body, Shape, BodyType, Controller, SHAPES, createNewTransform } from '../../src';
+import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry, PlaneBufferGeometry } from 'three';
 
 enum COLLISIONS {
   NONE = 0,
@@ -26,8 +26,8 @@ const load = async () => {
   kinematicObject.children[0].scale.setScalar(2);
   kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
   const kinematicBody = PhysXInstance.instance.addBody(new Body({
-    shapes: getShapesFromObject(kinematicObject).map((shape: Shape) => { 
-      shape.config.collisionLayer = COLLISIONS.HAMMER; 
+    shapes: getShapesFromObject(kinematicObject).map((shape: Shape) => {
+      shape.config.collisionLayer = COLLISIONS.HAMMER;
       shape.config.collisionMask = COLLISIONS.BALL;
       return shape;
     }),
@@ -48,8 +48,14 @@ const load = async () => {
 
   const character = new Group();
   character.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
-  const characterBody = PhysXInstance.instance.createController(new Controller({ isCapsule: true, radius: 0.5, position: { y: 5 } }));
-  
+  const characterBody = PhysXInstance.instance.createController(new Controller({
+    isCapsule: true,
+    radius: 0.5,
+    position: { y: 5 },
+    collisionLayer: COLLISIONS.CHARACTER,
+    collisionMask: COLLISIONS.ALL
+  }));
+
   (character as any).body = characterBody;
   objects.set(characterBody.id, character);
   characterBody.addEventListener(ControllerEvents.CONTROLLER_SHAPE_HIT, (ev) => {
@@ -62,11 +68,12 @@ const load = async () => {
     maxDistance: 1,
     collisionMask: COLLISIONS.ALL
   });
+  renderer.addToScene(character);
 
   createBalls().forEach(async (object) => {
     const body = new Body({
-      shapes: getShapesFromObject(object).map((shape: Shape) => { 
-        shape.config.collisionLayer = COLLISIONS.BALL; 
+      shapes: getShapesFromObject(object).map((shape: Shape) => {
+        shape.config.collisionLayer = COLLISIONS.BALL;
         shape.config.collisionMask = COLLISIONS.FLOOR | COLLISIONS.HAMMER | COLLISIONS.BALL;
         return shape;
       }),
@@ -80,23 +87,41 @@ const load = async () => {
     renderer.addToScene(object);
   });
 
-  const floor = new Mesh(new BoxBufferGeometry(platformSize, 1, platformSize), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide })).translateY(-2);
-  const floorbody = PhysXInstance.instance.addBody(new Body({
-    shapes: getShapesFromObject(floor).map((shape: Shape) => { 
-      shape.config.collisionLayer = COLLISIONS.FLOOR; 
+  const platform = new Mesh(new BoxBufferGeometry(platformSize, 1, platformSize), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide })).translateY(-2);
+  const platformBody = PhysXInstance.instance.addBody(new Body({
+    shapes: getShapesFromObject(platform).map((shape: Shape) => {
+      shape.config.collisionLayer = COLLISIONS.FLOOR;
       shape.config.collisionMask = COLLISIONS.CHARACTER | COLLISIONS.BALL;
       return shape;
     }),
-    transform: getTransformFromWorldPos(floor),
+    transform: getTransformFromWorldPos(platform),
     type: BodyType.STATIC
   }));
-  (floor as any).body = floorbody;
-  objects.set(floorbody.id, floor);
-  renderer.addToScene(floor);
+  (platform as any).body = platformBody;
+  objects.set(platformBody.id, platform);
+  renderer.addToScene(platform);
 
-  renderer.addToScene(character);
-  const keys = {}
 
+  const groundPlane = new Mesh(new PlaneBufferGeometry(10000, 10000), new MeshStandardMaterial({ color: randomColor() })).translateY(-5).rotateX(-Math.PI / 2);
+  const groundPlaneBody = PhysXInstance.instance.addBody(new Body({
+    shapes: [
+      {
+        shape: SHAPES.Plane,
+        transform: getTransformFromWorldPos(groundPlane),
+        config: {
+          collisionLayer: COLLISIONS.FLOOR,
+          collisionMask: COLLISIONS.ALL
+        }
+      }
+    ],
+    transform: createNewTransform(),
+    type: BodyType.STATIC
+  }));
+  (platform as any).body = groundPlane;
+  objects.set(groundPlaneBody.id, groundPlane);
+  renderer.addToScene(groundPlane);
+
+  const keys = {};
   document.addEventListener('keydown', (ev) => {
     keys[ev.code] = true;
     if (ev.code === 'Backquote') {
@@ -112,7 +137,7 @@ const load = async () => {
       characterBody.resize(1);
     }
     if (ev.code === 'KeyR') {
-      characterBody.updateTransform({ translation: { x: 1, y: 1, z: 1 }})
+      characterBody.updateTransform({ translation: { x: 1, y: 1, z: 1 } })
     }
   });
 
@@ -182,8 +207,8 @@ const load = async () => {
         object.updateWorldMatrix(true, true)
         const newbody = PhysXInstance.instance.addBody(new Body({
           transform: getTransformFromWorldPos(object),
-          shapes: getShapesFromObject(object).map((shape: Shape) => { 
-            shape.config.collisionLayer = COLLISIONS.BALL; 
+          shapes: getShapesFromObject(object).map((shape: Shape) => {
+            shape.config.collisionLayer = COLLISIONS.BALL;
             shape.config.collisionMask = COLLISIONS.FLOOR | COLLISIONS.HAMMER | COLLISIONS.BALL;
             return shape;
           }),
@@ -202,7 +227,7 @@ const load = async () => {
   };
   update();
 };
-const platformSize = 50;
+const platformSize = 25;
 const createBalls = () => {
   const geoms = [
     new BoxBufferGeometry(),

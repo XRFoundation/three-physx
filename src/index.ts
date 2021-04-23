@@ -349,7 +349,7 @@ export class Body extends EventDispatcher implements RigidBody {
   shapes: Shape[];
   private _type: BodyType;
 
-  constructor({ shapes, type, transform }: { shapes?: any; type?: BodyType; transform?: Transform } = {}) {
+  constructor({ shapes, type, transform }: { shapes?: Shape[]; type?: BodyType; transform?: Transform } = {}) {
     super();
 
     this.id = PhysXInstance.instance._getNextAvailableBodyID();
