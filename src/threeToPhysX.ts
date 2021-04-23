@@ -1,6 +1,6 @@
 import { Vector3, Matrix4, Mesh, Quaternion, Object3D, SphereGeometry, BufferGeometry } from 'three';
 import { PhysXInstance } from '.';
-import { PhysXBodyType, PhysXModelShapes, PhysXShapeConfig, RigidBodyProxy, ShapeConfig } from './types/ThreePhysX';
+import { BodyType, SHAPES, Shape, RigidBody, ShapeConfig } from './types/ThreePhysX';
 
 const matrixA = new Matrix4();
 const matrixB = new Matrix4();
@@ -9,7 +9,7 @@ const rot = new Quaternion();
 const scale = new Vector3(1, 1, 1);
 
 export const getShapesFromObject = (object: any) => {
-  const shapes: PhysXShapeConfig[] = [];
+  const shapes: Shape[] = [];
   object.updateMatrixWorld(true);
   iterateGeometries(object, { includeInvisible: true }, (data) => {
     shapes.push(...data);
@@ -27,11 +27,11 @@ export const createShapeFromConfig = (shape) => {
   return shape;
 };
 
-const createShapesFromUserData = (mesh, root): PhysXShapeConfig[] => {
+const createShapesFromUserData = (mesh, root): Shape[] => {
   if (!mesh.userData.physx) {
     mesh.userData.physx = {};
   }
-  const shapes: PhysXShapeConfig[] = [];
+  const shapes: Shape[] = [];
   if (mesh.userData.physx.shapes) {
     const relativeTransform = getTransformRelativeToRoot(mesh, root);
     mesh.userData.physx.shapes.forEach((shape) => {
@@ -84,26 +84,26 @@ const getShapeData = (mesh, shape): any => {
     return getThreeGeometryShape(mesh);
   }
   switch (shape.type) {
-    case PhysXModelShapes.Box:
+    case SHAPES.Box:
       return {
         shape: shape.type,
         options: { boxExtents: shape.boxExtents || getBoxExtents(mesh) },
       };
-    case PhysXModelShapes.Capsule:
+    case SHAPES.Capsule:
       return {
         shape: shape.type,
         halfHeight: shape.halfHeight ?? 1,
         radius: shape.radius ?? shape.radiusTop ?? 0.5,
       };
-    case PhysXModelShapes.Sphere:
+    case SHAPES.Sphere:
       return {
         shape: shape.type,
         options: { radius: shape.sphereRadius || getSphereRadius(mesh) },
       };
-    case PhysXModelShapes.ConvexMesh:
+    case SHAPES.ConvexMesh:
       const vertices = Array.from(mesh.geometry.attributes.position.array);
       return { shape: shape.type, options: { vertices } };
-    case PhysXModelShapes.TriangleMesh:
+    case SHAPES.TriangleMesh:
     default: {
       // const vertices = removeDuplicates(Array.from(mesh.geometry.attributes.position.array));
       const vertices = Array.from(mesh.geometry.attributes.position.array);
@@ -119,30 +119,30 @@ const getThreeGeometryShape = (mesh): any => {
     case 'BoxGeometry':
     case 'BoxBufferGeometry':
       return {
-        shape: PhysXModelShapes.Box,
+        shape: SHAPES.Box,
         options: { boxExtents: getBoxExtents(mesh) },
       };
     case 'CapsuleBufferGeometry': // https://github.com/maximeq/three-js-capsule-geometry
       return {
-        shape: PhysXModelShapes.Capsule,
+        shape: SHAPES.Capsule,
         options: { halfHeight: mesh.geometry._halfHeight ?? 1, radius: mesh.geometry.radius ?? mesh.geometry.radiusTop ?? 0.5 },
       };
     case 'SphereGeometry':
     case 'SphereBufferGeometry':
       return {
-        shape: PhysXModelShapes.Sphere,
+        shape: SHAPES.Sphere,
         options: { radius: getSphereRadius(mesh) },
       };
     case 'ConvexGeometry': {
       const vertices = Array.from(mesh.geometry.attributes.position.array);
-      return { shape: PhysXModelShapes.ConvexMesh, options: { vertices } };
+      return { shape: SHAPES.ConvexMesh, options: { vertices } };
     }
     default:
       // console.log('threeToPhysX: geometry of type', mesh.geometry.type, 'not supported. No shape will be added.');
       // return;
       const vertices = Array.from(mesh.geometry.attributes.position.array);
       return {
-        shape: PhysXModelShapes.ConvexMesh,
+        shape: SHAPES.ConvexMesh,
         options: { vertices },
       };
   }

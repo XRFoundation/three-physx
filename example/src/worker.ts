@@ -1,4 +1,4 @@
-import { receiveWorker } from "@xr3ngine/three-physx";
+import { receiveWorker } from "../../src";
 import PHYSX from '../dist/physx/physx.release.js';
 import physxModule from '../dist/physx/physx.release.wasm';
 

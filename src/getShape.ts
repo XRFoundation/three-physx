@@ -1,5 +1,5 @@
 import { Matrix4, Quaternion, Vector3 } from 'three';
-import { Transform, PhysXModelShapes } from './types/ThreePhysX';
+import { Transform, SHAPES } from './types/ThreePhysX';
 import { PhysXManager } from './worker';
 
 const quat1 = new Quaternion();
@@ -17,7 +17,7 @@ export const getShape = ({ shape, transform, options }): PhysX.PxShape => {
 
   const newShape = PhysXManager.instance.physics.createShape(geometry, material, false, flags);
   // rotate 90 degrees on Z axis as PhysX capsule extend along X axis not the Y axis
-  if (shape === PhysXModelShapes.Capsule) {
+  if (shape === SHAPES.Capsule) {
     quat1.setFromAxisAngle(zVec, halfPI);
     quat2.set(transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w);
     quat2.multiply(quat1);
@@ -37,23 +37,23 @@ const getGeometry = ({ shape, transform, options }): PhysX.PxGeometry => {
   const { boxExtents, radius, vertices, indices, halfHeight } = options || {};
   let geometry: PhysX.PxGeometry;
   switch (shape) {
-    case PhysXModelShapes.Box:
+    case SHAPES.Box:
       geometry = new PhysX.PxBoxGeometry(boxExtents.x, boxExtents.y, boxExtents.z);
       break;
-    case PhysXModelShapes.Sphere:
+    case SHAPES.Sphere:
       geometry = new PhysX.PxSphereGeometry(radius);
       break;
-    case PhysXModelShapes.Capsule:
+    case SHAPES.Capsule:
       geometry = new PhysX.PxCapsuleGeometry(radius, halfHeight);
       break;
-    case PhysXModelShapes.Plane:
+    case SHAPES.Plane:
       geometry = new PhysX.PxPlaneGeometry();
       break;
-    case PhysXModelShapes.TriangleMesh:
+    case SHAPES.TriangleMesh:
       geometry = createTrimesh(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices, indices);
       break;
     default:
-    case PhysXModelShapes.ConvexMesh:
+    case SHAPES.ConvexMesh:
       geometry = createConvexMesh(transform, PhysXManager.instance.cooking, PhysXManager.instance.physics, vertices);
       break;
   }

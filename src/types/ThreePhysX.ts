@@ -1,4 +1,4 @@
-import type { Object3D } from 'three';
+import type { EventDispatcher, Object3D } from 'three';
 ///<reference path="./PhysX.d.ts"/>
 
 export interface PhysXConfig {
@@ -7,7 +7,7 @@ export interface PhysXConfig {
   start?: boolean;
 }
 
-export enum PhysXModelShapes {
+export enum SHAPES {
   Sphere,
   Plane,
   Capsule,
@@ -42,23 +42,23 @@ export interface Quat {
 }
 
 export interface Transform {
-  translation: Vec3;
-  rotation: Quat;
-  scale: Vec3;
+  translation?: Vec3;
+  rotation?: Quat;
+  scale?: Vec3;
   linearVelocity?: Vec3;
   angularVelocity?: Vec3;
 }
 
-export enum PhysXBodyType {
+export enum BodyType {
   STATIC,
   DYNAMIC,
   KINEMATIC,
   CONTROLLER,
 }
 
-export interface PhysXShapeConfig {
+export interface Shape {
   id: number;
-  shape: PhysXModelShapes;
+  shape: SHAPES;
   transform: Transform;
   config: ShapeConfig;
   _debugNeedsUpdate?: any;
@@ -87,38 +87,31 @@ export interface ShapeConfig {
 }
 
 export interface BodyConfig {
-  type?: PhysXBodyType;
+  type?: BodyType;
   mass?: number;
   linearDamping?: number;
   angularDamping?: number;
   linearVelocity?: Vec3;
   angularVelocity?: Vec3;
-  transform?: Transform;
-  shapes?: ShapeConfig[]; // only use in updates, initial is set from PhysXShapeConfig
 }
 
-export interface RigidBodyProxy {
+export interface RigidBody extends EventDispatcher, BodyConfig {
   id: number;
   transform: Transform;
   updateTransform?: ({ translation, rotation }: { translation?: Vec3Fragment; rotation?: QuatFragment }) => void;
-  shapes: PhysXShapeConfig[];
-  options: BodyConfig;
-  controller?: {
-    _debugNeedsUpdate?: any;
-    config: ControllerConfig;
-    collisions: { down: boolean; sides: boolean; up: boolean };
-    delta: { x: number; y: number; z: number };
-    velocity: { x: number; y: number; z: number };
-  };
-  addEventListener?: any;
-  removeEventListener?: any;
-  hasEventListener?: any;
-  dispatchEvent?: any;
+  shapes: Shape[];
+}
+
+export interface ControllerRigidBody extends RigidBody {
+  _debugNeedsUpdate?: any;
+  _shape: ControllerConfig;
+  collisions: { down: boolean; sides: boolean; up: boolean };
+  delta: { x: number; y: number; z: number };
+  velocity: { x: number; y: number; z: number };
 }
 
 export interface ControllerConfig {
   id?: number;
-  body?: any; // internal use
   position?: Vec3Fragment;
   positionDelta?: Vec3Fragment;
   stepOffset?: number;
@@ -141,17 +134,8 @@ export interface ControllerConfig {
   halfSideExtent?: number;
 }
 
-export const DefaultControllerConfig: ControllerConfig = {
-  height: 1,
-  radius: 0.25,
-  stepOffset: 0.1,
-  contactOffset: 0.01,
-  slopeLimit: 1,
-  invisibleWallHeight: 1,
-};
-
 export interface Object3DBody extends Object3D {
-  body: RigidBodyProxy;
+  body: RigidBody;
 }
 
 export enum SceneQueryType {

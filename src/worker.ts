@@ -2,7 +2,7 @@
 
 import { Matrix4, Vector3, Quaternion } from 'three';
 import { getShape } from './getShape';
-import { PhysXConfig, PhysXBodyType, BodyConfig, Transform, RigidBodyProxy, ShapeConfig, PhysXShapeConfig, ControllerConfig, Vec3, SceneQuery, SceneQueryType, RaycastHit, CollisionEvents, ControllerEvents } from './types/ThreePhysX';
+import { PhysXConfig, BodyType, Transform, RigidBody, ShapeConfig, Shape, ControllerConfig, Vec3, SceneQuery, SceneQueryType, RaycastHit, CollisionEvents, ControllerEvents, BodyConfig } from './types/ThreePhysX';
 import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
 
@@ -215,12 +215,12 @@ export class PhysXManager {
     }
   };
 
-  addBody = async ({ id, transform, shapes, options }: RigidBodyProxy) => {
-    const { type } = options;
+  addBody = async (config: RigidBody) => {
+    const { id, transform, shapes, type } = config;
 
     let rigidBody: PhysX.PxRigidStatic | PhysX.PxRigidDynamic;
 
-    if (type === PhysXBodyType.STATIC) {
+    if (type === BodyType.STATIC) {
       rigidBody = this.physics.createRigidStatic(transform);
     } else {
       rigidBody = this.physics.createRigidDynamic(transform);
@@ -228,7 +228,7 @@ export class PhysXManager {
     (rigidBody as any)._type = type;
 
     const bodyShapes: PhysX.PxShape[] = [];
-    shapes.forEach(({ id: shapeID, shape, transform, options, config }: PhysXShapeConfig) => {
+    shapes.forEach(({ id: shapeID, shape, transform, options, config }: Shape) => {
       const bodyShape = getShape({
         shape,
         transform,
@@ -258,62 +258,67 @@ export class PhysXManager {
     this.bodies.set(id, rigidBody);
     this.scene.addActor(rigidBody, null);
 
-    delete options.type;
-    this.updateBody({ id, options });
+    delete config.type;
+    this.updateBody(config);
   };
 
-  updateBody = async ({ id, options }: { id: number; options: BodyConfig }) => {
-    const body = this.bodies.get(id);
+  updateBody = async (config: RigidBody) => {
+    const body = this.bodies.get(config.id);
     if (!isStaticBody(body)) {
-      if (typeof options.type !== 'undefined') {
+      if (typeof config.type !== 'undefined') {
         const transform = body.getGlobalPose();
-        if (options.type === PhysXBodyType.KINEMATIC) {
+        if (config.type === BodyType.KINEMATIC) {
           (body as PhysX.PxRigidDynamic).setRigidBodyFlag(PhysX.PxRigidBodyFlag.eKINEMATIC, true);
-          (body as any)._type = PhysXBodyType.KINEMATIC;
+          (body as any)._type = BodyType.KINEMATIC;
         } else {
           (body as PhysX.PxRigidDynamic).setRigidBodyFlag(PhysX.PxRigidBodyFlag.eKINEMATIC, false);
-          (body as any)._type = PhysXBodyType.DYNAMIC;
+          (body as any)._type = BodyType.DYNAMIC;
         }
         body.setGlobalPose(transform, true);
       }
-      if (options.mass) {
-        (body as PhysX.PxRigidDynamic).setMass(options.mass);
+      if (config.mass) {
+        (body as PhysX.PxRigidDynamic).setMass(config.mass);
       }
-      if (options.linearDamping) {
-        (body as PhysX.PxRigidDynamic).setLinearDamping(options.linearDamping);
+      if (config.linearDamping) {
+        (body as PhysX.PxRigidDynamic).setLinearDamping(config.linearDamping);
       }
-      if (options.angularDamping) {
-        (body as PhysX.PxRigidDynamic).setAngularDamping(options.angularDamping);
+      if (config.angularDamping) {
+        (body as PhysX.PxRigidDynamic).setAngularDamping(config.angularDamping);
       }
     }
-    if (options.linearVelocity) {
+    if (config.linearVelocity) {
       const linearVelocity = body.getLinearVelocity();
-      body.setLinearVelocity({ x: options.linearVelocity.x ?? linearVelocity.x, y: options.linearVelocity.y ?? linearVelocity.x, z: options.linearVelocity.z ?? linearVelocity.z }, true);
+      body.setLinearVelocity({ x: config.linearVelocity.x ?? linearVelocity.x, y: config.linearVelocity.y ?? linearVelocity.x, z: config.linearVelocity.z ?? linearVelocity.z }, true);
     }
-    if (options.angularVelocity) {
+    if (config.angularVelocity) {
       const angularVelocity = body.getAngularVelocity();
-      body.setAngularVelocity({ x: options.angularVelocity.x ?? angularVelocity.x, y: options.angularVelocity.y ?? angularVelocity.x, z: options.angularVelocity.z ?? angularVelocity.z }, true);
+      body.setAngularVelocity({ x: config.angularVelocity.x ?? angularVelocity.x, y: config.angularVelocity.y ?? angularVelocity.x, z: config.angularVelocity.z ?? angularVelocity.z }, true);
     }
-    if (options.transform) {
+    if (config.transform) {
       const transform = body.getGlobalPose();
-      transform.translation.x = options.transform.translation.x ?? transform.translation.x;
-      transform.translation.y = options.transform.translation.y ?? transform.translation.y;
-      transform.translation.z = options.transform.translation.z ?? transform.translation.z;
-      transform.rotation.x = options.transform.rotation.x ?? transform.rotation.x;
-      transform.rotation.y = options.transform.rotation.y ?? transform.rotation.y;
-      transform.rotation.z = options.transform.rotation.z ?? transform.rotation.z;
-      transform.rotation.w = options.transform.rotation.w ?? transform.rotation.w;
+      transform.translation.x = config.transform.translation.x ?? transform.translation.x;
+      transform.translation.y = config.transform.translation.y ?? transform.translation.y;
+      transform.translation.z = config.transform.translation.z ?? transform.translation.z;
+      transform.rotation.x = config.transform.rotation.x ?? transform.rotation.x;
+      transform.rotation.y = config.transform.rotation.y ?? transform.rotation.y;
+      transform.rotation.z = config.transform.rotation.z ?? transform.rotation.z;
+      transform.rotation.w = config.transform.rotation.w ?? transform.rotation.w;
       body.setGlobalPose(transform, true);
     }
-    options.shapes?.forEach(this._updateShape);
+    config.shapes?.forEach((shape) => this._updateShape(shape));
   };
 
   _updateShape({ id, isTrigger, contactOffset, collisionLayer, collisionMask, material }: ShapeConfig) {
     const shape = this.shapes.get(id);
     if (!shape) return;
     if (typeof isTrigger !== 'undefined') {
-      shape.setFlag(PhysX.PxShapeFlag.eSIMULATION_SHAPE, !isTrigger);
-      shape.setFlag(PhysX.PxShapeFlag.eTRIGGER_SHAPE, isTrigger);
+      if (isTrigger) {
+        shape.setFlag(PhysX.PxShapeFlag.eSIMULATION_SHAPE, !isTrigger);
+        shape.setFlag(PhysX.PxShapeFlag.eTRIGGER_SHAPE, isTrigger);
+      } else {
+        shape.setFlag(PhysX.PxShapeFlag.eTRIGGER_SHAPE, isTrigger);
+        shape.setFlag(PhysX.PxShapeFlag.eSIMULATION_SHAPE, !isTrigger);
+      }
     }
     if (typeof collisionLayer !== 'undefined') {
       (shape as any)._collisionLayer = collisionLayer;
@@ -408,14 +413,14 @@ export class PhysXManager {
     const shapes = actor.getShapes() as PhysX.PxShape;
     this.shapeIDByPointer.set(shapes.$$.ptr, config.id);
     (controller as any)._collisions = [];
-    (actor as any)._type = PhysXBodyType.CONTROLLER;
+    (actor as any)._type = BodyType.CONTROLLER;
     // todo
     (controller as any)._filterData = null; //new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0);
     (controller as any)._queryCallback = null; //PhysX.PxQueryFilterCallback.implement({ preFilter: () => {}, postFilter: () => {} });
   };
 
-  updateController = async ({ id, config }: { id: number; config: ControllerConfig }) => {
-    const controller = this.controllers.get(id);
+  updateController = async (config: ControllerConfig) => {
+    const controller = this.controllers.get(config.id);
     if (!controller) return;
     if (typeof config.positionDelta !== 'undefined') {
       const currentPos = controller.getPosition();
@@ -454,6 +459,7 @@ export class PhysXManager {
     if (typeof config.halfSideExtent !== 'undefined') {
       (controller as PhysX.PxBoxController).setHalfSideExtent(config.halfSideExtent);
     }
+    // TODO: implement rest of ControllerConfig
   };
 
   removeController = async ({ id }) => {
@@ -559,19 +565,19 @@ function dec2bin(dec) {
   return (dec >>> 0).toString(2);
 }
 const isKinematicBody = (body: PhysX.PxRigidActor) => {
-  return (body as any)._type === PhysXBodyType.KINEMATIC;
+  return (body as any)._type === BodyType.KINEMATIC;
 };
 
 const isControllerBody = (body: PhysX.PxRigidActor) => {
-  return (body as any)._type === PhysXBodyType.CONTROLLER;
+  return (body as any)._type === BodyType.CONTROLLER;
 };
 
 const isDynamicBody = (body: PhysX.PxRigidActor) => {
-  return (body as any)._type === PhysXBodyType.DYNAMIC;
+  return (body as any)._type === BodyType.DYNAMIC;
 };
 
 const isStaticBody = (body: PhysX.PxRigidActor) => {
-  return (body as any)._type === PhysXBodyType.STATIC;
+  return (body as any)._type === BodyType.STATIC;
 };
 
 const getBodyData = (body: PhysX.PxRigidActor) => {
@@ -599,9 +605,11 @@ export const receiveWorker = async (physx): Promise<void> => {
   };
   const addFunctionListener = (eventLabel) => {
     messageQueue.addEventListener(eventLabel, async ({ detail }) => {
+      // try {
       PhysXManager.instance[eventLabel](...detail.args).then((returnValue) => {
         messageQueue.sendEvent(detail.uuid, { returnValue });
       });
+      // } catch (e) { console.log(e, eventLabel, detail )}
     });
   };
   Object.keys(PhysXManager.instance).forEach((key) => {

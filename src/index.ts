@@ -1,10 +1,28 @@
 import * as BufferConfig from './BufferConfig';
 import { MessageQueue } from './utils/MessageQueue';
 
-import { PhysXConfig, PhysXBodyType, RigidBodyProxy, PhysXShapeConfig, BodyConfig, ControllerConfig, SceneQuery, CollisionEvents, ControllerEvents, Transform, Quat, QuatFragment, Vec3, Vec3Fragment } from './types/ThreePhysX';
+import {
+  PhysXConfig,
+  BodyType,
+  RigidBody,
+  Shape,
+  SceneQuery,
+  CollisionEvents,
+  ControllerEvents,
+  Transform,
+  Quat,
+  QuatFragment,
+  Vec3,
+  Vec3Fragment,
+  ControllerRigidBody,
+  MaterialConfig,
+  ControllerConfig,
+  BodyConfig,
+} from './types/ThreePhysX';
 import { createNewTransform } from './threeToPhysX';
 import { proxyEventListener } from './utils/proxyEventListener';
 import { clone } from './utils/misc';
+import { EventDispatcher, Vector3 } from 'three';
 
 let nextAvailableBodyIndex = 0;
 let nextAvailableShapeID = 0;
@@ -12,13 +30,13 @@ let nextAvailableRaycastID = 0;
 
 export class PhysXInstance {
   static instance: PhysXInstance = new PhysXInstance();
-  physicsProxy: any;
+  _physicsProxy: any;
 
-  bodies: Map<number, RigidBodyProxy> = new Map<number, RigidBodyProxy>();
-  shapes: Map<number, PhysXShapeConfig> = new Map<number, PhysXShapeConfig>();
-  kinematicBodies: Map<number, RigidBodyProxy> = new Map<number, RigidBodyProxy>();
-  controllerBodies: Map<number, RigidBodyProxy> = new Map<number, RigidBodyProxy>();
-  raycasts: Map<number, SceneQuery> = new Map<number, SceneQuery>();
+  _bodies: Map<number, Body> = new Map<number, Body>();
+  _shapes: Map<number, Shape> = new Map<number, Shape>();
+  _kinematicBodies: Map<number, Body> = new Map<number, Body>();
+  _controllerBodies: Map<number, Controller> = new Map<number, Controller>();
+  _raycasts: Map<number, SceneQuery> = new Map<number, SceneQuery>();
 
   initPhysX = async (worker: Worker, config: PhysXConfig): Promise<void> => {
     const messageQueue = new MessageQueue(worker);
@@ -31,18 +49,18 @@ export class PhysXInstance {
       let offset = 0;
       const { raycastResults, bodyArray } = ev.detail;
       while (offset < bodyArray.length) {
-        const body = this.bodies.get(bodyArray[offset]);
+        const body = this._bodies.get(bodyArray[offset]);
         if (body) {
-          if (body.options.type === PhysXBodyType.CONTROLLER) {
+          if (body.type === BodyType.CONTROLLER) {
             body.transform.translation.x = bodyArray[offset + 1];
             body.transform.translation.y = bodyArray[offset + 2];
             body.transform.translation.z = bodyArray[offset + 3];
-            body.controller.collisions = {
+            (body as Controller).collisions = {
               down: Boolean(bodyArray[offset + 4]),
               sides: Boolean(bodyArray[offset + 5]),
               up: Boolean(bodyArray[offset + 6]),
             };
-          } else if (body.options.type === PhysXBodyType.DYNAMIC) {
+          } else if (body.type === BodyType.DYNAMIC) {
             body.transform.translation.x = bodyArray[offset + 1];
             body.transform.translation.y = bodyArray[offset + 2];
             body.transform.translation.z = bodyArray[offset + 3];
@@ -60,7 +78,7 @@ export class PhysXInstance {
         }
         offset += BufferConfig.BODY_DATA_SIZE;
       }
-      this.raycasts.forEach((raycastQuery) => {
+      this._raycasts.forEach((raycastQuery) => {
         raycastQuery.hits = raycastResults[raycastQuery.id] ?? [];
       });
     });
@@ -75,8 +93,8 @@ export class PhysXInstance {
             {
               try {
                 const { event, idA, idB } = collision;
-                const shapeA = this.shapes.get(idA);
-                const shapeB = this.shapes.get(idB);
+                const shapeA = this._shapes.get(idA);
+                const shapeB = this._shapes.get(idB);
                 const bodyA = (shapeA as any).body;
                 const bodyB = (shapeB as any).body;
                 if (!bodyA || !bodyB) return; // TODO this is a hack
@@ -104,8 +122,8 @@ export class PhysXInstance {
           case ControllerEvents.CONTROLLER_OBSTACLE_HIT:
             {
               const { event, controllerID, shapeID, position, normal, length } = collision;
-              const controllerBody: RigidBodyProxy = this.bodies.get(controllerID);
-              const shape = this.shapes.get(shapeID);
+              const controllerBody: RigidBody = this._bodies.get(controllerID);
+              const shape = this._shapes.get(shapeID);
               controllerBody.dispatchEvent({
                 type: event,
                 shape,
@@ -119,7 +137,7 @@ export class PhysXInstance {
       });
     });
 
-    this.physicsProxy = {
+    this._physicsProxy = {
       initPhysX: pipeRemoteFunction(messageQueue, 'initPhysX'),
       update: pipeRemoteFunction(messageQueue, 'update'),
       startPhysX: pipeRemoteFunction(messageQueue, 'startPhysX'),
@@ -134,194 +152,83 @@ export class PhysXInstance {
       removeRaycastQuery: pipeRemoteFunction(messageQueue, 'removeRaycastQuery'),
     };
 
-    await this.physicsProxy.initPhysX([clone(config)]);
+    await this._physicsProxy.initPhysX([clone(config)]);
   };
 
   // update kinematic bodies
   update(delta: number) {
     // TODO: make this rely on kinematicBodies.size instead of bodies.size
     let offset = 0;
-    const kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.KINEMATIC_DATA_SIZE * this.kinematicBodies.size));
-    this.kinematicBodies.forEach((body, id) => {
+    const kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.KINEMATIC_DATA_SIZE * this._kinematicBodies.size));
+    this._kinematicBodies.forEach((body, id) => {
       const { translation, rotation } = body.transform;
       kinematicArray.set([id, translation.x, translation.y, translation.z, rotation.x, rotation.y, rotation.z, rotation.w], offset);
       offset += BufferConfig.KINEMATIC_DATA_SIZE;
     });
     offset = 0;
-    const controllerArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.CONTROLLER_DATA_SIZE * this.controllerBodies.size));
-    this.controllerBodies.forEach((body, id) => {
-      const { x, y, z } = body.controller.delta;
+    const controllerArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.CONTROLLER_DATA_SIZE * this._controllerBodies.size));
+    this._controllerBodies.forEach((body, id) => {
+      const { x, y, z } = body.delta;
       controllerArray.set([id, x, y, z, delta], offset);
-      body.controller.delta = { x: 0, y: 0, z: 0 };
+      body.delta = { x: 0, y: 0, z: 0 };
       offset += BufferConfig.CONTROLLER_DATA_SIZE;
     });
     offset = 0;
-    const raycastArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.RAYCAST_DATA_SIZE * this.raycasts.size));
-    this.raycasts.forEach((raycast, id) => {
+    const raycastArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.RAYCAST_DATA_SIZE * this._raycasts.size));
+    this._raycasts.forEach((raycast, id) => {
       const ori = raycast.origin;
       const dir = raycast.direction;
       raycastArray.set([id, ori.x, ori.y, ori.z, dir.x, dir.y, dir.z]);
       offset += BufferConfig.RAYCAST_DATA_SIZE;
     });
-    this.physicsProxy.update([kinematicArray, controllerArray, raycastArray], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);
+    this._physicsProxy.update([kinematicArray, controllerArray, raycastArray], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);
   }
 
   startPhysX(start: boolean) {
-    return this.physicsProxy.startPhysX([start]);
+    return this._physicsProxy.startPhysX([start]);
   }
 
-  addBody({ shapes, type, transform }: { shapes?: any; type?: PhysXBodyType; transform?: Transform } = {}) {
-    const id = this._getNextAvailableBodyID();
-    shapes?.forEach((shape) => {
-      shape.id = this._getNextAvailableShapeID();
-      this.shapes.set(shape.id, shape);
-    });
-    const body: RigidBodyProxy = {
-      id,
-      transform: transform ?? createNewTransform(),
-      shapes: shapes ?? [],
-      options: {
-        type: type ?? PhysXBodyType.DYNAMIC,
-      },
-    };
-    this.physicsProxy.addBody([clone(body)]);
-    body.shapes.forEach((shape) => {
-      (shape as any).body = body;
-    });
-    proxyEventListener(body);
-    body.updateTransform = (newTransform) => {
-      if (this.controllerBodies.has(id)) {
-        this.updateController(body, { position: newTransform.translation });
-      } else {
-        this.updateBody(body, mergeTransformFragments(body.transform, newTransform));
-      }
-    };
-    this.bodies.set(body.id, body);
-    if (body.options.type === PhysXBodyType.KINEMATIC) {
-      this.kinematicBodies.set(body.id, body);
-    }
-    return body;
-  }
-
-  updateBody(body: RigidBodyProxy | any, options: BodyConfig) {
-    if (typeof body === 'undefined') {
-      throw new Error('three-physx! Tried to update a body that does not exist.');
-    }
-    if (body.options.type === PhysXBodyType.STATIC && typeof options.type !== 'undefined') {
-      throw new Error('three-physx! Tried to change the type of a static object. This is not allowed, instead remove the body and create a new one.');
-    }
-    if (body.options.type === PhysXBodyType.DYNAMIC && options.type === PhysXBodyType.KINEMATIC) {
-      this.kinematicBodies.set(body.id, body);
-      body.options.type = PhysXBodyType.KINEMATIC;
-    } else if (body.options.type === PhysXBodyType.KINEMATIC && options.type === PhysXBodyType.DYNAMIC) {
-      this.kinematicBodies.delete(body.id);
-      body.options.type = PhysXBodyType.DYNAMIC;
-    }
-    const id = body.id;
-    body.shapes.forEach((shape) => {
-      shape._debugNeedsUpdate = true;
-    });
-    this.physicsProxy.updateBody([clone({ id, options })]);
-  }
-
-  removeBody = async (body: RigidBodyProxy) => {
-    this.bodies.delete(body.id);
-    if (body.options.type === PhysXBodyType.KINEMATIC) {
-      this.kinematicBodies.delete(body.id);
-    }
-    body.shapes.forEach((shape) => {
-      this.shapes.delete(shape.id);
-    });
-    const id = body.id;
-    return this.physicsProxy.removeBody([{ id }]);
-  };
-
-  createController(options?: ControllerConfig) {
-    const id = this._getNextAvailableBodyID();
-    const body: RigidBodyProxy = {
-      id,
-      transform: createNewTransform(),
-      shapes: [],
-      options: {
-        type: PhysXBodyType.CONTROLLER,
-      },
-    };
-    const shape = options ?? {};
-    if (typeof options !== 'undefined') {
-      if (options.isCapsule) {
-        shape.height = options.height ?? 1;
-        shape.radius = options.radius ?? 0.5;
-      } else {
-        shape.halfForwardExtent = options.halfForwardExtent ?? 0.5;
-        shape.halfHeight = options.halfHeight ?? 0.5;
-        shape.halfSideExtent = options.halfSideExtent ?? 0.5;
-      }
-    }
-    shape.id = this._getNextAvailableShapeID();
-    this.physicsProxy.createController([
+  addBody(body: Body) {
+    this._physicsProxy.addBody([
       clone({
         id: body.id,
-        config: shape,
+        transform: body.transform,
+        shapes: body.shapes,
+        type: body.type,
       }),
     ]);
-    shape.body = body;
-    body.controller = {
-      config: shape,
-      collisions: { down: false, sides: false, up: false },
-      delta: { x: 0, y: 0, z: 0 },
-      velocity: { x: 0, y: 0, z: 0 },
-    };
-    this.shapes.set(shape.id, shape as any);
-    this.controllerBodies.set(id, body);
-    proxyEventListener(body);
-    this.bodies.set(id, body);
     return body;
   }
 
-  updateController(body: RigidBodyProxy, config: ControllerConfig) {
+  removeBody(body: RigidBody) {
+    this._bodies.delete(body.id);
+    if (body.type === BodyType.KINEMATIC) {
+      this._kinematicBodies.delete(body.id);
+    }
+    body.shapes.forEach((shape) => {
+      this._shapes.delete(shape.id);
+    });
+    const id = body.id;
+    this._physicsProxy.removeBody([{ id }]);
+  }
+
+  createController(controller: Controller) {
+    this._physicsProxy.createController([
+      clone({
+        id: controller.id,
+        config: controller._shape,
+      }),
+    ]);
+    return controller;
+  }
+
+  removeController(body: Controller) {
     if (typeof body?.id === 'undefined') return;
-    if (!this.controllerBodies.has(body.id)) return;
-    body.controller._debugNeedsUpdate = true;
-    if (typeof config.height !== 'undefined') {
-      body.controller.config.height = config.height;
-    }
-    if (typeof config.resize !== 'undefined') {
-      if (typeof body.controller.config.height !== 'undefined') {
-        body.controller.config.height = config.resize;
-      }
-      if (typeof body.controller.config.halfHeight !== 'undefined') {
-        body.controller.config.halfHeight = config.resize * 2;
-      }
-    }
-    if (typeof config.radius !== 'undefined') {
-      body.controller.config.radius = config.radius;
-    }
-    if (typeof config.climbingMode !== 'undefined') {
-      body.controller.config.climbingMode = config.climbingMode;
-    }
-    if (typeof config.halfForwardExtent !== 'undefined') {
-      body.controller.config.halfForwardExtent = config.halfForwardExtent;
-    }
-    if (typeof config.halfHeight !== 'undefined') {
-      body.controller.config.halfHeight = config.halfHeight;
-    }
-    if (typeof config.halfSideExtent !== 'undefined') {
-      body.controller.config.halfSideExtent = config.halfSideExtent;
-    }
-    return this.physicsProxy.updateController([
-      clone({
-        id: body.id,
-        config,
-      }),
-    ]);
-  }
-
-  removeController(id) {
-    this.physicsProxy.removeController([{ id }]);
-    const body = this.controllerBodies.get(id);
-    this.shapes.delete(body.controller.config.id);
-    this.controllerBodies.delete(id);
-    this.bodies.delete(id);
+    const id = body.id;
+    this._physicsProxy.removeController([{ id }]);
+    this._shapes.delete(body._shape.id);
+    this._controllerBodies.delete(id);
+    this._bodies.delete(id);
   }
 
   addRaycastQuery(raycastQuery: SceneQuery) {
@@ -333,15 +240,15 @@ export class PhysXInstance {
     raycastQuery.maxHits = raycastQuery.maxHits ?? 1;
 
     const id = this._getNextAvailableRaycastID();
-    this.raycasts.set(id, raycastQuery);
+    this._raycasts.set(id, raycastQuery);
     raycastQuery.id = id;
     raycastQuery.hits = []; // init
-    this.physicsProxy.addRaycastQuery([clone(raycastQuery)]);
+    this._physicsProxy.addRaycastQuery([clone(raycastQuery)]);
     return raycastQuery;
   }
 
   updateRaycastQuery(id, newArgs: any) {
-    const raycast = this.raycasts.get(id);
+    const raycast = this._raycasts.get(id);
     if (!raycast) return;
     if (typeof newArgs.flags !== 'undefined') {
       raycast.flags = newArgs.flags;
@@ -355,13 +262,13 @@ export class PhysXInstance {
     if (typeof newArgs.collisionMask !== 'undefined') {
       raycast.collisionMask = newArgs.collisionMask;
     }
-    this.physicsProxy.updateRaycastQuery([clone({ id, ...newArgs })]);
+    this._physicsProxy.updateRaycastQuery([clone({ id, ...newArgs })]);
   }
 
   removeRaycastQuery(raycastQuery: SceneQuery) {
-    if (!this.raycasts.has(raycastQuery.id)) return;
-    this.raycasts.delete(raycastQuery.id);
-    this.physicsProxy.removeRaycastQuery([raycastQuery.id]);
+    if (!this._raycasts.has(raycastQuery.id)) return;
+    this._raycasts.delete(raycastQuery.id);
+    this._physicsProxy.removeRaycastQuery([raycastQuery.id]);
   }
 
   addConstraint = async () => {
@@ -372,7 +279,7 @@ export class PhysXInstance {
     // todo
   };
 
-  private _getNextAvailableBodyID = () => {
+  _getNextAvailableBodyID = () => {
     // todo, make this smart
     return nextAvailableBodyIndex++;
   };
@@ -382,7 +289,7 @@ export class PhysXInstance {
     return nextAvailableShapeID++;
   };
 
-  private _getNextAvailableRaycastID = () => {
+  _getNextAvailableRaycastID = () => {
     // todo, make this smart
     return nextAvailableRaycastID++;
   };
@@ -433,6 +340,166 @@ const generateUUID = (): string => {
     .map(() => Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16))
     .join('-');
 };
+
+export class Body extends EventDispatcher implements RigidBody {
+  id: number;
+  transform: Transform;
+  shapes: Shape[];
+  private _type: BodyType;
+
+  constructor({ shapes, type, transform }: { shapes?: any; type?: BodyType; transform?: Transform } = {}) {
+    super();
+
+    this.id = PhysXInstance.instance._getNextAvailableBodyID();
+    this._type = type;
+    this.transform = transform ?? createNewTransform();
+
+    this.shapes = shapes ?? [];
+    this.shapes.forEach((shape) => {
+      shape.id = PhysXInstance.instance._getNextAvailableShapeID();
+      PhysXInstance.instance._shapes.set(shape.id, shape);
+    });
+
+    PhysXInstance.instance._bodies.set(this.id, this);
+    if (this._type === BodyType.KINEMATIC) {
+      PhysXInstance.instance._kinematicBodies.set(this.id, this);
+    }
+  }
+
+  set type(value: BodyType) {
+    if (this._type === BodyType.STATIC && typeof value !== 'undefined') {
+      throw new Error('three-physx! Tried to change the type of a static object. This is not allowed, instead remove the body and create a new one.');
+    }
+    if (this._type === BodyType.DYNAMIC && value === BodyType.KINEMATIC) {
+      PhysXInstance.instance._kinematicBodies.set(this.id, this);
+      this._type = BodyType.KINEMATIC;
+    } else if (this._type === BodyType.KINEMATIC && value === BodyType.DYNAMIC) {
+      PhysXInstance.instance._kinematicBodies.delete(this.id);
+      this._type = BodyType.DYNAMIC;
+    }
+
+    this.shapes.forEach((shape) => {
+      shape._debugNeedsUpdate = true;
+    });
+
+    PhysXInstance.instance._physicsProxy.updateBody([{ id: this.id, type: value }]);
+  }
+
+  get type(): BodyType {
+    return this._type;
+  }
+
+  updateTransform(newTransform) {
+    if (this._type === BodyType.KINEMATIC) {
+      this.transform = mergeTransformFragments(this.transform, newTransform);
+      return;
+    }
+    PhysXInstance.instance._physicsProxy.updateBody([clone({ id: this.id, transform: newTransform })]);
+  }
+}
+
+const DefaultControllerConfig: ControllerConfig = {
+  height: 1,
+  radius: 0.25,
+  stepOffset: 0.1,
+  contactOffset: 0.01,
+  slopeLimit: 1,
+  invisibleWallHeight: 1,
+};
+
+export class Controller extends Body implements ControllerRigidBody {
+  // internal
+  _debugNeedsUpdate?: any;
+  _shape: ControllerConfig;
+  collisions: { down: boolean; sides: boolean; up: boolean };
+  delta: { x: number; y: number; z: number };
+  velocity: { x: number; y: number; z: number };
+
+  constructor(config: ControllerConfig) {
+    super({ type: BodyType.CONTROLLER, transform: { translation: mergeTranslationFragments({ x: 0, y: 0, z: 0 }, config.position) } });
+
+    this._shape = {
+      ...DefaultControllerConfig,
+      ...config,
+      id: PhysXInstance.instance._getNextAvailableShapeID(),
+    };
+
+    this.collisions = { down: false, sides: false, up: false };
+    this.delta = new Vector3();
+    this.velocity = new Vector3();
+
+    PhysXInstance.instance._shapes.set(this._shape.id, this._shape as any);
+    PhysXInstance.instance._controllerBodies.set(this.id, this);
+  }
+  updateTransform = (newTransform) => {
+    PhysXInstance.instance._physicsProxy.updateController([clone({ id: this.id, position: newTransform.translation })]);
+  };
+  set type(value: BodyType) {}
+  get type() {
+    return BodyType.CONTROLLER;
+  }
+
+  resize(value: number) {
+    this._shape.isCapsule ? (this._shape.height = value) : (this._shape.halfHeight = value);
+    PhysXInstance.instance._physicsProxy.updateController([{ id: this.id, resize: value }]);
+    this._debugNeedsUpdate = true;
+  }
+
+  get height() {
+    return this._shape.height;
+  }
+  set height(value: number) {
+    this._shape.height = value;
+    PhysXInstance.instance._physicsProxy.updateController([{ id: this.id, height: value }]);
+    this._debugNeedsUpdate = true;
+  }
+  get radius() {
+    return this._shape.radius;
+  }
+  set radius(value: number) {
+    this._shape.radius = value;
+    PhysXInstance.instance._physicsProxy.updateController([{ id: this.id, radius: value }]);
+    this._debugNeedsUpdate = true;
+  }
+  get climbingMode() {
+    return this._shape.climbingMode;
+  }
+  set climbingMode(value: number) {
+    this._shape.climbingMode = value;
+    PhysXInstance.instance._physicsProxy.updateController([{ id: this.id, climbingMode: value }]);
+    this._debugNeedsUpdate = true;
+  }
+  get halfForwardExtent() {
+    return this._shape.halfForwardExtent;
+  }
+  set halfForwardExtent(value: number) {
+    this._shape.halfForwardExtent = value;
+    PhysXInstance.instance._physicsProxy.updateController([{ id: this.id, halfForwardExtent: value }]);
+    this._debugNeedsUpdate = true;
+  }
+  get halfHeight() {
+    return this._shape.halfHeight;
+  }
+  set halfHeight(value: number) {
+    this._shape.halfHeight = value;
+    PhysXInstance.instance._physicsProxy.updateController([{ id: this.id, halfHeight: value }]);
+    this._debugNeedsUpdate = true;
+  }
+  get halfSideExtent() {
+    return this._shape.halfSideExtent;
+  }
+  set halfSideExtent(value: number) {
+    this._shape.halfSideExtent = value;
+    PhysXInstance.instance._physicsProxy.updateController([{ id: this.id, halfSideExtent: value }]);
+    this._debugNeedsUpdate = true;
+  }
+
+  // TODO: implement rest of ControllerConfig
+}
+
+export class RaycastQuery {
+  constructor() {}
+}
 
 export { CapsuleBufferGeometry } from './utils/CapsuleBufferGeometry';
 export { DebugRenderer } from './utils/DebugRenderer';
