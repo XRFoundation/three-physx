@@ -183,7 +183,7 @@ const load = async () => {
     characterBody.delta.y += characterBody.velocity.y;
     raycastQuery.origin = new Vector3().copy(character.position).add(new Vector3(0, -1, 0));
     // console.log(raycastQuery.hits)
-    PhysXInstance.instance.update(delta);
+    PhysXInstance.instance.update();
     objects.forEach((obj: Object3DBody) => {
       if (!obj.body) return;
       if ((obj.body as Body).type === BodyType.DYNAMIC) {

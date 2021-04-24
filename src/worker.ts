@@ -11,7 +11,8 @@ const pos = new Vector3();
 const quat = new Quaternion();
 const scale = new Vector3();
 
-let lastTick = 0;
+let lastSimulationTick = 0;
+let lastUpdateTick = 0;
 
 export class PhysXManager {
   static instance: PhysXManager;
@@ -120,7 +121,8 @@ export class PhysXManager {
 
   simulate = async () => {
     const now = Date.now();
-    const delta = now - lastTick;
+    const delta = now - lastSimulationTick;
+    lastSimulationTick = now;
     this.scene.simulate(delta / 1000, true);
     this.scene.fetchResults(true);
     const bodyArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
@@ -142,10 +144,12 @@ export class PhysXManager {
       raycastResults[id] = hits;
     });
     this.onUpdate({ raycastResults, bodyArray }); //, shapeArray);
-    lastTick = now;
   };
 
   update = async (kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array, raycastQueryArray: Float32Array) => {
+    const now = Date.now();
+    const delta = now - lastUpdateTick;
+    lastUpdateTick = now;
     let offset = 0;
     while (offset < kinematicBodiesArray.length) {
       const id = kinematicBodiesArray[offset];
@@ -174,9 +178,8 @@ export class PhysXManager {
         y: controllerBodiesArray[offset + 2],
         z: controllerBodiesArray[offset + 3],
       };
-      const deltaTime = controllerBodiesArray[offset + 4];
       const filters = new PhysX.PxControllerFilters((controller as any)._filterData, null, null);
-      const collisionFlags = controller.move(deltaPos, 0.01, deltaTime, filters, null);
+      const collisionFlags = controller.move(deltaPos, 0.001, delta, filters, null);
       const collisions = {
         down: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_DOWN) ? 1 : 0,
         sides: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_SIDES) ? 1 : 0,
@@ -208,7 +211,7 @@ export class PhysXManager {
 
   startPhysX = async (start: boolean = true) => {
     if (start) {
-      lastTick = Date.now();
+      lastSimulationTick = Date.now();
       this.updateInterval = setInterval(this.simulate, 1000 / this.tps);
     } else {
       clearInterval(this.updateInterval);
@@ -562,6 +565,19 @@ export class PhysXManager {
     // }
     return hits;
   };
+
+  _diagnostic = () => {
+    const diagnosticData: any = {};
+    diagnosticData.bodies = Array.from(PhysXManager.instance.bodies.values()).map((body) => {
+      return {
+        body,
+        transform: body.getGlobalPose(),
+        type: BodyType[(body as any)._type],
+      };
+    });
+    diagnosticData.raycasts = Array.from(PhysXManager.instance.raycasts.values());
+    return diagnosticData;
+  };
 }
 function dec2bin(dec) {
   return (dec >>> 0).toString(2);
@@ -620,4 +636,9 @@ export const receiveWorker = async (physx): Promise<void> => {
     }
   });
   messageQueue.sendEvent('init', {});
+
+  globalThis.diagnostic = () => {
+    console.log('=== PhysXInstance Diagnostic ===');
+    console.log(PhysXManager.instance._diagnostic());
+  };
 };

@@ -156,7 +156,7 @@ export class PhysXInstance {
   };
 
   // update kinematic bodies
-  update(delta: number) {
+  update() {
     // TODO: make this rely on kinematicBodies.size instead of bodies.size
     let offset = 0;
     const kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.KINEMATIC_DATA_SIZE * this._kinematicBodies.size));
@@ -169,7 +169,9 @@ export class PhysXInstance {
     const controllerArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.CONTROLLER_DATA_SIZE * this._controllerBodies.size));
     this._controllerBodies.forEach((body, id) => {
       const { x, y, z } = body.delta;
-      controllerArray.set([id, x, y, z, delta], offset);
+      if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+        controllerArray.set([id, x, y, z], offset);
+      }
       body.delta = { x: 0, y: 0, z: 0 };
       offset += BufferConfig.CONTROLLER_DATA_SIZE;
     });
@@ -354,7 +356,7 @@ export class Body extends EventDispatcher implements RigidBody {
 
     this.id = PhysXInstance.instance._getNextAvailableBodyID();
     this._type = type;
-    this.transform = transform ?? createNewTransform();
+    this.transform = mergeTransformFragments(createNewTransform(), transform);
 
     this.shapes = shapes ?? [];
     this.shapes.forEach((shape) => {

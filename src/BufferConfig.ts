@@ -8,5 +8,5 @@ const _deltaTime = 1; // number
 
 export const BODY_DATA_SIZE = _id + _positionSize + _quaternionSize + _velocity + _angular;
 export const KINEMATIC_DATA_SIZE = _id + _positionSize + _quaternionSize;
-export const CONTROLLER_DATA_SIZE = _id + _positionSize + _deltaTime;
+export const CONTROLLER_DATA_SIZE = _id + _positionSize;
 export const RAYCAST_DATA_SIZE = _id + _positionSize + _dirSize;
