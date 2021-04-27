@@ -183,8 +183,7 @@ const load = async () => {
     characterBody.delta.y += characterBody.velocity.y;
     raycastQuery.origin = new Vector3().copy(character.position).add(new Vector3(0, -1, 0));
     // console.log(raycastQuery.hits)
-    PhysXInstance.instance.update();
-    objects.forEach((obj: Object3DBody) => {
+    objects.forEach((obj: any) => {
       if (!obj.body) return;
       if ((obj.body as Body).type === BodyType.DYNAMIC) {
         const translation = (obj.body as Body).transform.translation;
@@ -196,7 +195,7 @@ const load = async () => {
         obj.position.set(translation.x, translation.y, translation.z);
       }
     });
-    balls.forEach(async (object: Object3DBody, id) => {
+    balls.forEach(async (object: any, id) => {
       const { body } = object;
       if (object.position.y < -10 && body) {
         delete object.body;
@@ -219,6 +218,7 @@ const load = async () => {
         objects.set(newbody.id, object);
       }
     })
+    PhysXInstance.instance.update();
     debug.update();
     renderer.update();
     lastDelta = delta;

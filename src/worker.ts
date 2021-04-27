@@ -133,6 +133,16 @@ export class PhysXManager {
         bodyArray.set([...getBodyData(body)], offset + 1);
       } else if (isControllerBody(body)) {
         const controller = this.controllers.get(id);
+        const filters = new PhysX.PxControllerFilters((controller as any)._filterData, null, null);
+        // console.log(delta*(controller as any)._delta.x)
+        const collisionFlags = controller.move((controller as any)._delta, 0.001, 1 / 60, filters, null);
+        (controller as any)._delta = { x: 0, y: 0, z: 0 };
+        const collisions = {
+          down: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_DOWN) ? 1 : 0,
+          sides: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_SIDES) ? 1 : 0,
+          up: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_UP) ? 1 : 0,
+        };
+        (controller as any)._collisions = [collisions.down, collisions.sides, collisions.up];
         const { x, y, z } = controller.getPosition();
         bodyArray.set([x, y, z, ...(controller as any)._collisions], offset + 1);
       }
@@ -147,9 +157,6 @@ export class PhysXManager {
   };
 
   update = async (kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array, raycastQueryArray: Float32Array) => {
-    const now = Date.now();
-    const delta = now - lastUpdateTick;
-    lastUpdateTick = now;
     let offset = 0;
     while (offset < kinematicBodiesArray.length) {
       const id = kinematicBodiesArray[offset];
@@ -173,19 +180,9 @@ export class PhysXManager {
       const id = controllerBodiesArray[offset];
       const controller = this.controllers.get(id) as PhysX.PxController;
       if (!controller) return;
-      const deltaPos = {
-        x: controllerBodiesArray[offset + 1],
-        y: controllerBodiesArray[offset + 2],
-        z: controllerBodiesArray[offset + 3],
-      };
-      const filters = new PhysX.PxControllerFilters((controller as any)._filterData, null, null);
-      const collisionFlags = controller.move(deltaPos, 0.001, delta, filters, null);
-      const collisions = {
-        down: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_DOWN) ? 1 : 0,
-        sides: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_SIDES) ? 1 : 0,
-        up: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_UP) ? 1 : 0,
-      };
-      (controller as any)._collisions = [collisions.down, collisions.sides, collisions.up];
+      (controller as any)._delta.x += controllerBodiesArray[offset + 1];
+      (controller as any)._delta.y += controllerBodiesArray[offset + 2];
+      (controller as any)._delta.z += controllerBodiesArray[offset + 3];
       offset += BufferConfig.CONTROLLER_DATA_SIZE;
     }
     offset = 0;
@@ -257,7 +254,6 @@ export class PhysXManager {
       this.shapeIDByPointer.set(bodyShape.$$.ptr, shapeID);
       this.shapes.set(shapeID, bodyShape);
     });
-
     this.bodyShapes.set(id, bodyShapes);
     this.bodies.set(id, rigidBody);
     this.scene.addActor(rigidBody, null);
@@ -426,6 +422,7 @@ export class PhysXManager {
     shapes.setSimulationFilterData(new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0));
     shapes.setQueryFilterData(new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0));
     (controller as any)._filterData = new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0);
+    (controller as any)._delta = { x: 0, y: 0, z: 0 };
   };
 
   updateController = async (config: ControllerConfig) => {

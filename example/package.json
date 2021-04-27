@@ -5,8 +5,6 @@
   "private": true,
   "scripts": {
     "start": "vite",
-    "start:webpack": "npx webpack serve --config webpack.dev.js",
-    "build": "webpack --config webpack.prod.js",
     "test": "echo \"This template does not include a test runner by default.\" && exit 1"
   },
   "repository": {
@@ -21,23 +19,12 @@
   },
   "homepage": "https://github.com/HexaField/three-physx#readme",
   "devDependencies": {
-    "babel-loader": "^8.2.2",
-    "cache-loader": "^4.1.0",
-    "copy-webpack-plugin": "^8.1.1",
-    "file-loader": "^6.2.0",
     "prettier": "^2.0.5",
-    "thread-loader": "^3.0.0",
-    "three": "^0.127.0",
-    "ts-loader": "^8.1.0",
+    "three": "^0.128.0",
     "typescript": "^4.2.3",
-    "vite": "^2.2.1",
-    "wasm-loader": "^1.3.0",
-    "webpack": "^5.30.0",
-    "webpack-cli": "^4.6.0",
-    "webpack-dev-server": "^3.11.2"
+    "vite": "^2.2.3"
   },
   "dependencies": {
-    "@types/three": "^0.127.0",
-    "@xr3ngine/three-physx": "^0.0.1"
+    "@types/three": "^0.127.0"
   }
 }
