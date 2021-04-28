@@ -18,7 +18,7 @@ const load = async () => {
   (globalThis as any).objects = objects;
 
   // @ts-ignore
-  await PhysXInstance.instance.initPhysX(new Worker(new URL('./worker.ts', import.meta.url), { type: "module" }), { jsPath: '/physx/physx.release.js', wasmPath: '/physx/physx.release.wasm' });
+  await PhysXInstance.instance.initPhysX(new Worker(new URL('./worker.ts', import.meta.url), { type: "module" }), { });
 
   const kinematicObject = new Group()//.translateY(-2.5).rotateZ(Math.PI / 2);
   // kinematicObject.scale.setScalar(2)
@@ -101,7 +101,6 @@ const load = async () => {
   objects.set(platformBody.id, platform);
   renderer.addToScene(platform);
 
-
   const groundPlane = new Mesh(new PlaneBufferGeometry(10000, 10000), new MeshStandardMaterial({ color: randomColor() })).translateY(-5).rotateX(-Math.PI / 2);
   const groundPlaneBody = PhysXInstance.instance.addBody(new Body({
     shapes: [
@@ -146,6 +145,8 @@ const load = async () => {
   let lastTime = Date.now() - (1 / 60);
   let lastDelta = 1 / 60;
 
+  let lastCharacterPos = new Vector3();
+
   PhysXInstance.instance.startPhysX(true);
   const update = () => {
     const time = Date.now();
@@ -165,16 +166,16 @@ const load = async () => {
     }
     Object.entries(keys).forEach(([key]) => {
       if (key === 'KeyW') {
-        characterBody.delta.z -= 2 / delta;
+        characterBody.delta.z -= 0.1;
       }
       if (key === 'KeyS') {
-        characterBody.delta.z += 2 / delta;
+        characterBody.delta.z += 0.1;
       }
       if (key === 'KeyA') {
-        characterBody.delta.x -= 2 / delta;
+        characterBody.delta.x -= 0.1;
       }
       if (key === 'KeyD') {
-        characterBody.delta.x += 2 / delta;
+        characterBody.delta.x += 0.1;
       }
       if (key === 'Space' && characterBody.collisions.down) {
         characterBody.velocity.y = 0.2;
@@ -221,6 +222,8 @@ const load = async () => {
     PhysXInstance.instance.update();
     debug.update();
     renderer.update();
+    console.log(character.position.x - lastCharacterPos.x)
+    lastCharacterPos.copy(character.position);
     lastDelta = delta;
     lastTime = time;
     requestAnimationFrame(update);
@@ -238,7 +241,7 @@ const createBalls = () => {
     // new CylinderBufferGeometry()
   ];
   const meshes = [];
-  for (let i = 0; i < 250; i++) {
+  for (let i = 0; i < 0; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     meshes.push(mesh);

@@ -27,10 +27,12 @@ import { EventDispatcher, Vector3 } from 'three';
 let nextAvailableBodyIndex = 0;
 let nextAvailableShapeID = 0;
 let nextAvailableRaycastID = 0;
+let lastUpdateTick = 0;
 
 export class PhysXInstance {
   static instance: PhysXInstance = new PhysXInstance();
   _physicsProxy: any;
+  _messageQueue: MessageQueue;
 
   _bodies: Map<number, Body> = new Map<number, Body>();
   _shapes: Map<number, Shape> = new Map<number, Shape>();
@@ -38,14 +40,23 @@ export class PhysXInstance {
   _controllerBodies: Map<number, Controller> = new Map<number, Controller>();
   _raycasts: Map<number, SceneQuery> = new Map<number, SceneQuery>();
 
-  initPhysX = async (worker: Worker, config: PhysXConfig): Promise<void> => {
-    const messageQueue = new MessageQueue(worker);
+  initPhysX = async (worker: Worker, config: PhysXConfig = {}): Promise<void> => {
+    this._messageQueue = new MessageQueue(worker);
     await new Promise((resolve) => {
-      messageQueue.addEventListener('init', () => {
+      this._messageQueue.addEventListener('init', () => {
         resolve(true);
       });
+      this._messageQueue.sendQueue();
     });
-    messageQueue.addEventListener('data', (ev) => {
+    await new Promise((resolve) => {
+      this._messageQueue.addEventListener('initphysx', (ev) => {
+        console.log(ev);
+        resolve(true);
+      });
+      this._messageQueue.sendEvent('initphysx', config);
+      this._messageQueue.sendQueue();
+    });
+    this._messageQueue.addEventListener('data', (ev) => {
       let offset = 0;
       const { raycastResults, bodyArray } = ev.detail;
       while (offset < bodyArray.length) {
@@ -82,7 +93,7 @@ export class PhysXInstance {
         raycastQuery.hits = raycastResults[raycastQuery.id] ?? [];
       });
     });
-    messageQueue.addEventListener('colliderEvent', ({ detail }) => {
+    this._messageQueue.addEventListener('colliderEvent', ({ detail }) => {
       detail.forEach((collision) => {
         switch (collision.event) {
           case CollisionEvents.COLLISION_START:
@@ -138,26 +149,28 @@ export class PhysXInstance {
     });
 
     this._physicsProxy = {
-      initPhysX: pipeRemoteFunction(messageQueue, 'initPhysX'),
-      update: pipeRemoteFunction(messageQueue, 'update'),
-      startPhysX: pipeRemoteFunction(messageQueue, 'startPhysX'),
-      addBody: pipeRemoteFunction(messageQueue, 'addBody'),
-      updateBody: pipeRemoteFunction(messageQueue, 'updateBody'),
-      removeBody: pipeRemoteFunction(messageQueue, 'removeBody'),
-      createController: pipeRemoteFunction(messageQueue, 'createController'),
-      updateController: pipeRemoteFunction(messageQueue, 'updateController'),
-      removeController: pipeRemoteFunction(messageQueue, 'removeController'),
-      addRaycastQuery: pipeRemoteFunction(messageQueue, 'addRaycastQuery'),
-      updateRaycastQuery: pipeRemoteFunction(messageQueue, 'updateRaycastQuery'),
-      removeRaycastQuery: pipeRemoteFunction(messageQueue, 'removeRaycastQuery'),
+      initPhysX: pipeRemoteFunction(this._messageQueue, 'initPhysX'),
+      update: pipeRemoteFunction(this._messageQueue, 'update'),
+      startPhysX: pipeRemoteFunction(this._messageQueue, 'startPhysX'),
+      addBody: pipeRemoteFunction(this._messageQueue, 'addBody'),
+      updateBody: pipeRemoteFunction(this._messageQueue, 'updateBody'),
+      removeBody: pipeRemoteFunction(this._messageQueue, 'removeBody'),
+      createController: pipeRemoteFunction(this._messageQueue, 'createController'),
+      updateController: pipeRemoteFunction(this._messageQueue, 'updateController'),
+      removeController: pipeRemoteFunction(this._messageQueue, 'removeController'),
+      addRaycastQuery: pipeRemoteFunction(this._messageQueue, 'addRaycastQuery'),
+      updateRaycastQuery: pipeRemoteFunction(this._messageQueue, 'updateRaycastQuery'),
+      removeRaycastQuery: pipeRemoteFunction(this._messageQueue, 'removeRaycastQuery'),
     };
-
-    await this._physicsProxy.initPhysX([clone(config)]);
+    this._messageQueue.sendQueue();
   };
 
   // update kinematic bodies
   update() {
     // TODO: make this rely on kinematicBodies.size instead of bodies.size
+    const now = Date.now();
+    const deltaTime = now - lastUpdateTick;
+    lastUpdateTick = now;
     let offset = 0;
     const kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.KINEMATIC_DATA_SIZE * this._kinematicBodies.size));
     this._kinematicBodies.forEach((body, id) => {
@@ -183,7 +196,8 @@ export class PhysXInstance {
       raycastArray.set([id, ori.x, ori.y, ori.z, dir.x, dir.y, dir.z]);
       offset += BufferConfig.RAYCAST_DATA_SIZE;
     });
-    this._physicsProxy.update([kinematicArray, controllerArray, raycastArray], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);
+    this._physicsProxy.update([kinematicArray, controllerArray, raycastArray, deltaTime], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);
+    this._messageQueue.sendQueue();
   }
 
   startPhysX(start: boolean) {

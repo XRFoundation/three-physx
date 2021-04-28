@@ -81,7 +81,6 @@ export class EventDispatcherProxy {
 export class MessageQueue extends EventDispatcherProxy {
   messagePort: any;
   queue: Message[];
-  interval: any;
   eventTarget: EventDispatcher = new EventDispatcher();
   toTransfer: Transferable[] = [];
 
@@ -91,11 +90,6 @@ export class MessageQueue extends EventDispatcherProxy {
     this.queue = [];
 
     this.messagePort.onmessage = this.receiveQueue.bind(this);
-    //   message.data as object[]);
-    // };
-    this.interval = setInterval(() => {
-      this.sendQueue();
-    }, 1000 / 120);
   }
   sendEvent(type: string, detail: any, transferables: Transferable[] = []) {
     this.queue.push({

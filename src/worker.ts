@@ -30,7 +30,7 @@ export class PhysXManager {
   controllerManager: PhysX.PxControllerManager;
 
   updateInterval: any;
-  tps: number = 60;
+  tps: number = 120;
   onUpdate: any;
   onEvent: any;
   transformArray: Float32Array;
@@ -133,16 +133,6 @@ export class PhysXManager {
         bodyArray.set([...getBodyData(body)], offset + 1);
       } else if (isControllerBody(body)) {
         const controller = this.controllers.get(id);
-        const filters = new PhysX.PxControllerFilters((controller as any)._filterData, null, null);
-        // console.log(delta*(controller as any)._delta.x)
-        const collisionFlags = controller.move((controller as any)._delta, 0.001, 1 / 60, filters, null);
-        (controller as any)._delta = { x: 0, y: 0, z: 0 };
-        const collisions = {
-          down: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_DOWN) ? 1 : 0,
-          sides: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_SIDES) ? 1 : 0,
-          up: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_UP) ? 1 : 0,
-        };
-        (controller as any)._collisions = [collisions.down, collisions.sides, collisions.up];
         const { x, y, z } = controller.getPosition();
         bodyArray.set([x, y, z, ...(controller as any)._collisions], offset + 1);
       }
@@ -156,7 +146,7 @@ export class PhysXManager {
     this.onUpdate({ raycastResults, bodyArray }); //, shapeArray);
   };
 
-  update = async (kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array, raycastQueryArray: Float32Array) => {
+  update = async (kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array, raycastQueryArray: Float32Array, deltaTime: number) => {
     let offset = 0;
     while (offset < kinematicBodiesArray.length) {
       const id = kinematicBodiesArray[offset];
@@ -183,6 +173,16 @@ export class PhysXManager {
       (controller as any)._delta.x += controllerBodiesArray[offset + 1];
       (controller as any)._delta.y += controllerBodiesArray[offset + 2];
       (controller as any)._delta.z += controllerBodiesArray[offset + 3];
+      const filters = new PhysX.PxControllerFilters((controller as any)._filterData, null, null);
+      const collisionFlags = controller.move((controller as any)._delta, 0.001, deltaTime, filters, null);
+      (controller as any)._delta = { x: 0, y: 0, z: 0 };
+      (controller as any)._needsUpdate = false;
+      const collisions = {
+        down: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_DOWN) ? 1 : 0,
+        sides: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_SIDES) ? 1 : 0,
+        up: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_UP) ? 1 : 0,
+      };
+      (controller as any)._collisions = [collisions.down, collisions.sides, collisions.up];
       offset += BufferConfig.CONTROLLER_DATA_SIZE;
     }
     offset = 0;
@@ -609,10 +609,21 @@ export const receiveWorker = async (physx): Promise<void> => {
   globalThis.messageQueue = messageQueue;
   let latestCollisions = [];
   PhysXManager.instance = new PhysXManager(physx);
+  messageQueue.sendEvent('init', {});
+  messageQueue.sendQueue();
+  await new Promise((resolve) => {
+    messageQueue.addEventListener('initphysx', ({ detail }) => {
+      PhysXManager.instance.initPhysX(detail).then(resolve);
+    });
+    messageQueue.sendQueue();
+  });
+  messageQueue.sendEvent('initphysx', {});
+  messageQueue.sendQueue();
   globalThis.physXManager = PhysXManager.instance;
   PhysXManager.instance.onUpdate = ({ raycastResults, bodyArray }) => {
     messageQueue.sendEvent('data', { raycastResults, bodyArray }, [bodyArray.buffer]);
     messageQueue.sendEvent('colliderEvent', [...latestCollisions]);
+    messageQueue.sendQueue();
     latestCollisions = [];
   };
   PhysXManager.instance.onEvent = (data) => {
@@ -632,7 +643,6 @@ export const receiveWorker = async (physx): Promise<void> => {
       addFunctionListener(key);
     }
   });
-  messageQueue.sendEvent('init', {});
 
   globalThis.diagnostic = () => {
     console.log('=== PhysXInstance Diagnostic ===');
