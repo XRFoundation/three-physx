@@ -3,7 +3,6 @@ import json from '@rollup/plugin-json';
 import resolve from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import path from 'path';
-import babel from 'rollup-plugin-babel';
 import nodePolyfills from 'rollup-plugin-node-polyfills';
 import typescript from '@rollup/plugin-typescript';
 import { defineConfig } from 'vite';

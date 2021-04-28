@@ -1,50 +1,60 @@
 {
-  "name": "three-physx",
-  "version": "1.0.0",
-  "description": "",
-  "exports": "./dist/three-physx.es.js",
-  "main": "./dist",
+  "name": "@xr3ngine/three-physx",
+  "version": "0.0.6",
+  "description": "Multithreaded PhysX simulation for threejs.",
   "entry": "./src",
+  "main": "./dist/three-physx.umd.js",
   "module": "./dist/three-physx.es.js",
   "types": "./dist/index.d.ts",
   "typescript": {
     "definition": "./dist/index.d.ts"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "format": "prettier --write \"src/**/*.{ts,js}\" ",
     "lint": "prettier --check \"src/**/*.{ts,js}\" ",
-    "dist": "rimraf dist && tsc && vite build"
+    "dist": "rimraf dist && tsc && vite build",
+    "build-publish": "yarn dist && npm publish --access public"
   },
+  "pre-push": [
+    "lint"
+  ],
+  "pre-commit": [
+    "lint"
+  ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/HexaField/three-physx.git"
+    "url": "git+https://github.com/xr3ngine/three-physx.git"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/HexaField/three-physx/issues"
+  "author": {
+    "name": "Josh Field",
+    "email": "joshfield999@gmail.com",
+    "url": "http://github.com/HexaField"
   },
-  "homepage": "https://github.com/HexaField/three-physx#readme",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/xr3ngine/three-physx/issues"
+  },
+  "homepage": "https://github.com/xr3ngine/three-physx#readme",
   "devDependencies": {
     "@rollup/plugin-commonjs": "18.0.0",
     "@rollup/plugin-json": "4.1.0",
     "@rollup/plugin-node-resolve": "11.2.1",
     "@rollup/plugin-replace": "2.4.2",
     "@rollup/plugin-typescript": "8.2.1",
+    "@types/three": "^0.127.0",
     "cross-env": "^7.0.3",
     "ctix": "^0.3.1",
     "prettier": "^2.0.5",
     "rimraf": "^3.0.2",
     "rollup": "^2.45.2",
-    "rollup-plugin-babel": "4.4.0",
     "rollup-plugin-node-polyfills": "0.2.1",
     "rollup-plugin-scss": "2.6.1",
-    "three": "^0.127.0",
+    "three": "^0.128.0",
     "typescript": "^4.2.3",
     "vite": "^2.1.5"
-  },
-  "dependencies": {
-    "@types/three": "^0.127.0"
   }
 }
