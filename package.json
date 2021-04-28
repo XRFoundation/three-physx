@@ -1,10 +1,9 @@
 {
   "name": "@xr3ngine/three-physx",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Multithreaded PhysX simulation for threejs.",
-  "exports": "./dist/three-physx.es.js",
-  "main": "./dist",
   "entry": "./src",
+  "main": "./dist/three-physx.umd.js",
   "module": "./dist/three-physx.es.js",
   "types": "./dist/index.d.ts",
   "typescript": {
@@ -53,7 +52,6 @@
     "prettier": "^2.0.5",
     "rimraf": "^3.0.2",
     "rollup": "^2.45.2",
-    "rollup-plugin-babel": "4.4.0",
     "rollup-plugin-node-polyfills": "0.2.1",
     "rollup-plugin-scss": "2.6.1",
     "three": "^0.128.0",
