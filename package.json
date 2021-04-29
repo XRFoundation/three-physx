@@ -1,6 +1,6 @@
 {
-  "name": "@xr3ngine/three-physx",
-  "version": "0.0.7",
+  "name": "three-physx",
+  "version": "0.0.2",
   "description": "Multithreaded PhysX simulation for threejs.",
   "entry": "./src",
   "main": "./dist/three-physx.umd.js",
