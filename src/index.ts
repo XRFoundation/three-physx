@@ -50,7 +50,6 @@ export class PhysXInstance {
     });
     await new Promise((resolve) => {
       this._messageQueue.addEventListener('initphysx', (ev) => {
-        console.log(ev);
         resolve(true);
       });
       this._messageQueue.sendEvent('initphysx', config);
@@ -193,7 +192,7 @@ export class PhysXInstance {
     this._raycasts.forEach((raycast, id) => {
       const ori = raycast.origin;
       const dir = raycast.direction;
-      raycastArray.set([id, ori.x, ori.y, ori.z, dir.x, dir.y, dir.z]);
+      raycastArray.set([id, ori.x, ori.y, ori.z, dir.x, dir.y, dir.z], offset);
       offset += BufferConfig.RAYCAST_DATA_SIZE;
     });
     this._physicsProxy.update([kinematicArray, controllerArray, raycastArray, deltaTime], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);

@@ -70,6 +70,15 @@ const load = async () => {
   });
   renderer.addToScene(character);
 
+
+  const cameraRaycastQuery = PhysXInstance.instance.addRaycastQuery({
+    type: SceneQueryType.Closest,
+    origin: character.position,
+    direction: new Vector3(0, -1, 0),
+    maxDistance: 10,
+    collisionMask: COLLISIONS.ALL
+  });
+
   createBalls().forEach(async (object) => {
     const body = new Body({
       shapes: getShapesFromObject(object).map((shape: Shape) => {
@@ -183,6 +192,12 @@ const load = async () => {
     })
     characterBody.delta.y += characterBody.velocity.y;
     raycastQuery.origin = new Vector3().copy(character.position).add(new Vector3(0, -1, 0));
+    
+    const raycastDirection = new Vector3().subVectors(renderer.camera.position, renderer.controls.target).normalize();
+    cameraRaycastQuery.origin = renderer.camera.position;
+    cameraRaycastQuery.direction = new Vector3(raycastDirection.x, raycastDirection.y, raycastDirection.z);
+    
+    // console.log('cam', cameraRaycastQuery.hits.length, 'char', raycastQuery.hits.length)
     // console.log(raycastQuery.hits)
     objects.forEach((obj: any) => {
       if (!obj.body) return;
@@ -222,7 +237,6 @@ const load = async () => {
     PhysXInstance.instance.update();
     debug.update();
     renderer.update();
-    console.log(character.position.x - lastCharacterPos.x)
     lastCharacterPos.copy(character.position);
     lastDelta = delta;
     lastTime = time;
@@ -241,7 +255,7 @@ const createBalls = () => {
     // new CylinderBufferGeometry()
   ];
   const meshes = [];
-  for (let i = 0; i < 0; i++) {
+  for (let i = 0; i < 4; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     meshes.push(mesh);

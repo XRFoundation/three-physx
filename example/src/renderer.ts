@@ -53,4 +53,4 @@ export const update = () => {
   renderer.render(scene, camera);
 };
 
-export { scene };
+export { scene, camera, controls };
