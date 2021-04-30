@@ -309,7 +309,7 @@ bool ConvexMeshBuilder::loadConvexHull(const PxConvexMeshDesc& desc, ConvexHullL
 	const bool doValidation = desc.flags & PxConvexFlag::eDISABLE_MESH_VALIDATION ? false : true;
   	if(!hullBuilder.init(desc.points.count, geometry, topology, desc.indices.count, desc.polygons.count, hullPolygons, doValidation, hullLib))
   	{
-		Ps::getFoundation().error(PxErrorCode::eINTERNAL_ERROR, __FILE__, __LINE__, "Gu::ConvexMesh::loadConvexHull: convex hull init failed!");
+		// Ps::getFoundation().error(PxErrorCode::eINTERNAL_ERROR, __FILE__, __LINE__, "Gu::ConvexMesh::loadConvexHull: convex hull init failed!");
   		return false;
   	}
 	computeMassInfo(desc.flags & PxConvexFlag::eFAST_INERTIA_COMPUTATION);

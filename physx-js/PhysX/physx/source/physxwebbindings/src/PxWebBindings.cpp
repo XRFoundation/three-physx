@@ -263,7 +263,7 @@ PxConvexMesh *createConvexMeshFromVectors(std::vector<PxVec3> &vertices, PxCooki
   convexDesc.points.count = vertices.size();
   convexDesc.points.stride = sizeof(PxVec3);
   convexDesc.points.data = vertices.data();
-  convexDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
+  convexDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX | PxConvexFlag::eCHECK_ZERO_AREA_TRIANGLES | PxConvexFlag::eSHIFT_VERTICES | PxConvexFlag::eQUANTIZE_INPUT | PxConvexFlag::eDISABLE_MESH_VALIDATION;
 
   cooking.validateConvexMesh(convexDesc);
 
@@ -278,7 +278,7 @@ PxConvexMesh *createConvexMesh(int vertices, PxU32 vertCount, PxCooking &cooking
   convexDesc.points.count = vertCount;
   convexDesc.points.stride = sizeof(PxVec3);
   convexDesc.points.data = (PxVec3 *)vertices;
-  convexDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
+  convexDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX | PxConvexFlag::eCHECK_ZERO_AREA_TRIANGLES | PxConvexFlag::eSHIFT_VERTICES | PxConvexFlag::eQUANTIZE_INPUT | PxConvexFlag::eDISABLE_MESH_VALIDATION;
 
   cooking.validateConvexMesh(convexDesc);
 
@@ -342,7 +342,7 @@ PxConvexMesh *createConvexMeshComputeHull(int vertices, PxU32 vertCount, int ind
   convexDesc.polygons.stride = sizeof(PxVec3);
   convexDesc.polygons.data = &hullPolygons;
 
-  convexDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
+  convexDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX | PxConvexFlag::eCHECK_ZERO_AREA_TRIANGLES | PxConvexFlag::eSHIFT_VERTICES | PxConvexFlag::eQUANTIZE_INPUT | PxConvexFlag::eDISABLE_MESH_VALIDATION;
 
   cooking.validateConvexMesh(convexDesc);
 

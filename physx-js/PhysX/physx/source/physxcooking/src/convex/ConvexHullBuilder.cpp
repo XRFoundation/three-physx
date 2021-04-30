@@ -510,10 +510,10 @@ bool ConvexHullBuilder::calculateVertexMapTable(PxU32 nbPolygons, bool userPolyg
 	if (noPlaneShift)
 	{
 		//PCM will use the original shape, which means it will have a huge performance drop
-		if (!userPolygons)
-			Ps::getFoundation().error(PxErrorCode::eINTERNAL_ERROR, __FILE__, __LINE__, "ConvexHullBuilder: convex hull does not have vertex-to-face info! Try to use different convex mesh cooking settings.");
-		else
-			Ps::getFoundation().error(PxErrorCode::eINTERNAL_ERROR, __FILE__, __LINE__, "ConvexHullBuilder: convex hull does not have vertex-to-face info! Some of the vertices have less than 3 neighbor polygons. The vertex is most likely inside a polygon or on an edge between 2 polygons, please remove those vertices.");
+		// if (!userPolygons)
+		// 	Ps::getFoundation().error(PxErrorCode::eINTERNAL_ERROR, __FILE__, __LINE__, "ConvexHullBuilder: convex hull does not have vertex-to-face info! Try to use different convex mesh cooking settings.");
+		// else
+		// 	Ps::getFoundation().error(PxErrorCode::eINTERNAL_ERROR, __FILE__, __LINE__, "ConvexHullBuilder: convex hull does not have vertex-to-face info! Some of the vertices have less than 3 neighbor polygons. The vertex is most likely inside a polygon or on an edge between 2 polygons, please remove those vertices.");
 		for (PxU32 i = 0; i < mHull->mNbHullVertices; ++i)
 		{
 			mHullDataFacesByVertices8[i * 3 + 0] = 0xFF;

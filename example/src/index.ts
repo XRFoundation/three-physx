@@ -1,5 +1,11 @@
-import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, Object3DBody, SceneQueryType, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos, Body, Shape, BodyType, Controller, SHAPES, createNewTransform } from '../../src';
+import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, Object3DBody, SceneQueryType, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos, Body, Shape, BodyType, Controller, SHAPES, createNewTransform, removeDuplicates, arrayOfPointsToArrayOfVector3 } from '../../src';
 import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry, PlaneBufferGeometry } from 'three';
+import { ConeBufferGeometry } from 'three';
+import { IcosahedronBufferGeometry } from 'three';
+import { OctahedronBufferGeometry } from 'three';
+import { TorusBufferGeometry } from 'three';
+import { TubeBufferGeometry } from 'three';
+import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry';
 
 enum COLLISIONS {
   NONE = 0,
@@ -248,14 +254,31 @@ const platformSize = 25;
 const createBalls = () => {
   const geoms = [
     new BoxBufferGeometry(),
-    new SphereBufferGeometry(1),
     new CapsuleBufferGeometry(0.5, 0.5, 1),
-    // new DodecahedronBufferGeometry(),
-    // new TetrahedronBufferGeometry(),
-    // new CylinderBufferGeometry()
-  ];
+    new ConeBufferGeometry(), 
+    new CylinderBufferGeometry(),
+    new DodecahedronBufferGeometry(), 
+    new IcosahedronBufferGeometry(), 
+    new OctahedronBufferGeometry(), 
+    new SphereBufferGeometry(1), 
+    new TetrahedronBufferGeometry(),
+    new TorusBufferGeometry(),
+    new TorusKnotBufferGeometry(),
+  ].map((geom) => { return new ConvexGeometry(arrayOfPointsToArrayOfVector3(geom.attributes.position.array)) }).concat([
+    new BoxBufferGeometry(),
+    new CapsuleBufferGeometry(0.5, 0.5, 1),
+    new ConeBufferGeometry(), 
+    new CylinderBufferGeometry(),
+    new DodecahedronBufferGeometry(), 
+    new IcosahedronBufferGeometry(), 
+    new OctahedronBufferGeometry(), 
+    new SphereBufferGeometry(1), 
+    new TetrahedronBufferGeometry(),
+    new TorusBufferGeometry(),
+    new TorusKnotBufferGeometry(),
+  ])
   const meshes = [];
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 100; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     meshes.push(mesh);

@@ -1,4 +1,5 @@
 import { Vector3, Matrix4, Mesh, Quaternion, Object3D, SphereGeometry, BufferGeometry } from 'three';
+import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry';
 import { PhysXInstance } from '.';
 import { BodyType, SHAPES, Shape, RigidBody, ShapeConfig } from './types/ThreePhysX';
 
@@ -101,7 +102,8 @@ const getShapeData = (mesh, shape): any => {
         options: { radius: shape.sphereRadius || getSphereRadius(mesh) },
       };
     case SHAPES.ConvexMesh:
-      const vertices = Array.from(mesh.geometry.attributes.position.array);
+      const convexGeom = new ConvexGeometry(arrayOfPointsToArrayOfVector3(mesh.geometry.attributes.position.array));
+      const vertices = Array.from(convexGeom.attributes.position.array);
       return { shape: shape.type, options: { vertices } };
     case SHAPES.TriangleMesh:
     default: {
@@ -115,6 +117,10 @@ const getShapeData = (mesh, shape): any => {
 
 const getThreeGeometryShape = (mesh): any => {
   if (!mesh.geometry) throw new Error('No geometry defined!');
+  if (mesh.geometry instanceof ConvexGeometry) {
+    const vertices = Array.from(mesh.geometry.attributes.position.array);
+    return { shape: SHAPES.ConvexMesh, options: { vertices } };
+  }
   switch (mesh.geometry.type) {
     case 'BoxGeometry':
     case 'BoxBufferGeometry':
@@ -127,24 +133,26 @@ const getThreeGeometryShape = (mesh): any => {
         shape: SHAPES.Capsule,
         options: { halfHeight: mesh.geometry._halfHeight ?? 1, radius: mesh.geometry.radius ?? mesh.geometry.radiusTop ?? 0.5 },
       };
+    case 'DodecahedronBufferGeometry':
+    case 'DodecahedronGeometry':
+    case 'OctahedronBufferGeometry':
+    case 'OctahedronGeometry':
+    case 'IcosahedronBufferGeometry':
+    case 'IcosahedronGeometry':
     case 'SphereGeometry':
     case 'SphereBufferGeometry':
       return {
         shape: SHAPES.Sphere,
         options: { radius: getSphereRadius(mesh) },
       };
-    case 'ConvexGeometry': {
+    default: {
       const vertices = Array.from(mesh.geometry.attributes.position.array);
-      return { shape: SHAPES.ConvexMesh, options: { vertices } };
-    }
-    default:
-      // console.log('threeToPhysX: geometry of type', mesh.geometry.type, 'not supported. No shape will be added.');
-      // return;
-      const vertices = Array.from(mesh.geometry.attributes.position.array);
+      const indices = Array.from(mesh.geometry.index?.array ?? mesh.geometry.parameters?.indices ?? []);
       return {
-        shape: SHAPES.ConvexMesh,
-        options: { vertices },
+        shape: SHAPES.TriangleMesh,
+        options: { vertices, indices },
       };
+    }
   }
 };
 
@@ -296,7 +304,7 @@ function getMeshes(object) {
   return meshes;
 }
 
-const removeDuplicates = (verticesIn: number[]) => {
+export const removeDuplicates = (verticesIn: number[]) => {
   const vertices: Vector3[] = [];
   for (let i = 0; i < verticesIn.length; i += 3) {
     const newVec = new Vector3(verticesIn[i], verticesIn[i + 1], verticesIn[i + 2]);
@@ -315,4 +323,12 @@ const removeDuplicates = (verticesIn: number[]) => {
     verticesOut.push(vert.x, vert.y, vert.z);
   });
   return verticesOut;
+};
+
+export const arrayOfPointsToArrayOfVector3 = (points: ArrayLike<number>) => {
+  const verts = [];
+  for (let i = 0; i < points.length; i += 3) {
+    verts.push(new Vector3(points[i], points[i + 1], points[i + 2]));
+  }
+  return verts;
 };
