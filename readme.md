@@ -21,7 +21,9 @@ Progress:
 - [x] collision filtering
 - [x] trimesh and convex
 - [x] raycasts
+- [ ] get rid of transform, make internal and rely entirely on Vector3 & Quaternion
 - [ ] raycasts ignore backface option
+- [ ] fix up updating body and shape data
 - [ ] vehicle controller
 - [ ] heightfield colliders
 - [ ] fix root object scaling bug
@@ -41,38 +43,38 @@ https://three-physx.netlify.app/
 ## API
 
 *-work in progress-*
-(outdated)
 
 This multithreaded PhysX API uses a singleton approach. This way the PhysX interface is accessible globally once instantiated.
 
-```typescript
+```ts
+import { PhysXInstance, createNewTransform } from 'three-physx';
 
 // create the interface
-new PhysXInstance(worker: Worker, onUpdate: () => void);
-
-// load PhysX and launch the simulation
-await PhysXInstance.instance.initPhysX({ jsPath: string, wasmPath: string });
+await PhysXInstance.instance.initPhysX(new Worker('./worker.js'), { tps: 60, start: true });
 
 // add an object
-await PhysXInstance.instance.addBody(object: Object3D);
-```
-
-Body parameters are read from `object.userData`. This allows externally loaded models to be given physx bodies in their respective editors.
-
-```typescript
-object.userData.physx = {
-  type: PhysXBodyType,
+const body = PhysXInstance.instance.addBody(new Body({
   shapes: [
     {
-      type: PhysXShapeType.Box,
-      halfExtents: { x: 1, y: 1, z: 1 }
-    },
-    {
-      type: PhysXShapeType.Sphere,
-      radius: 1
-    },
-  ]
-}
+      shape: SHAPES.Box,
+      transform: createNewTransform(),
+      config: {
+        collisionLayer: COLLISIONS.FLOOR,
+        collisionMask: COLLISIONS.ALL
+      }
+    }
+  ],
+  transform: createNewTransform(),
+  type: BodyType.DYNAMIC
+}));
+
+// In scene loop
+PhysXInstance.instance.update();
 ```
 
-
+`worker.js`
+```ts
+import { receiveWorker } from "three-physx";
+import PHYSX from './physx.release.js';
+PHYSX().then(receiveWorker);
+```

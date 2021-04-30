@@ -1432,19 +1432,19 @@ EMSCRIPTEN_BINDINGS(physx)
 
   class_<PxControllerHit>("PxControllerHit")
       .constructor<>()
-      .function("getWorldPos", optional_override([](PxControllerShapeHit &hit) {
+      .function("getWorldPos", optional_override([](PxControllerHit &hit) {
                   return hit.worldPos;
                 }),
                 allow_raw_pointers())
-      .function("getWorldNormal", optional_override([](PxControllerShapeHit &hit) {
+      .function("getWorldNormal", optional_override([](PxControllerHit &hit) {
                   return hit.worldNormal;
                 }),
                 allow_raw_pointers())
-      .function("getLength", optional_override([](PxControllerShapeHit &hit) {
+      .function("getLength", optional_override([](PxControllerHit &hit) {
                   return hit.length;
                 }),
                 allow_raw_pointers())
-      .function("getDirection", optional_override([](PxControllerShapeHit &hit) {
+      .function("getDirection", optional_override([](PxControllerHit &hit) {
                   return hit.dir;
                 }),
                 allow_raw_pointers());

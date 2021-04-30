@@ -65,16 +65,35 @@ const load = async () => {
   (character as any).body = characterBody;
   objects.set(characterBody.id, character);
   characterBody.addEventListener(ControllerEvents.CONTROLLER_SHAPE_HIT, (ev) => {
-    // console.log('COLLISION DETECTED', ev);
+    // console.log('Hit Shape', ev);
   });
-  const raycastQuery = PhysXInstance.instance.addRaycastQuery({
+  characterBody.addEventListener(ControllerEvents.CONTROLLER_CONTROLLER_HIT, (ev) => {
+    // console.log('Hit Controller', ev);
+  });
+
+  const characterRaycastQuery = PhysXInstance.instance.addRaycastQuery({
     type: SceneQueryType.Closest,
     origin: character.position,
     direction: new Vector3(0, -1, 0),
     maxDistance: 1,
     collisionMask: COLLISIONS.ALL
   });
-  renderer.addToScene(character);
+
+
+  const character2 = new Group();
+  character2.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
+  character2.position.set(2, 0, 2);
+  const characterBody2 = PhysXInstance.instance.createController(new Controller({
+    isCapsule: true,
+    radius: 0.5,
+    position: { y: 0 },
+    collisionLayer: COLLISIONS.CHARACTER,
+    collisionMask: COLLISIONS.ALL
+  }));
+
+  renderer.addToScene(character2);
+  (character2 as any).body = characterBody2;
+  objects.set(characterBody2.id, character2);
 
 
   const cameraRaycastQuery = PhysXInstance.instance.addRaycastQuery({
@@ -102,7 +121,7 @@ const load = async () => {
     renderer.addToScene(object);
   });
 
-  const platform = new Mesh(new BoxBufferGeometry(platformSize, 1, platformSize), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide })).translateY(-2);
+  const platform = new Mesh(new BoxBufferGeometry(platformSize, 1, platformSize), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide }));
   const platformBody = PhysXInstance.instance.addBody(new Body({
     shapes: getShapesFromObject(platform).map((shape: Shape) => {
       shape.config.collisionLayer = COLLISIONS.FLOOR;
@@ -197,7 +216,7 @@ const load = async () => {
       }
     })
     characterBody.delta.y += characterBody.velocity.y;
-    raycastQuery.origin = new Vector3().copy(character.position).add(new Vector3(0, -1, 0));
+    characterRaycastQuery.origin = new Vector3().copy(character.position).add(new Vector3(0, -1, 0));
     
     const raycastDirection = new Vector3().subVectors(renderer.camera.position, renderer.controls.target).normalize();
     cameraRaycastQuery.origin = renderer.camera.position;

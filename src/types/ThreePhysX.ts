@@ -60,7 +60,7 @@ export interface Shape {
   id?: number;
   shape: SHAPES;
   transform: Transform;
-  config: ShapeConfig;
+  config?: ShapeConfig;
   _debugNeedsUpdate?: any;
   options?: {
     vertices?: number[];

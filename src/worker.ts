@@ -1,18 +1,12 @@
 ///<reference path="./types/PhysX.d.ts"/>
 
-import { Matrix4, Vector3, Quaternion } from 'three';
+import { Matrix4 } from 'three';
 import { getShape } from './getShape';
-import { PhysXConfig, BodyType, Transform, RigidBody, ShapeConfig, Shape, ControllerConfig, Vec3, SceneQuery, SceneQueryType, RaycastHit, CollisionEvents, ControllerEvents, BodyConfig } from './types/ThreePhysX';
+import { PhysXConfig, BodyType, RigidBody, ShapeConfig, Shape, ControllerConfig, SceneQuery, SceneQueryType, RaycastHit, CollisionEvents, ControllerEvents } from './types/ThreePhysX';
 import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
 
-const mat4 = new Matrix4();
-const pos = new Vector3();
-const quat = new Quaternion();
-const scale = new Vector3();
-
 let lastSimulationTick = 0;
-let lastUpdateTick = 0;
 
 export class PhysXManager {
   static instance: PhysXManager;
@@ -236,14 +230,14 @@ export class PhysXManager {
         options,
       });
       if (!bodyShape) return;
-      bodyShape.setContactOffset(config.contactOffset ?? 0.0000001);
+      bodyShape.setContactOffset(config?.contactOffset ?? 0.0000001);
       let collisionLayer = defaultMask;
       let collisionMask = defaultMask;
-      if (typeof config.collisionLayer !== 'undefined') {
+      if (typeof config?.collisionLayer !== 'undefined') {
         collisionLayer = config.collisionLayer;
         (bodyShape as any)._collisionLayer = collisionLayer;
       }
-      if (typeof config.collisionMask !== 'undefined') {
+      if (typeof config?.collisionMask !== 'undefined') {
         collisionMask = config.collisionMask;
         (bodyShape as any)._collisionMask = collisionMask;
       }
@@ -374,7 +368,6 @@ export class PhysXManager {
     controllerDesc.setReportCallback(
       PhysX.PxUserControllerHitReport.implement({
         onShapeHit: (event: PhysX.PxControllerShapeHit) => {
-          // TODO: make, get and return shape ID
           const shape = event.getShape();
           const shapeID = this.shapeIDByPointer.get(shape.$$.ptr);
           const position = event.getWorldPos();
@@ -383,7 +376,6 @@ export class PhysXManager {
           this.onEvent({ event: ControllerEvents.CONTROLLER_SHAPE_HIT, controllerID: id, shapeID, position, normal, length });
         },
         onControllerHit: (event: PhysX.PxControllersHit) => {
-          // TODO
           const other = event.getOther();
           const otherID = this.controllerIDByPointer.get(other.$$.ptr);
           const position = event.getWorldPos();
@@ -576,9 +568,7 @@ export class PhysXManager {
     return diagnosticData;
   };
 }
-function dec2bin(dec) {
-  return (dec >>> 0).toString(2);
-}
+
 const isKinematicBody = (body: PhysX.PxRigidActor) => {
   return (body as any)._type === BodyType.KINEMATIC;
 };
@@ -631,11 +621,9 @@ export const receiveWorker = async (physx): Promise<void> => {
   };
   const addFunctionListener = (eventLabel) => {
     messageQueue.addEventListener(eventLabel, async ({ detail }) => {
-      // try {
       PhysXManager.instance[eventLabel](...detail.args).then((returnValue) => {
         messageQueue.sendEvent(detail.uuid, { returnValue });
       });
-      // } catch (e) { console.log(e, eventLabel, detail )}
     });
   };
   Object.keys(PhysXManager.instance).forEach((key) => {
