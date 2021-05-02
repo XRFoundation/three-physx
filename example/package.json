@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "start": "vite",
+    "build": "vite build",
     "test": "echo \"This template does not include a test runner by default.\" && exit 1"
   },
   "repository": {
