@@ -78,3 +78,16 @@ import { receiveWorker } from "three-physx";
 import PHYSX from './physx.release.js';
 PHYSX().then(receiveWorker);
 ```
+
+## Building PhysX
+
+```
+cd physx-js
+npm install
+npm run generate
+npm run make
+```
+
+The scripts will be copied to /lib and /example/dist
+
+[This file](https://github.com/XRFoundation/three-physx/blob/master/physx-js/PhysX/physx/source/compiler/cmake/emscripten/PhysXWebBindings.cmake) contains the build parameters, to build for cjs you will need to remove the `-s EXPORT_ES6=1` flag

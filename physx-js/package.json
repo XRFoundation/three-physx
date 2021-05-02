@@ -17,7 +17,8 @@
     "clean": "docker run --rm -v $(pwd):/src trzeci/emscripten ./clean.sh",
     "shell": "docker run --rm -it -v $(pwd):/src trzeci/emscripten /bin/bash",
     "copy": "./copy.sh",
-    "dev": "docker run --rm -v $(pwd):/src trzeci/emscripten ./make.sh && ./copy.sh",
+    "dev": "docker run --rm -v $(pwd):/src trzeci/emscripten ./make.sh && ./copy.sh && node ./makeUMD.js",
+    "deves5": "docker run --rm -v $(pwd):/src trzeci/emscripten ./makees5.sh  && ./copyes5.sh",
     "prep-examples": "./prep-examples.sh"
   }
 }
