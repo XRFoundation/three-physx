@@ -305,7 +305,9 @@ declare namespace PhysX {
 
   class PxRigidStatic extends PxRigidActor {}
   class PxRigidDynamic extends PxRigidBody {
-    constructor() { super(); }
+    constructor() {
+      super();
+    }
     wakeUp(): void;
     putToSleep(): void;
     isSleeping(): boolean;

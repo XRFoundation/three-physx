@@ -346,16 +346,17 @@ const mergeRotationFragments = (original: Quat, fragments: QuatFragment): Quat =
 
 const pipeRemoteFunction = (awaitResponse: boolean, id: string) => {
   return (args, transferables) => {
-    return awaitResponse ? PhysXInstance.instance._messageQueue.sendEvent(id, { args }, transferables) : 
-    new Promise<any>((resolve) => {
-      const uuid = generateUUID();
-      const callback = ({ detail }) => {
-        PhysXInstance.instance._messageQueue.removeEventListener(uuid, callback);
-        resolve(detail.returnValue);
-      };
-      PhysXInstance.instance._messageQueue.addEventListener(uuid, callback);
-      PhysXInstance.instance._messageQueue.sendEvent(id, { args, uuid }, transferables);
-    });
+    return awaitResponse
+      ? PhysXInstance.instance._messageQueue.sendEvent(id, { args }, transferables)
+      : new Promise<any>((resolve) => {
+          const uuid = generateUUID();
+          const callback = ({ detail }) => {
+            PhysXInstance.instance._messageQueue.removeEventListener(uuid, callback);
+            resolve(detail.returnValue);
+          };
+          PhysXInstance.instance._messageQueue.addEventListener(uuid, callback);
+          PhysXInstance.instance._messageQueue.sendEvent(id, { args, uuid }, transferables);
+        });
   };
 };
 
@@ -366,14 +367,7 @@ const generateUUID = (): string => {
     .join('-');
 };
 
-const bodyGetterFunctions = [
-  'getAngularDamping',
-  'getLinearDamping',
-  'getAngularVelocity',
-  'getLinearDamping',
-  'getMass',
-  'getRigidBodyFlags',
-];
+const bodyGetterFunctions = ['getAngularDamping', 'getLinearDamping', 'getAngularVelocity', 'getLinearDamping', 'getMass', 'getRigidBodyFlags'];
 
 const bodySetterFunctions = [
   'setAngularDamping',
@@ -404,12 +398,16 @@ const bodySetterFunctions = [
 ];
 
 const assignSetterFunction = (type, assignee, id, func) => {
-  assignee[func] = (...args) => { PhysXInstance.instance._physicsProxy._classSetter(clone([type, func, id, ...args])); }
-}
+  assignee[func] = (...args) => {
+    PhysXInstance.instance._physicsProxy._classSetter(clone([type, func, id, ...args]));
+  };
+};
 
 const assignGetterFunction = (type, assignee, id, func) => {
-  assignee[func] = (...args) => { return PhysXInstance.instance._physicsProxy._classGetter(clone([type, func, id, ...args])); }
-}
+  assignee[func] = (...args) => {
+    return PhysXInstance.instance._physicsProxy._classGetter(clone([type, func, id, ...args]));
+  };
+};
 
 export class Body extends EventDispatcher implements RigidBody {
   id: number;
@@ -429,11 +427,11 @@ export class Body extends EventDispatcher implements RigidBody {
 
     bodySetterFunctions.forEach((func) => {
       assignSetterFunction('body', this, this.id, func);
-    })
+    });
 
     bodyGetterFunctions.forEach((func) => {
       assignGetterFunction('body', this, this.id, func);
-    })
+    });
 
     this.shapes = shapes ?? [];
     this.shapes.forEach((shape) => {

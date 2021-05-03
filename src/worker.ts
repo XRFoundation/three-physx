@@ -567,10 +567,11 @@ export class PhysXManager {
 
   _classFunc = async (type, func, id, ...args) => {
     // console.log(this.bodies.get(id), this.bodies.get(id)[func]);
-    switch(type) {
-      case 'body': this.bodies.get(id)[func](...args);
+    switch (type) {
+      case 'body':
+        this.bodies.get(id)[func](...args);
     }
-  }
+  };
 
   _diagnostic = () => {
     const diagnosticData: any = {};
