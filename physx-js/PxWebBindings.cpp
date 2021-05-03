@@ -178,11 +178,14 @@ struct PxSimulationEventCallbackWrapper : public wrapper<PxSimulationEventCallba
   }
   void onTrigger(PxTriggerPair *pairs, PxU32 count)
   {
+    physx::shdfnd::getFoundation().error(PxErrorCode::eDEBUG_INFO, __FILE__, __LINE__, "onTrigger");
     for (PxU32 i = 0; i < count; i++)
     {
       const PxTriggerPair &tp = pairs[i];
       if (tp.flags & (PxTriggerPairFlag::eREMOVED_SHAPE_TRIGGER | PxTriggerPairFlag::eREMOVED_SHAPE_OTHER))
         continue;
+
+      call<void>("onTrigger", tp.triggerShape, tp.otherShape);
 
       if (tp.status & PxPairFlag::eNOTIFY_TOUCH_FOUND)
       {
@@ -237,7 +240,7 @@ PxFilterFlags LayerMaskFilterShader(
   }
 
   // pairFlags = PxPairFlag::eCONTACT_DEFAULT | PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_TOUCH_LOST | PxPairFlag::eNOTIFY_TOUCH_PERSISTS |PxPairFlag::eDETECT_CCD_CONTACT;
-  pairFlags = PxPairFlag::eCONTACT_DEFAULT | PxPairFlag::eSOLVE_CONTACT | PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_TOUCH_LOST | PxPairFlag::eDETECT_CCD_CONTACT | PxPairFlag::eDETECT_DISCRETE_CONTACT | PxPairFlag::eNOTIFY_CONTACT_POINTS;
+  pairFlags = PxPairFlag::eCONTACT_DEFAULT | PxPairFlag::eSOLVE_CONTACT | PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_TOUCH_LOST | PxPairFlag::eNOTIFY_TOUCH_PERSISTS | PxPairFlag::eDETECT_CCD_CONTACT | PxPairFlag::eDETECT_DISCRETE_CONTACT | PxPairFlag::eNOTIFY_CONTACT_POINTS;
   return PxFilterFlag::eDEFAULT;
 }
 

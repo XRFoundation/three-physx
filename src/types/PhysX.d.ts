@@ -77,21 +77,26 @@ declare namespace PhysX {
 
   class PxShapeFlags {
     constructor(flags: PxShapeFlag | number);
+    isSet(flag: PxShapeFlag): boolean;
   }
 
   class PxRigidBodyFlags {
     constructor(flags: number);
+    isSet(flag: PxRigidBodyFlag): boolean;
   }
 
   class PxMeshGeometryFlags {
     constructor(a: any);
+    isSet(flag: PxMeshGeometryFlag): boolean;
   }
 
   class PxConvexMeshGeometryFlags {
     constructor(a: any);
+    isSet(flag: PxConvexMeshGeometryFlag): boolean;
   }
 
   class PxControllerCollisionFlags {
+    constructor(a: any);
     isSet(flag: PxControllerCollisionFlag): boolean;
   }
 
@@ -241,6 +246,7 @@ declare namespace PhysX {
     setName(value: string): void;
     getName(): string;
     setFlag(flag: PxShapeFlag, value: boolean): void;
+    getFlags(): PxShapeFlags;
   }
 
   class Actor extends Base {

@@ -18,6 +18,7 @@ import {
   MaterialConfig,
   ControllerConfig,
   BodyConfig,
+  SHAPES,
 } from './types/ThreePhysX';
 import { createNewTransform } from './threeToPhysX';
 import { proxyEventListener } from './utils/proxyEventListener';
@@ -90,6 +91,10 @@ export class PhysXInstance {
       }
       this._raycasts.forEach((raycastQuery) => {
         raycastQuery.hits = raycastResults[raycastQuery.id] ?? [];
+        raycastQuery.hits.forEach((hit) => {
+          hit.body = this._bodies.get(hit._bodyID);
+          delete hit._bodyID;
+        })
       });
     });
     this._messageQueue.addEventListener('colliderEvent', ({ detail }) => {
@@ -362,17 +367,25 @@ export class Body extends EventDispatcher implements RigidBody {
   id: number;
   transform: Transform;
   shapes: Shape[];
+  userData: any;
   private _type: BodyType;
 
-  constructor({ shapes, type, transform }: { shapes?: Shape[]; type?: BodyType; transform?: Transform } = {}) {
+  constructor({ shapes, type, transform, userData }: { shapes?: Shape[]; type?: BodyType; transform?: Transform, userData?: any } = {}) {
     super();
 
     this.id = PhysXInstance.instance._getNextAvailableBodyID();
     this._type = type;
     this.transform = mergeTransformFragments(createNewTransform(), transform);
+    this.userData = userData;
 
     this.shapes = shapes ?? [];
     this.shapes.forEach((shape) => {
+      if(!shape.options) shape.options = {};
+      switch(shape.shape) {
+        case SHAPES.Box: if(!shape.options?.boxExtents) shape.options.boxExtents = { x: 1, y: 1, z: 1 }; break;
+        case SHAPES.Capsule: if(!shape.options?.halfHeight) shape.options.halfHeight = 1; // yes, dont break here
+        case SHAPES.Sphere: if(!shape.options?.radius) shape.options.radius = 0.5; break;
+      }
       shape.id = PhysXInstance.instance._getNextAvailableShapeID();
       PhysXInstance.instance._shapes.set(shape.id, shape);
     });
@@ -416,6 +429,7 @@ export class Body extends EventDispatcher implements RigidBody {
 }
 
 const DefaultControllerConfig: ControllerConfig = {
+  userData: {},
   height: 1,
   radius: 0.25,
   stepOffset: 0.1,
@@ -433,7 +447,7 @@ export class Controller extends Body implements ControllerRigidBody {
   velocity: { x: number; y: number; z: number };
 
   constructor(config: ControllerConfig) {
-    super({ type: BodyType.CONTROLLER, transform: { translation: mergeTranslationFragments({ x: 0, y: 0, z: 0 }, config.position) } });
+    super({ type: BodyType.CONTROLLER, transform: { translation: mergeTranslationFragments({ x: 0, y: 0, z: 0 }, config.position) }, userData: config.userData });
 
     this._shape = {
       ...DefaultControllerConfig,

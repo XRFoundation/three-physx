@@ -13,7 +13,8 @@ enum COLLISIONS {
   CHARACTER = 1 << 1,
   BALL = 1 << 2,
   HAMMER = 1 << 3,
-  ALL = FLOOR | CHARACTER | BALL | HAMMER,
+  TRIGGER = 1 << 4,
+  ALL = FLOOR | CHARACTER | BALL | HAMMER | TRIGGER,
 }
 
 const load = async () => {
@@ -61,6 +62,7 @@ const load = async () => {
     collisionLayer: COLLISIONS.CHARACTER,
     collisionMask: COLLISIONS.ALL
   }));
+  renderer.addToScene(character);
 
   (character as any).body = characterBody;
   objects.set(characterBody.id, character);
@@ -79,7 +81,6 @@ const load = async () => {
     collisionMask: COLLISIONS.ALL
   });
 
-
   const character2 = new Group();
   character2.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
   character2.position.set(2, 0, 2);
@@ -95,6 +96,29 @@ const load = async () => {
   (character2 as any).body = characterBody2;
   objects.set(characterBody2.id, character2);
 
+  // const triggerPos = createNewTransform();
+  // triggerPos.translation.x = 2;
+  // triggerPos.translation.y = 1;
+
+  // const triggerBody = PhysXInstance.instance.addBody(new Body({
+  //   shapes: [
+  //     {
+  //       shape: SHAPES.Box,
+  //       transform: createNewTransform(),
+  //       config: {
+  //         isTrigger: true,
+  //         collisionLayer: COLLISIONS.BALL,
+  //         collisionMask: COLLISIONS.ALL
+  //       }
+  //     }
+  //   ],
+  //   transform: triggerPos,
+  //   type: BodyType.STATIC,
+  // }));
+
+  // triggerBody.addEventListener(CollisionEvents.TRIGGER_START, (ev) => {
+  //   console.log(ev)
+  // })
 
   const cameraRaycastQuery = PhysXInstance.instance.addRaycastQuery({
     type: SceneQueryType.Closest,
@@ -223,7 +247,7 @@ const load = async () => {
     cameraRaycastQuery.direction = new Vector3(raycastDirection.x, raycastDirection.y, raycastDirection.z);
     
     // console.log('cam', cameraRaycastQuery.hits.length, 'char', raycastQuery.hits.length)
-    // console.log(raycastQuery.hits)
+    // console.log(cameraRaycastQuery.hits)
     objects.forEach((obj: any) => {
       if (!obj.body) return;
       if ((obj.body as Body).type === BodyType.DYNAMIC) {
@@ -297,7 +321,7 @@ const createBalls = () => {
     new TorusKnotBufferGeometry(),
   ])
   const meshes = [];
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 250; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     meshes.push(mesh);

@@ -69,6 +69,7 @@ export interface Shape {
     radius?: number;
     halfHeight?: number;
   };
+  userData?: any;
 }
 
 export interface MaterialConfig {
@@ -100,6 +101,7 @@ export interface RigidBody extends EventDispatcher, BodyConfig {
   transform: Transform;
   updateTransform?: ({ translation, rotation }: { translation?: Vec3Fragment; rotation?: QuatFragment }) => void;
   shapes: Shape[];
+  userData?: any;
 }
 
 export interface ControllerRigidBody extends RigidBody {
@@ -112,6 +114,7 @@ export interface ControllerRigidBody extends RigidBody {
 
 export interface ControllerConfig {
   id?: number;
+  userData?: any;
   position?: Vec3Fragment;
   positionDelta?: Vec3Fragment;
   stepOffset?: number;
@@ -160,6 +163,8 @@ export interface RaycastHit {
   distance: number;
   position: Vec3;
   normal: Vec3;
+  body?: RigidBody;
+  _bodyID: number; // internal
 }
 
 export enum ControllerEvents {

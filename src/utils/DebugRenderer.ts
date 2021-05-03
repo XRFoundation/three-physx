@@ -16,6 +16,8 @@ import {
   Quaternion,
   LineBasicMaterial,
   Line,
+  MeshStandardMaterial,
+  Material,
 } from 'three';
 import { Body, Controller, PhysXInstance } from '..';
 import { Object3DBody, BodyType, SHAPES, Shape, SceneQuery } from '../types/ThreePhysX';
@@ -31,7 +33,7 @@ export class DebugRenderer {
   private scene: Scene;
   private _meshes: Map<number, any> = new Map<number, any>();
   private _raycasts: Map<number, any> = new Map<number, any>();
-  private _materials: MeshBasicMaterial[];
+  private _materials: Material[];
   private _sphereGeometry: SphereBufferGeometry;
   private _boxGeometry: BoxBufferGeometry;
   private _planeGeometry: PlaneBufferGeometry;
@@ -50,6 +52,7 @@ export class DebugRenderer {
       new MeshBasicMaterial({ color: 0x00ff00, wireframe: true }),
       new MeshBasicMaterial({ color: 0x00aaff, wireframe: true }),
       new MeshBasicMaterial({ color: 0xffffff, wireframe: true }),
+      new MeshStandardMaterial({ color: 0xff0000, transparent: true, opacity: 0.25 }),
     ];
 
     this._lineMaterial = new LineBasicMaterial({ color: 0x0000ff });
@@ -170,7 +173,7 @@ export class DebugRenderer {
   private _createMesh(shape: Shape, type: BodyType): Mesh | Points {
     let mesh: Mesh | Points;
     let geometry: BufferGeometry;
-    const material: MeshBasicMaterial = this._materials[type];
+    const material: Material = this._materials[shape.config.isTrigger ? 4 : type];
     let points: Vector3[] = [];
 
     switch (shape.shape) {

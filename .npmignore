@@ -3,3 +3,5 @@
 
 example/
 physx-js/
+test/
+vite.config.js
