@@ -283,7 +283,7 @@ declare namespace PhysX {
     setCMassLocalPose(value: PxTransform): void;
     clearForce(): void;
     clearTorque(): void;
-    addForce(force: PxVec3 | any, mode: PxForceMode | number, autowake: boolean): void;
+    addForce(force: PxVec3): void;
     addForceAtPos(force: PxVec3, pos: PxVec3): void;
     addForceAtLocalPos(force: PxVec3, pos: PxVec3): void;
     addLocalForceAtLocalPos(force: PxVec3, pos: PxVec3): void;
