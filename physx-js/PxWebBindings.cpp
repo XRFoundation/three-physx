@@ -1130,6 +1130,10 @@ EMSCRIPTEN_BINDINGS(physx)
       .function("setMaxContactImpulse", &PxRigidBody::setMaxContactImpulse)
       .function("clearForce", &PxRigidBody::clearForce)
       .function("clearTorque", &PxRigidBody::clearTorque)
+      .function("addForce", optional_override(
+                                     [](PxRigidBody &body, const PxVec3 &force) {
+                                       body.addForce(force, PxForceMode::eFORCE, true);
+                                     }))
       .function("addForceAtPos", optional_override(
                                      [](PxRigidBody &body, const PxVec3 &force, const PxVec3 &pos) {
                                        PxRigidBodyExt::addForceAtPos(body, force, pos, PxForceMode::eFORCE, true);

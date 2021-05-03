@@ -153,18 +153,20 @@ export class PhysXInstance {
     });
 
     this._physicsProxy = {
-      initPhysX: pipeRemoteFunction(this._messageQueue, 'initPhysX'),
-      update: pipeRemoteFunction(this._messageQueue, 'update'),
-      startPhysX: pipeRemoteFunction(this._messageQueue, 'startPhysX'),
-      addBody: pipeRemoteFunction(this._messageQueue, 'addBody'),
-      updateBody: pipeRemoteFunction(this._messageQueue, 'updateBody'),
-      removeBody: pipeRemoteFunction(this._messageQueue, 'removeBody'),
-      createController: pipeRemoteFunction(this._messageQueue, 'createController'),
-      updateController: pipeRemoteFunction(this._messageQueue, 'updateController'),
-      removeController: pipeRemoteFunction(this._messageQueue, 'removeController'),
-      addRaycastQuery: pipeRemoteFunction(this._messageQueue, 'addRaycastQuery'),
-      updateRaycastQuery: pipeRemoteFunction(this._messageQueue, 'updateRaycastQuery'),
-      removeRaycastQuery: pipeRemoteFunction(this._messageQueue, 'removeRaycastQuery'),
+      initPhysX: pipeRemoteFunction(true, 'initPhysX'),
+      update: pipeRemoteFunction(true, 'update'),
+      startPhysX: pipeRemoteFunction(true, 'startPhysX'),
+      addBody: pipeRemoteFunction(false, 'addBody'),
+      updateBody: pipeRemoteFunction(false, 'updateBody'),
+      removeBody: pipeRemoteFunction(false, 'removeBody'),
+      createController: pipeRemoteFunction(false, 'createController'),
+      updateController: pipeRemoteFunction(false, 'updateController'),
+      removeController: pipeRemoteFunction(false, 'removeController'),
+      addRaycastQuery: pipeRemoteFunction(false, 'addRaycastQuery'),
+      updateRaycastQuery: pipeRemoteFunction(false, 'updateRaycastQuery'),
+      removeRaycastQuery: pipeRemoteFunction(false, 'removeRaycastQuery'),
+      _classGetter: pipeRemoteFunction(true, '_classFunc'),
+      _classSetter: pipeRemoteFunction(false, '_classFunc'),
     };
     this._messageQueue.sendQueue();
   };
@@ -342,16 +344,17 @@ const mergeRotationFragments = (original: Quat, fragments: QuatFragment): Quat =
   };
 };
 
-const pipeRemoteFunction = (messageQueue: MessageQueue, id: string) => {
+const pipeRemoteFunction = (awaitResponse: boolean, id: string) => {
   return (args, transferables) => {
-    return new Promise<any>((resolve) => {
+    return awaitResponse ? PhysXInstance.instance._messageQueue.sendEvent(id, { args }, transferables) : 
+    new Promise<any>((resolve) => {
       const uuid = generateUUID();
       const callback = ({ detail }) => {
-        messageQueue.removeEventListener(uuid, callback);
+        PhysXInstance.instance._messageQueue.removeEventListener(uuid, callback);
         resolve(detail.returnValue);
       };
-      messageQueue.addEventListener(uuid, callback);
-      messageQueue.sendEvent(id, { args, uuid }, transferables);
+      PhysXInstance.instance._messageQueue.addEventListener(uuid, callback);
+      PhysXInstance.instance._messageQueue.sendEvent(id, { args, uuid }, transferables);
     });
   };
 };
@@ -363,12 +366,58 @@ const generateUUID = (): string => {
     .join('-');
 };
 
+const bodyGetterFunctions = [
+  'getAngularDamping',
+  'getLinearDamping',
+  'getAngularVelocity',
+  'getLinearDamping',
+  'getMass',
+  'getRigidBodyFlags',
+];
+
+const bodySetterFunctions = [
+  'setAngularDamping',
+  'setLinearDamping',
+  'setAngularVelocity',
+  'setLinearVelocity',
+  'setMass',
+  'setCMassLocalPose',
+  'clearForce',
+  'clearTorque',
+  'addForce',
+  'addForceAtPos',
+  'addForceAtLocalPos',
+  'addLocalForceAtLocalPos',
+  'addImpulseAtPos',
+  'addImpulseAtLocalPos',
+  'addLocalImpulseAtLocalPos',
+  'applyImpulse',
+  'applyLocalImpulse',
+  'applyForce',
+  'applyLocalForce',
+  'addTorque',
+  'setRigidBodyFlags',
+  'setRigidBodyFlag',
+  'setMassandUpdateInertia',
+  'setMassSpaceInertiaTensor',
+  'updateMassAndInertia',
+];
+
+const assignSetterFunction = (type, assignee, id, func) => {
+  assignee[func] = (...args) => { PhysXInstance.instance._physicsProxy._classSetter(clone([type, func, id, ...args])); }
+}
+
+const assignGetterFunction = (type, assignee, id, func) => {
+  assignee[func] = (...args) => { return PhysXInstance.instance._physicsProxy._classGetter(clone([type, func, id, ...args])); }
+}
+
 export class Body extends EventDispatcher implements RigidBody {
   id: number;
   transform: Transform;
   shapes: Shape[];
   userData: any;
   private _type: BodyType;
+  [x: string]: any;
 
   constructor({ shapes, type, transform, userData }: { shapes?: Shape[]; type?: BodyType; transform?: Transform; userData?: any } = {}) {
     super();
@@ -377,6 +426,14 @@ export class Body extends EventDispatcher implements RigidBody {
     this._type = type;
     this.transform = mergeTransformFragments(createNewTransform(), transform);
     this.userData = userData;
+
+    bodySetterFunctions.forEach((func) => {
+      assignSetterFunction('body', this, this.id, func);
+    })
+
+    bodyGetterFunctions.forEach((func) => {
+      assignGetterFunction('body', this, this.id, func);
+    })
 
     this.shapes = shapes ?? [];
     this.shapes.forEach((shape) => {

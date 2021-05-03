@@ -64,6 +64,13 @@ declare namespace PhysX {
     static eLOCK_ANGULAR_Z: { value: number };
   }
 
+  class PxForceMode {
+    static eFORCE: { value: number };
+    static eIMPULSE: { value: number };
+    static eVELOCITY_CHANGE: { value: number };
+    static eACCELERATION: { value: number };
+  }
+
   // class PxActorFlags {
   //   constructor(flags: number);
   // }
@@ -253,6 +260,11 @@ declare namespace PhysX {
     // setActorFlag(flag: number, value: boolean): void;
     setActorFlags(flags: PxActorFlag): void;
     getActorFlags(): number;
+  }
+  class PxRigidActor extends Actor {
+    attachShape(shape: PxShape): void;
+    detachShape(shape: PxShape, wakeOnLostTouch?: boolean | true): void;
+    getShapes(): PxShape[] | PxShape;
     getGlobalPose(): PxTransform;
     setGlobalPose(transform: PxTransform, autoAwake: boolean): void;
     setLinearVelocity(value: PxVec3, autoAwake: boolean): void;
@@ -261,42 +273,50 @@ declare namespace PhysX {
     getAngularVelocity(): PxVec3;
     addImpulseAtLocalPos(valueA: PxVec3, valueB: PxVec3): void;
   }
-  class PxRigidActor extends Actor {
-    attachShape(shape: PxShape): void;
-    detachShape(shape: PxShape, wakeOnLostTouch?: boolean | true): void;
-    addForce(force: PxVec3 | any, mode: PxForceMode | number, autowake: boolean): void;
-    getShapes(): PxShape[] | PxShape;
-  }
-  enum PxForceMode {}
   class PxRigidBody extends PxRigidActor {
+    setAngularDamping(value: number): void;
+    getAngularDamping(): number;
+    setLinearDamping(value: number): void;
+    getLinearDamping(): number;
+    setMass(value: number): void;
+    getMass(): number;
+    setCMassLocalPose(value: PxTransform): void;
+    clearForce(): void;
+    clearTorque(): void;
+    addForce(force: PxVec3 | any, mode: PxForceMode | number, autowake: boolean): void;
+    addForceAtPos(force: PxVec3, pos: PxVec3): void;
+    addForceAtLocalPos(force: PxVec3, pos: PxVec3): void;
+    addLocalForceAtLocalPos(force: PxVec3, pos: PxVec3): void;
+    addImpulseAtPos(impulse: PxVec3, pos: PxVec3): void;
+    addImpulseAtLocalPos(impulse: PxVec3, pos: PxVec3): void;
+    addLocalImpulseAtLocalPos(impulse: PxVec3, pos: PxVec3): void;
+    applyImpulse(impulse: PxVec3, pos: PxVec3): void;
+    applyLocalImpulse(impulse: PxVec3, pos: PxVec3): void;
+    applyForce(force: PxVec3, pos: PxVec3): void;
+    applyLocalForce(force: PxVec3, pos: PxVec3): void;
+    addTorque(torque: PxVec3): void;
     setRigidBodyFlags(flags: PxRigidBodyFlags): void;
     setRigidBodyFlag(flag: PxRigidBodyFlag, value: boolean): void;
     getRigidBodyFlags(): number;
-
-    setMass(value: number): void;
-    getMass(): number;
-
-    setAngularVelocity(value: PxVec3, autoWake: boolean): void;
-
-    setAngularDamping(value: number): void;
-    getAngularDamping(): number;
-
-    setLinearDamping(value: number): void;
-    getLinearDamping(): number;
-
-    setMassSpaceInertiaTensor(value: PxVec3): void;
+    setMassandUpdateInertia(mass: PxVec3): void;
+    setMassSpaceInertiaTensor(mass: PxVec3): void;
+    updateMassAndInertia(shapeDensities: number[]): void;
   }
 
   class PxRigidStatic extends PxRigidActor {}
   class PxRigidDynamic extends PxRigidBody {
-    wakeUp(): void; //, &PxRigidDynamic::wakeUp)
-    setWakeCounter(): void; //, &PxRigidDynamic::setWakeCounter)
-    isSleeping(): boolean; //, &PxRigidDynamic::isSleeping)
-    getWakeCounter(): void; //, &PxRigidDynamic::getWakeCounter)
-    setSleepThreshold(value: number): void; //, &PxRigidDynamic::setSleepThreshold)
-    getSleepThreshold(): number; //, &PxRigidDynamic::getSleepThreshold)
-    setKinematicTarget(transform: PxTransform): void; //, &PxRigidDynamic::setKinematicTarget)
-    setRigidDynamicLockFlags(flags: PxRigidDynamicLockFlag): void; //, &PxRigidDynamic::setRigidDynamicLockFlags);
+    constructor() { super(); }
+    wakeUp(): void;
+    putToSleep(): void;
+    isSleeping(): boolean;
+    setWakeCounter(wakeCounterValue: number): void;
+    getWakeCounter(): void;
+    setSleepThreshold(threshold: number): void;
+    getSleepThreshold(): number;
+    setKinematicTarget(transform: PxTransform): void;
+    setRigidDynamicLockFlag(flags: PxRigidDynamicLockFlag, value: boolean): void;
+    setRigidDynamicLockFlags(flags: PxRigidDynamicLockFlags): void;
+    getRigidDynamicLockFlags(flags: PxRigidDynamicLockFlag): void;
     setSolverIterationCounts(minPositionIters: number, minVelocityIters: number): void;
   }
   class PxVec3 {

@@ -1,11 +1,13 @@
 import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, Object3DBody, SceneQueryType, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos, Body, Shape, BodyType, Controller, SHAPES, createNewTransform, removeDuplicates, arrayOfPointsToArrayOfVector3 } from '../../src';
-import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry, PlaneBufferGeometry } from 'three';
+import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry, PlaneBufferGeometry, Raycaster, Vector2 } from 'three';
 import { ConeBufferGeometry } from 'three';
 import { IcosahedronBufferGeometry } from 'three';
 import { OctahedronBufferGeometry } from 'three';
 import { TorusBufferGeometry } from 'three';
 import { TubeBufferGeometry } from 'three';
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry';
+
+const vector3 = new Vector3();
 
 enum COLLISIONS {
   NONE = 0,
@@ -25,7 +27,7 @@ const load = async () => {
   (globalThis as any).objects = objects;
 
   // @ts-ignore
-  await PhysXInstance.instance.initPhysX(new Worker(new URL('./worker.ts', import.meta.url), { type: "module" }), { });
+  await PhysXInstance.instance.initPhysX(new Worker(new URL('./worker.ts', import.meta.url), { type: "module" }), {});
 
   const kinematicObject = new Group()//.translateY(-2.5).rotateZ(Math.PI / 2);
   // kinematicObject.scale.setScalar(2)
@@ -204,6 +206,22 @@ const load = async () => {
   let lastDelta = 1 / 60;
 
   let lastCharacterPos = new Vector3();
+  const raycaster = new Raycaster();
+  const mouse = new Vector2();
+  document.addEventListener('pointermove', (event) => {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+  });
+
+  document.addEventListener('pointerdown', (event) => {
+    raycaster.setFromCamera( mouse, renderer.camera );
+  	const intersects = raycaster.intersectObjects(Array.from(balls.values()));
+    for ( let i = 0; i < intersects.length; i ++ ) {
+      renderer.camera.getWorldDirection(vector3);
+      vector3.multiplyScalar(10000);
+      ((intersects[i].object as any).body as Body).addForce({ x: vector3.x, y: vector3.y, z: vector3.z })
+	  }
+  });
 
   PhysXInstance.instance.startPhysX(true);
   const update = () => {
@@ -241,11 +259,11 @@ const load = async () => {
     })
     characterBody.delta.y += characterBody.velocity.y;
     characterRaycastQuery.origin = new Vector3().copy(character.position).add(new Vector3(0, -1, 0));
-    
+
     const raycastDirection = new Vector3().subVectors(renderer.camera.position, renderer.controls.target).normalize();
     cameraRaycastQuery.origin = renderer.camera.position;
     cameraRaycastQuery.direction = new Vector3(raycastDirection.x, raycastDirection.y, raycastDirection.z);
-    
+
     // console.log('cam', cameraRaycastQuery.hits.length, 'char', raycastQuery.hits.length)
     // console.log(cameraRaycastQuery.hits)
     objects.forEach((obj: any) => {
@@ -298,24 +316,24 @@ const createBalls = () => {
   const geoms = [
     new BoxBufferGeometry(),
     new CapsuleBufferGeometry(0.5, 0.5, 1),
-    new ConeBufferGeometry(), 
+    new ConeBufferGeometry(),
     new CylinderBufferGeometry(),
-    new DodecahedronBufferGeometry(), 
-    new IcosahedronBufferGeometry(), 
-    new OctahedronBufferGeometry(), 
-    new SphereBufferGeometry(1), 
+    new DodecahedronBufferGeometry(),
+    new IcosahedronBufferGeometry(),
+    new OctahedronBufferGeometry(),
+    new SphereBufferGeometry(1),
     new TetrahedronBufferGeometry(),
     new TorusBufferGeometry(),
     new TorusKnotBufferGeometry(),
   ].map((geom) => { return new ConvexGeometry(arrayOfPointsToArrayOfVector3(geom.attributes.position.array)) }).concat([
     new BoxBufferGeometry(),
     new CapsuleBufferGeometry(0.5, 0.5, 1),
-    new ConeBufferGeometry(), 
+    new ConeBufferGeometry(),
     new CylinderBufferGeometry(),
-    new DodecahedronBufferGeometry(), 
-    new IcosahedronBufferGeometry(), 
-    new OctahedronBufferGeometry(), 
-    new SphereBufferGeometry(1), 
+    new DodecahedronBufferGeometry(),
+    new IcosahedronBufferGeometry(),
+    new OctahedronBufferGeometry(),
+    new SphereBufferGeometry(1),
     new TetrahedronBufferGeometry(),
     new TorusBufferGeometry(),
     new TorusKnotBufferGeometry(),
