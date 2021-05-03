@@ -94,7 +94,7 @@ export class PhysXInstance {
         raycastQuery.hits.forEach((hit) => {
           hit.body = this._bodies.get(hit._bodyID);
           delete hit._bodyID;
-        })
+        });
       });
     });
     this._messageQueue.addEventListener('colliderEvent', ({ detail }) => {
@@ -370,7 +370,7 @@ export class Body extends EventDispatcher implements RigidBody {
   userData: any;
   private _type: BodyType;
 
-  constructor({ shapes, type, transform, userData }: { shapes?: Shape[]; type?: BodyType; transform?: Transform, userData?: any } = {}) {
+  constructor({ shapes, type, transform, userData }: { shapes?: Shape[]; type?: BodyType; transform?: Transform; userData?: any } = {}) {
     super();
 
     this.id = PhysXInstance.instance._getNextAvailableBodyID();
@@ -380,11 +380,16 @@ export class Body extends EventDispatcher implements RigidBody {
 
     this.shapes = shapes ?? [];
     this.shapes.forEach((shape) => {
-      if(!shape.options) shape.options = {};
-      switch(shape.shape) {
-        case SHAPES.Box: if(!shape.options?.boxExtents) shape.options.boxExtents = { x: 1, y: 1, z: 1 }; break;
-        case SHAPES.Capsule: if(!shape.options?.halfHeight) shape.options.halfHeight = 1; // yes, dont break here
-        case SHAPES.Sphere: if(!shape.options?.radius) shape.options.radius = 0.5; break;
+      if (!shape.options) shape.options = {};
+      switch (shape.shape) {
+        case SHAPES.Box:
+          if (!shape.options?.boxExtents) shape.options.boxExtents = { x: 1, y: 1, z: 1 };
+          break;
+        case SHAPES.Capsule:
+          if (!shape.options?.halfHeight) shape.options.halfHeight = 1; // yes, dont break here
+        case SHAPES.Sphere:
+          if (!shape.options?.radius) shape.options.radius = 0.5;
+          break;
       }
       shape.id = PhysXInstance.instance._getNextAvailableShapeID();
       PhysXInstance.instance._shapes.set(shape.id, shape);
