@@ -297,7 +297,7 @@ export function getGeometry(object) {
 function getMeshes(object) {
   const meshes = [];
   object.traverse((o) => {
-    if (o.type === 'Mesh') {
+    if (o.type === 'Mesh' || o.type === 'SkinnedMesh') {
       meshes.push(o);
     }
   });
