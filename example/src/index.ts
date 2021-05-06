@@ -131,7 +131,7 @@ const load = async () => {
   });
 
   createBalls().forEach(async (object) => {
-    const body = new Body({
+    const body = PhysXInstance.instance.addBody(new Body({
       shapes: getShapesFromObject(object).map((shape: Shape) => {
         shape.config.collisionLayer = COLLISIONS.BALL;
         shape.config.collisionMask = COLLISIONS.FLOOR | COLLISIONS.HAMMER | COLLISIONS.BALL;
@@ -139,8 +139,8 @@ const load = async () => {
       }),
       transform: getTransformFromWorldPos(object),
       type: BodyType.DYNAMIC
-    });
-    PhysXInstance.instance.addBody(body);
+    }));
+    PhysXInstance.instance.updateBody(body, { mass: Math.random() * 4, shapes: [ { config: { material: { dynamicFriction: 0.5, staticFriction: 0.2, restitution: 0.5 } } } ] });
     object.body = body;
     objects.set(body.id, object);
     balls.set(body.id, object);

@@ -8,11 +8,11 @@ const yVec = new Vector3(0, 1, 0);
 const zVec = new Vector3(0, 0, 1);
 const halfPI = Math.PI / 2;
 
-export const getShape = ({ shape, transform, options }): PhysX.PxShape => {
+export const getShape = ({ shape, transform, options, config }): PhysX.PxShape => {
   const geometry = getGeometry({ shape, transform, options });
   if (!geometry) return;
 
-  const material = PhysXManager.instance.physics.createMaterial(0.2, 0.2, 0.2);
+  const material = PhysXManager.instance.physics.createMaterial(config.material?.staticFriction ?? 0, config.material?.dynamicFriction ?? 0, config.material?.restitution ?? 0);
   const flags = new PhysX.PxShapeFlags(PhysX.PxShapeFlag.eSCENE_QUERY_SHAPE.value | PhysX.PxShapeFlag.eSIMULATION_SHAPE.value);
 
   const newShape = PhysXManager.instance.physics.createShape(geometry, material, false, flags);

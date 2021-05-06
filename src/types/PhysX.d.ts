@@ -244,24 +244,47 @@ declare namespace PhysX {
     constructor(a: any, b: any, c: any);
   }
 
-  class Material extends Base {}
+  class PxMaterial extends Base {
+    setDynamicFriction(value: number): void;
+    setStaticFriction(value: number): void;
+    setRestitution(value: number): void;
+    getDynamicFriction(): number;
+    getStaticFriction(): number;
+    getRestitution(): number;
+    setFrictionCombineMode(value: number): void;
+    setRestitutionCombineMode(value: number): void;
+    getFrictionCombineMode(): number;
+    getRestitutionCombineMode(): number;
+  }
 
   class PxShape extends Base {
     setContactOffset(contactOffset: number): void;
     setSimulationFilterData(filterData: PxFilterData): void;
+    getSimulationFilterData(): PxFilterData;
     setQueryFilterData(filterData: PxFilterData): void;
+    getQueryFilterData(): PxFilterData;
     setName(value: string): void;
     getName(): string;
     setFlag(flag: PxShapeFlag, value: boolean): void;
     getFlags(): PxShapeFlags;
+    release(): void;
+    setLocalPose(transform: PxTransform): void;
+    // setGeometry(geometry: PxGeometry): void; // TO DO
+    // getBoxGeometry(geometry: PxGeometry): void; // TO DO
+    // getSphereGeometry(geometry: PxGeometry): void; // TO DO
+    // getPlaneGeometry(geometry: PxGeometry): void; // TO DO
+    setRestOffset(value: number);
+    // setMaterials(materials: PxMaterial[]): void; // TO DO
+    getMaterials(): PxMaterial[] | PxMaterial; // TO DO
+    // getWorldBounds(actor: PxActor, inflation: number): PxBounds3; // TO DO
   }
 
-  class Actor extends Base {
+  class PxActor extends Base {
     // setActorFlag(flag: number, value: boolean): void;
     setActorFlags(flags: PxActorFlag): void;
     getActorFlags(): number;
   }
-  class PxRigidActor extends Actor {
+  class PxRigidActor extends PxActor {
     attachShape(shape: PxShape): void;
     detachShape(shape: PxShape, wakeOnLostTouch?: boolean | true): void;
     getShapes(): PxShape[] | PxShape;
@@ -357,11 +380,11 @@ declare namespace PhysX {
     bounceThresholdVelocity: number;
   }
   class PxScene {
-    addActor(actor: Actor, unk: any): void;
-    removeActor(actor: Actor, unk: any): void;
+    addActor(actor: PxActor, unk: any): void;
+    removeActor(actor: PxActor, unk: any): void;
     simulate(timeStep: number, rando: boolean): void;
     fetchResults(b: boolean): void;
-    getActiveActors(len: number): Actor[];
+    getActiveActors(len: number): PxActor[];
     setGravity(value: PxVec3): void;
 
     raycast(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, hits: PxRaycastBuffer): boolean;

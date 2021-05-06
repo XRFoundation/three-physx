@@ -238,6 +238,7 @@ export class PhysXManager {
         shape,
         transform,
         options,
+        config,
       });
       if (!bodyShape) return;
       bodyShape.setContactOffset(config?.contactOffset ?? 0.0000001);
@@ -336,9 +337,16 @@ export class PhysXManager {
       shapePx.setQueryFilterData(new PhysX.PxFilterData((shapePx as any)._collisionLayer, (shapePx as any)._collisionMask, 0, 0));
     }
     if (typeof material !== 'undefined') {
-      // TODO
-      // shape.setMaterial
-      // config.material?.staticFriction ?? 0.5, config.material?.dynamicFriction ?? 0.5, config.material?.restitution ?? 0.5
+      const materials = shapePx.getMaterials() as PhysX.PxMaterial;
+      if (typeof material.staticFriction !== 'undefined') {
+        materials.setStaticFriction(material.staticFriction);
+      }
+      if (typeof material.dynamicFriction !== 'undefined') {
+        materials.setDynamicFriction(material.dynamicFriction);
+      }
+      if (typeof material.restitution !== 'undefined') {
+        materials.setRestitution(material.restitution);
+      }
     }
     if (typeof contactOffset !== 'undefined') {
       shapePx.setContactOffset(contactOffset);
@@ -406,7 +414,7 @@ export class PhysXManager {
         },
       }),
     );
-    controllerDesc.setMaterial(this.physics.createMaterial(config.material?.staticFriction ?? 0.5, config.material?.dynamicFriction ?? 0.5, config.material?.restitution ?? 0.5));
+    controllerDesc.setMaterial(this.physics.createMaterial(config.material?.staticFriction ?? 0, config.material?.dynamicFriction ?? 0, config.material?.restitution ?? 0));
     if (!controllerDesc.isValid()) {
       console.warn('[WARN] Controller Description invalid!');
     }

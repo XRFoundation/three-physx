@@ -138,6 +138,7 @@ export class PhysXInstance {
             {
               const { event, controllerID, shapeID, position, normal, length } = collision;
               const controllerBody: RigidBody = this._bodies.get(controllerID);
+              if (!controllerBody) return;
               const shape = this._shapes.get(shapeID);
               controllerBody.dispatchEvent({
                 type: event,
@@ -217,6 +218,19 @@ export class PhysXInstance {
         transform: body.transform,
         shapes: body.shapes,
         type: body.type,
+      }),
+    ]);
+    return body;
+  }
+
+  updateBody(body: Body, config: Partial<RigidBody>) {
+    config.shapes.forEach((shape, i) => {
+      shape.id = body.shapes[i].id;
+    });
+    this._physicsProxy.updateBody([
+      clone({
+        id: body.id,
+        ...config,
       }),
     ]);
     return body;

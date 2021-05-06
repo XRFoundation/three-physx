@@ -58,8 +58,8 @@ export enum BodyType {
 
 export interface Shape {
   id?: number;
-  shape: SHAPES;
-  transform: Transform;
+  shape?: SHAPES;
+  transform?: Transform;
   config?: ShapeConfig;
   _debugNeedsUpdate?: any;
   options?: {

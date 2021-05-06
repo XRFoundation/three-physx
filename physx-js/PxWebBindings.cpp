@@ -857,8 +857,12 @@ EMSCRIPTEN_BINDINGS(physx)
       .function("setStaticFriction", &PxMaterial::setStaticFriction)
       .function("setRestitution", &PxMaterial::setRestitution)
       .function("getDynamicFriction", &PxMaterial::getDynamicFriction)
+      .function("getStaticFriction", &PxMaterial::getStaticFriction)
+      .function("getRestitution", &PxMaterial::getRestitution)
       .function("setFrictionCombineMode", &PxMaterial::setFrictionCombineMode)
       .function("setRestitutionCombineMode", &PxMaterial::setRestitutionCombineMode)
+      .function("getFrictionCombineMode", &PxMaterial::getFrictionCombineMode)
+      .function("getRestitutionCombineMode", &PxMaterial::getRestitutionCombineMode)
       .function("release", &PxMaterial::release);
   register_vector<PxMaterial *>("PxMaterialVector");
   // setMaterials has 'PxMaterial**' as an input, which is not representable with embind
@@ -882,7 +886,13 @@ EMSCRIPTEN_BINDINGS(physx)
                                     [](PxShape &shape, std::vector<PxMaterial *> materials) {
                                       return shape.setMaterials(materials.data(), materials.size());
                                     }))
-      .function("getMaterials", &PxShape::getMaterials, allow_raw_pointers())
+      .function("getMaterials", optional_override([](PxShape &shape) {
+                  PxU32 numMaterials = shape.getNbMaterials();
+                  PxMaterial *materials = NULL;
+                  shape.getMaterials(&materials, numMaterials);
+                  return materials;
+                }),
+                allow_raw_pointers())
       .function("getNbMaterials", &PxShape::getNbMaterials, allow_raw_pointers())
       .function("getWorldBounds", optional_override(
                                       [](PxShape &shape, PxRigidActor &actor, float i) {
@@ -909,7 +919,13 @@ EMSCRIPTEN_BINDINGS(physx)
       .function("getConvexMeshes", &PxPhysics::getConvexMeshes, allow_raw_pointers())
       // .function("getFoundation", &PxPhysics::getFoundation, allow_raw_pointers())
       .function("getHeightFields", &PxPhysics::getHeightFields, allow_raw_pointers())
-      .function("getMaterials", &PxPhysics::getMaterials, allow_raw_pointers())
+      .function("getMaterials", optional_override([](PxShape &shape) {
+                  PxU32 numMaterials = shape.getNbMaterials();
+                  PxMaterial *materials = NULL;
+                  shape.getMaterials(&materials, numMaterials);
+                  return materials;
+                }),
+                allow_raw_pointers())
       .function("getNbConvexMeshes", &PxPhysics::getNbConvexMeshes, allow_raw_pointers())
       .function("getNbHeightFields", &PxPhysics::getNbHeightFields, allow_raw_pointers())
       .function("getNbMaterials", &PxPhysics::getNbMaterials, allow_raw_pointers())
