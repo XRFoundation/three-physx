@@ -72,7 +72,7 @@ const load = async () => {
     // console.log('Hit Shape', ev);
   });
   characterBody.addEventListener(ControllerEvents.CONTROLLER_CONTROLLER_HIT, (ev) => {
-    // console.log('Hit Controller', ev);
+    console.log('Hit Controller', ev);
   });
 
   const characterRaycastQuery = PhysXInstance.instance.addRaycastQuery({

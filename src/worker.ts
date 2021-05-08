@@ -388,7 +388,6 @@ export class PhysXManager {
           const shape = event.getShape();
           const shapeID = this.shapeIDByPointer.get(shape.$$.ptr);
           const bodyID = this.bodyIDByShapeID.get(shapeID);
-          console.log(bodyID);
           const position = event.getWorldPos();
           const normal = event.getWorldNormal();
           const length = event.getLength();
@@ -396,11 +395,12 @@ export class PhysXManager {
         },
         onControllerHit: (event: PhysX.PxControllersHit) => {
           const other = event.getOther();
-          const otherID = this.controllerIDByPointer.get(other.$$.ptr);
+          const bodyID = this.controllerIDByPointer.get(other.$$.ptr);
+          const shapeID = this.shapeIDByPointer.get((other.getActor().getShapes() as PhysX.PxShape).$$.ptr);
           const position = event.getWorldPos();
           const normal = event.getWorldNormal();
           const length = event.getLength();
-          this.onEvent({ event: ControllerEvents.CONTROLLER_CONTROLLER_HIT, controllerID: id, otherID, position, normal, length });
+          this.onEvent({ event: ControllerEvents.CONTROLLER_CONTROLLER_HIT, controllerID: id, bodyID, shapeID, position, normal, length });
         },
         onObstacleHit: (event) => {
           // TODO
