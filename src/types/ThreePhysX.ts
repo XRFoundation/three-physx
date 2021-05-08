@@ -79,7 +79,6 @@ export interface MaterialConfig {
 }
 
 export interface ShapeConfig {
-  id?: number;
   contactOffset?: number;
   isTrigger?: boolean;
   collisionLayer?: number;
@@ -173,6 +172,15 @@ export enum ControllerEvents {
   CONTROLLER_OBSTACLE_HIT = 'CONTROLLER_OBSTACLE_HIT',
 }
 
+export type ControllerHitEvent = {
+  type: ControllerEvents;
+  shape: Shape;
+  body: Body;
+  position: Vec3;
+  normal: Vec3;
+  length: number;
+};
+
 export enum CollisionEvents {
   COLLISION_START = 'COLLISION_START',
   COLLISION_PERSIST = 'COLLISION_PERSIST',
@@ -181,3 +189,11 @@ export enum CollisionEvents {
   TRIGGER_START = 'TRIGGER_START',
   TRIGGER_END = 'TRIGGER_END',
 }
+
+export type ColliderHitEvent = {
+  type: CollisionEvents;
+  bodySelf: Body;
+  bodyOther: Body;
+  shapeSelf: Shape;
+  shapeOther: Shape;
+};

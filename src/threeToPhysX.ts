@@ -24,7 +24,6 @@ export const createShapeFromConfig = (shape) => {
   shape.id = id;
   shape.transform = transform;
   shape.config = getShapeConfig(shape ?? {});
-  shape.config.id = id;
   return shape;
 };
 
@@ -43,7 +42,6 @@ const createShapesFromUserData = (mesh, root): Shape[] => {
       data.id = id;
       data.transform = transform;
       data.config = getShapeConfig(shape ?? {});
-      data.config.id = id;
       shapes.push(data);
     });
   } else {
@@ -54,7 +52,6 @@ const createShapesFromUserData = (mesh, root): Shape[] => {
     data.id = id;
     data.transform = transform;
     data.config = getShapeConfig({});
-    data.config.id = id;
     shapes.push(data);
   }
   return shapes;

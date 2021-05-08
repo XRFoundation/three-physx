@@ -387,10 +387,12 @@ export class PhysXManager {
         onShapeHit: (event: PhysX.PxControllerShapeHit) => {
           const shape = event.getShape();
           const shapeID = this.shapeIDByPointer.get(shape.$$.ptr);
+          const bodyID = this.bodyIDByShapeID.get(shapeID);
+          console.log(bodyID);
           const position = event.getWorldPos();
           const normal = event.getWorldNormal();
           const length = event.getLength();
-          this.onEvent({ event: ControllerEvents.CONTROLLER_SHAPE_HIT, controllerID: id, shapeID, position, normal, length });
+          this.onEvent({ event: ControllerEvents.CONTROLLER_SHAPE_HIT, controllerID: id, bodyID, shapeID, position, normal, length });
         },
         onControllerHit: (event: PhysX.PxControllersHit) => {
           const other = event.getOther();

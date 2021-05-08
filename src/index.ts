@@ -136,12 +136,14 @@ export class PhysXInstance {
           case ControllerEvents.CONTROLLER_CONTROLLER_HIT:
           case ControllerEvents.CONTROLLER_OBSTACLE_HIT:
             {
-              const { event, controllerID, shapeID, position, normal, length } = collision;
+              const { event, controllerID, shapeID, bodyID, position, normal, length } = collision;
               const controllerBody: RigidBody = this._bodies.get(controllerID);
               if (!controllerBody) return;
               const shape = this._shapes.get(shapeID);
+              const body = this._bodies.get(bodyID);
               controllerBody.dispatchEvent({
                 type: event,
+                body,
                 shape,
                 position,
                 normal,
