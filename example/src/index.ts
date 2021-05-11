@@ -1,11 +1,12 @@
-import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, Object3DBody, SceneQueryType, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos, Body, Shape, BodyType, Controller, SHAPES, createNewTransform, removeDuplicates, arrayOfPointsToArrayOfVector3 } from '../../src';
-import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry, PlaneBufferGeometry, Raycaster, Vector2 } from 'three';
+import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, SceneQueryType, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos, Body, Shape, BodyType, Controller, SHAPES, arrayOfPointsToArrayOfVector3, Transform, Obstacle, BoxObstacle } from '../../src';
+import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry, PlaneBufferGeometry, Raycaster, Vector2, Euler } from 'three';
 import { ConeBufferGeometry } from 'three';
 import { IcosahedronBufferGeometry } from 'three';
 import { OctahedronBufferGeometry } from 'three';
 import { TorusBufferGeometry } from 'three';
 import { TubeBufferGeometry } from 'three';
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry';
+import { Quaternion } from 'three';
 
 const vector3 = new Vector3();
 
@@ -29,31 +30,31 @@ const load = async () => {
   // @ts-ignore
   await PhysXInstance.instance.initPhysX(new Worker(new URL('./worker.ts', import.meta.url), { type: "module" }), {});
 
-  const kinematicObject = new Group()//.translateY(-2.5).rotateZ(Math.PI / 2);
+  // const kinematicObject = new Group().translateY(2.5);
   // kinematicObject.scale.setScalar(2)
-  kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateX(2).rotateY(Math.PI / 2));
-  kinematicObject.children[0].scale.setScalar(2);
-  kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
-  const kinematicBody = PhysXInstance.instance.addBody(new Body({
-    shapes: getShapesFromObject(kinematicObject).map((shape: Shape) => {
-      shape.config.collisionLayer = COLLISIONS.HAMMER;
-      shape.config.collisionMask = COLLISIONS.BALL;
-      return shape;
-    }),
-    transform: getTransformFromWorldPos(kinematicObject),
-    type: BodyType.KINEMATIC,
-  }));
+  // kinematicObject.add(new Mesh(new BoxBufferGeometry(4, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateX(2).rotateY(Math.PI / 2));
+  // kinematicObject.children[0].scale.setScalar(2);
+  // kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
+  // const kinematicBody = PhysXInstance.instance.addBody(new Body({
+  //   shapes: getShapesFromObject(kinematicObject).map((shape: Shape) => {
+  //     shape.config.collisionLayer = COLLISIONS.HAMMER;
+  //     shape.config.collisionMask = COLLISIONS.BALL;
+  //     return shape;
+  //   }),
+  //   transform: getTransformFromWorldPos(kinematicObject),
+  //   type: BodyType.KINEMATIC,
+  // }));
   // let isKinematic = true;
   // setInterval(() => {
   //   isKinematic = !isKinematic;
   //   kinematicBody.type = isKinematic ? BodyType.KINEMATIC : BodyType.DYNAMIC;
   // }, 2000);
-  objects.set(kinematicBody.id, kinematicObject);
-  renderer.addToScene(kinematicObject);
-  (kinematicObject as any).body = kinematicBody;
-  kinematicBody.addEventListener(CollisionEvents.TRIGGER_START, ({ bodySelf, bodyOther, shapeSelf, shapeOther }) => {
+  // objects.set(kinematicBody.id, kinematicObject);
+  // renderer.addToScene(kinematicObject);
+  // (kinematicObject as any).body = kinematicBody;
+  // kinematicBody.addEventListener(CollisionEvents.TRIGGER_START, ({ bodySelf, bodyOther, shapeSelf, shapeOther }) => {
     // console.log('TRIGGER DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
-  });
+  // });
 
   const character = new Group();
   character.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
@@ -69,10 +70,13 @@ const load = async () => {
   (character as any).body = characterBody;
   objects.set(characterBody.id, character);
   characterBody.addEventListener(ControllerEvents.CONTROLLER_SHAPE_HIT, (ev) => {
-    // console.log('Hit Shape', ev);
+    // console.log('Hit shape', ev);
   });
   characterBody.addEventListener(ControllerEvents.CONTROLLER_CONTROLLER_HIT, (ev) => {
-    console.log('Hit Controller', ev);
+    // console.log('Hit controller', ev);
+  });
+  characterBody.addEventListener(ControllerEvents.CONTROLLER_OBSTACLE_HIT, (ev) => {
+    // console.log('Hit obstacle', ev);
   });
 
   const characterRaycastQuery = PhysXInstance.instance.addRaycastQuery({
@@ -85,11 +89,11 @@ const load = async () => {
 
   const character2 = new Group();
   character2.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
-  character2.position.set(2, 0, 2);
+  character2.position.set(2, 1.5, 2);
   const characterBody2 = PhysXInstance.instance.createController(new Controller({
     isCapsule: true,
     radius: 0.5,
-    position: { y: 0 },
+    position: character2.position,
     collisionLayer: COLLISIONS.CHARACTER,
     collisionMask: COLLISIONS.ALL
   }));
@@ -173,12 +177,39 @@ const load = async () => {
         }
       }
     ],
-    transform: createNewTransform(),
     type: BodyType.STATIC
   }));
   (platform as any).body = groundPlane;
   objects.set(groundPlaneBody.id, groundPlane);
   renderer.addToScene(groundPlane);
+
+  const obstacle1 = PhysXInstance.instance.addObstacle(new BoxObstacle({ 
+    isCapsule: false,
+    position: new Vector3(platformSize / 2, 2, 0),
+    rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI / 2, 0), true),
+    halfExtents: new Vector3(platformSize / 2, 1, 0.25)
+  })); 
+
+  const obstacle2 = PhysXInstance.instance.addObstacle(new BoxObstacle({ 
+    isCapsule: false,
+    position: new Vector3(-platformSize / 2, 2, 0),
+    rotation: new Quaternion().setFromEuler(new Euler(0, Math.PI / 2, 0), true),
+    halfExtents: new Vector3(platformSize / 2, 1, 0.25)
+  }));
+
+  const obstacle3 = PhysXInstance.instance.addObstacle(new BoxObstacle({ 
+    isCapsule: false,
+    position: new Vector3(0, 2, platformSize / 2),
+    rotation: new Quaternion().setFromEuler(new Euler(0, 0, 0), true),
+    halfExtents: new Vector3(platformSize / 2, 1, 0.25)
+  }));
+
+  const obstacle4 = PhysXInstance.instance.addObstacle(new BoxObstacle({ 
+    isCapsule: false,
+    position: new Vector3(0, 2, -platformSize / 2),
+    rotation: new Quaternion().setFromEuler(new Euler(0, 0, 0), true),
+    halfExtents: new Vector3(platformSize / 2, 1, 0.25)
+  }));
 
   const keys = {};
   document.addEventListener('keydown', (ev) => {
@@ -187,13 +218,13 @@ const load = async () => {
       debug.setEnabled(!debug.enabled)
     }
     if (ev.code === 'ShiftLeft') {
-      characterBody.resize(0);
+      // characterBody.resize(0);
     }
   });
   document.addEventListener('keyup', (ev) => {
     delete keys[ev.code];
     if (ev.code === 'ShiftLeft') {
-      characterBody.resize(1);
+      // characterBody.resize(1);
     }
     if (ev.code === 'KeyR') {
       characterBody.updateTransform({ translation: { x: 1, y: 1, z: 1 } })
@@ -229,11 +260,12 @@ const load = async () => {
     const timeSecs = time / 1000;
     const delta = time - lastTime;
 
-    if (kinematicBody.type === BodyType.KINEMATIC) {
-      kinematicObject.position.set(Math.sin(timeSecs) * 10, 0, Math.cos(timeSecs) * 10);
-      kinematicObject.lookAt(0, 0, 0);
-      kinematicBody.updateTransform({ translation: kinematicObject.position, rotation: kinematicObject.quaternion });
-    }
+    // if (kinematicBody.type === BodyType.KINEMATIC) {
+    //   kinematicObject.position.set(Math.sin(timeSecs) * 10, 0, Math.cos(timeSecs) * 10);
+    //   kinematicObject.lookAt(0, 0, 0);
+    //   kinematicObject.position.setY(1);
+    //   kinematicBody.updateTransform({ translation: kinematicObject.position, rotation: kinematicObject.quaternion });
+    // }
     if (characterBody.collisions.down) {
       if (characterBody.velocity.y < 0)
         characterBody.velocity.y = 0;
@@ -339,7 +371,7 @@ const createBalls = () => {
     new TorusKnotBufferGeometry(),
   ])
   const meshes = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 10; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     meshes.push(mesh);

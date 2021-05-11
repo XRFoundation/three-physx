@@ -19,25 +19,25 @@
 using namespace physx;
 using namespace emscripten;
 
-	class CustomQueryFilter : public PxSceneQueryFilterCallback
-	{
-	public:
-		PxQueryHitType::Enum	preFilter(const PxFilterData& filterData, const PxShape* shape, const PxRigidActor* actor, PxHitFlags& queryFlags)
-		{
-      physx::shdfnd::getFoundation().error(PxErrorCode::eDEBUG_INFO, __FILE__, __LINE__, "prefilter");
-			// PT: ignore triggers
-			if(shape->getFlags() & physx::PxShapeFlag::eTRIGGER_SHAPE)
-				return PxQueryHitType::eNONE;
+class CustomQueryFilter : public PxSceneQueryFilterCallback
+{
+public:
+  PxQueryHitType::Enum preFilter(const PxFilterData &filterData, const PxShape *shape, const PxRigidActor *actor, PxHitFlags &queryFlags)
+  {
+    physx::shdfnd::getFoundation().error(PxErrorCode::eDEBUG_INFO, __FILE__, __LINE__, "prefilter");
+    // PT: ignore triggers
+    if (shape->getFlags() & physx::PxShapeFlag::eTRIGGER_SHAPE)
+      return PxQueryHitType::eNONE;
 
-			return PxQueryHitType::eBLOCK;
-		}
+    return PxQueryHitType::eBLOCK;
+  }
 
-		PxQueryHitType::Enum	postFilter(const PxFilterData& filterData, const PxQueryHit& hit)
-		{
-      physx::shdfnd::getFoundation().error(PxErrorCode::eDEBUG_INFO, __FILE__, __LINE__, "postFilter");
-			return PxQueryHitType::eBLOCK;
-		}
-	};
+  PxQueryHitType::Enum postFilter(const PxFilterData &filterData, const PxQueryHit &hit)
+  {
+    physx::shdfnd::getFoundation().error(PxErrorCode::eDEBUG_INFO, __FILE__, __LINE__, "postFilter");
+    return PxQueryHitType::eBLOCK;
+  }
+};
 
 struct PxRaycastCallbackWrapper : public wrapper<PxRaycastCallback>
 {
@@ -299,8 +299,8 @@ PxConvexMesh *createConvexMeshComputeHull(int vertices, PxU32 vertCount, int ind
   triangleMesh.points.data = (PxVec3 *)vertices;
 
   int len = indexCount * 3;
-  PxU32* intPtr = new PxU32[len];
-  PxF32* ptr = (PxF32 *)indices;
+  PxU32 *intPtr = new PxU32[len];
+  PxF32 *ptr = (PxF32 *)indices;
 
   std::string str;
   // Explicitly cast float values to unsigned int
@@ -361,11 +361,12 @@ PxTriangleMesh *createTriMesh(int vertices, PxU32 vertCount, int indices, PxU32 
   meshDesc.points.stride = sizeof(PxVec3);
   meshDesc.points.data = (PxVec3 *)vertices;
 
-  if(indexCount > 0) {
+  if (indexCount > 0)
+  {
 
     int len = indexCount * 3;
-    PxU32* intPtr = new PxU32[len];
-    PxF32* ptr = (PxF32 *)indices;
+    PxU32 *intPtr = new PxU32[len];
+    PxF32 *ptr = (PxF32 *)indices;
 
     std::string str;
     // Explicitly cast float values to unsigned int
@@ -758,7 +759,7 @@ EMSCRIPTEN_BINDINGS(physx)
       .property("position", &PxLocationHit::position)
       .property("normal", &PxLocationHit::normal)
       .property("distance", &PxLocationHit::distance);
-      
+
   class_<PxRaycastHit, base<PxLocationHit>>("PxRaycastHit")
       .constructor<>()
       .function("getShape", optional_override([](PxRaycastHit &block) {
@@ -1147,9 +1148,9 @@ EMSCRIPTEN_BINDINGS(physx)
       .function("clearForce", &PxRigidBody::clearForce)
       .function("clearTorque", &PxRigidBody::clearTorque)
       .function("addForce", optional_override(
-                                     [](PxRigidBody &body, const PxVec3 &force) {
-                                       body.addForce(force, PxForceMode::eFORCE, true);
-                                     }))
+                                [](PxRigidBody &body, const PxVec3 &force) {
+                                  body.addForce(force, PxForceMode::eFORCE, true);
+                                }))
       .function("addForceAtPos", optional_override(
                                      [](PxRigidBody &body, const PxVec3 &force, const PxVec3 &pos) {
                                        PxRigidBodyExt::addForceAtPos(body, force, pos, PxForceMode::eFORCE, true);
@@ -1386,6 +1387,11 @@ EMSCRIPTEN_BINDINGS(physx)
                   return (PxBoxController *)ctrlMng.createController(desc);
                 }),
                 allow_raw_pointers())
+      .function("createObstacleContext", //&PxControllerManager::createObstacleContext, allow_raw_pointers())
+                optional_override([](PxControllerManager &ctrlMng) {
+                  return (PxObstacleContext *)ctrlMng.createObstacleContext();
+                }),
+                allow_raw_pointers())
       .function("setTessellation", &PxControllerManager::setTessellation)
       .function("setOverlapRecoveryModule", &PxControllerManager::setOverlapRecoveryModule)
       .function("setPreciseSweeps", &PxControllerManager::setPreciseSweeps)
@@ -1404,6 +1410,28 @@ EMSCRIPTEN_BINDINGS(physx)
       .function("getPosition", &PxController::getPosition)
       .function("setFootPosition", &PxController::setFootPosition)
       .function("getFootPosition", &PxController::getFootPosition)
+      .function("setStepOffset", &PxController::setStepOffset)
+      .function("getStepOffset", &PxController::getStepOffset)
+      .function("setContactOffset", &PxController::setContactOffset)
+      .function("getContactOffset", &PxController::getContactOffset)
+      .function("setNonWalkableMode", &PxController::setNonWalkableMode)
+      .function("getNonWalkableMode", &PxController::getNonWalkableMode)
+      .function("setUpDirection", &PxController::setUpDirection)
+      .function("getUpDirection", &PxController::getUpDirection)
+      .function("setSlopeLimit", &PxController::setSlopeLimit)
+      .function("getSlopeLimit", &PxController::getSlopeLimit)
+      .function("getScene", &PxController::getScene, allow_raw_pointers())
+      .function("setUserData", optional_override([](PxController &controller, int userData) {
+                  controller.setUserData((void *)userData);
+                }),
+                allow_raw_pointers())
+      .function("getUserData", optional_override([](PxController &controller) {
+                  return *(int*)controller.getUserData();
+                }),
+                allow_raw_pointers())
+      .function("getState", &PxController::getState, allow_raw_pointers())
+      .function("getStats", &PxController::getStats, allow_raw_pointers())
+      // custom functions
       .function("setSimulationFilterData", optional_override(
                                                [](PxController &ctrl, PxFilterData &data) {
                                                  PxRigidDynamic *actor = ctrl.getActor();
@@ -1501,7 +1529,7 @@ EMSCRIPTEN_BINDINGS(physx)
   class_<PxControllerObstacleHit, base<PxControllerHit>>("PxControllerObstacleHit")
       .constructor<>()
       .function("getUserData", optional_override([](PxControllerObstacleHit &hit) {
-                  return hit.userData;
+                  return *(int*)hit.userData;
                 }),
                 allow_raw_pointers());
 
@@ -1518,7 +1546,41 @@ EMSCRIPTEN_BINDINGS(physx)
       .property("halfHeight", &PxBoxControllerDesc::halfHeight)
       .property("halfSideExtent", &PxBoxControllerDesc::halfSideExtent);
 
-  class_<PxObstacleContext>("PxObstacleContext");
+  class_<PxObstacle>("PxObstacle")
+      .function("getType", &PxObstacle::getType)
+      .function("getUserData", optional_override([](PxObstacle &obstacle) {
+                  return *(int*)obstacle.mUserData;
+                }),
+                allow_raw_pointers())
+      .function("setUserData", optional_override([](PxObstacle &obstacle, int userData) {
+                  obstacle.mUserData = (void *)userData;
+                }),
+                allow_raw_pointers())
+      .function("getPosition", optional_override([](PxObstacle &obstacle) { return obstacle.mPos; }))
+      .function("setPosition", optional_override([](PxObstacle &obstacle, PxExtendedVec3 &pos) { return obstacle.mPos = pos; }))
+      .function("getRotation", optional_override([](PxObstacle &obstacle) { return obstacle.mRot; }))
+      .function("setRotation", optional_override([](PxObstacle &obstacle, PxQuat &rot) { return obstacle.mRot = rot; }));
+
+  class_<PxBoxObstacle, base<PxObstacle>>("PxBoxObstacle")
+      .constructor<>()
+      .function("getHalfExtents", optional_override([](PxBoxObstacle &obstacle) { return obstacle.mHalfExtents; }))
+      .function("setHalfExtents", optional_override([](PxBoxObstacle &obstacle, PxVec3 &extents) { return obstacle.mHalfExtents = extents; }));
+
+  class_<PxCapsuleObstacle, base<PxObstacle>>("PxCapsuleObstacle")
+      .constructor<>()
+      .function("getHalfHeight", optional_override([](PxCapsuleObstacle &obstacle) { return obstacle.mHalfHeight; }))
+      .function("setHalfHeight", optional_override([](PxCapsuleObstacle &obstacle, PxReal height) { return obstacle.mHalfHeight = height; }))
+      .function("getRadius", optional_override([](PxCapsuleObstacle &obstacle) { return obstacle.mRadius; }))
+      .function("setRadius", optional_override([](PxCapsuleObstacle &obstacle, PxReal radius) { return obstacle.mRadius = radius; }));
+
+  class_<PxObstacleContext>("PxObstacleContext")
+      .function("release", &PxObstacleContext::release)
+      .function("addObstacle", &PxObstacleContext::addObstacle, allow_raw_pointers())
+      .function("removeObstacle", &PxObstacleContext::removeObstacle, allow_raw_pointers())
+      .function("updateObstacle", &PxObstacleContext::updateObstacle, allow_raw_pointers())
+      .function("getObstacle", &PxObstacleContext::getObstacle, allow_raw_pointers())
+      .function("getNbObstacles", &PxObstacleContext::getNbObstacles, allow_raw_pointers())
+      .function("getObstacleByHandle", &PxObstacleContext::getObstacleByHandle, allow_raw_pointers());
 
   class_<PxControllerFilters>("PxControllerFilters")
       .constructor<const PxFilterData *, PxQueryFilterCallback *, PxControllerFilterCallback *>()
@@ -1608,5 +1670,9 @@ namespace emscripten
     void raw_destructor<PxDefaultErrorCallback>(PxDefaultErrorCallback *){};
     template <>
     void raw_destructor<PxControllerHit>(PxControllerHit *){};
+    template <>
+    void raw_destructor<PxObstacle>(PxObstacle *){};
+    template <>
+    void raw_destructor<PxObstacleContext>(PxObstacleContext *){};
   }
 }

@@ -138,6 +138,9 @@ declare namespace PhysX {
   type VoidPtr = number;
   const NULL: {};
   const HEAPF32: Float32Array;
+  const HEAPU8: Uint8Array;
+  const HEAPU16: Uint16Array;
+  const HEAPU32: Uint32Array;
   function destroy(obj: PhysX.Type): void;
   function castObject<T1, T2 extends PhysX.Type>(obj: T1, fun: Constructor<T2>): T2;
   function wrapPointer<T extends PhysX.Type>(params: number, obj: Constructor<T>): T;
@@ -444,15 +447,12 @@ declare namespace PhysX {
 
   type Type = {};
 
-  const HEAPU8: Uint8Array;
-  const HEAPU16: Uint16Array;
-  const HEAPU32: Uint32Array;
-
   function PxCreateControllerManager(scene: PxScene, lockingEnabled: boolean): PxControllerManager;
 
   class PxControllerManager {
     createCapsuleController(desc: PxControllerDesc): PxCapsuleController;
     createBoxController(desc: PxControllerDesc): PxBoxController;
+    createObstacleContext(): PxObstacleContext;
   }
 
   class PxControllerDesc {
@@ -511,7 +511,37 @@ declare namespace PhysX {
     constructor(filterData?: PxFilterData, callbacks?: PxQueryFilterCallback, cctFilterCb?: PxControllerFilterCallback);
   }
 
-  class PxObstacleContext {}
+  class PxObstacleContext {
+    release(): void;
+    addObstacle(obstacle: PxObstacle): number;
+    removeObstacle(handle: number): void;
+    updateObstacle(handle: number, obstacle: PxObstacle): void;
+    getNbObstacles(): number;
+    getObstacle(index: number): PxObstacle;
+    getObstacleByHandle(handle: number): PxObstacle;
+  }
+
+  class PxObstacle {
+    getType(): void;
+    getUserData(): any;
+    setUserData(userData: any);
+    getPosition(): PxVec3;
+    setPosition(position: PxVec3);
+    getRotation(): PxQuat;
+    setRotation(rotation: PxQuat);
+  }
+
+  class PxBoxObstacle extends PxObstacle {
+    getHalfExtents(): PxVec3;
+    setHalfExtents(halfExtents: PxVec3);
+  }
+
+  class PxCapsuleObstacle extends PxObstacle {
+    getHalfHeight(): number;
+    setHalfHeight(halfHeight: number);
+    getRadius(): number;
+    setRadius(radius: number);
+  }
 
   class PxController extends Base {
     move(displacement: PxVec3, minDistance: number, elapsedTime: number, filters: PxControllerFilters, obstacles?: PxObstacleContext): PxControllerCollisionFlags;
@@ -564,7 +594,7 @@ declare namespace PhysX {
   class PxControllersHit extends PxControllerHit {
     getOther(): PxController;
   }
-  class PxObstacleHit extends PxControllerHit {
+  class PxControllerObstacleHit extends PxControllerHit {
     getUserData(): number;
   }
 }

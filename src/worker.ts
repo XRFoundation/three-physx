@@ -2,9 +2,10 @@
 
 import { Matrix4 } from 'three';
 import { getShape } from './getShape';
-import { PhysXConfig, BodyType, RigidBody, ShapeConfig, Shape, ControllerConfig, SceneQuery, SceneQueryType, RaycastHit, CollisionEvents, ControllerEvents } from './types/ThreePhysX';
+import { PhysXConfig, BodyType, RigidBody, Shape, ControllerConfig, SceneQuery, SceneQueryType, RaycastHit, CollisionEvents, ControllerEvents } from './types/ThreePhysX';
 import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
+import { getFromPhysXHeap, putIntoPhysXHeap } from './utils/misc';
 
 let lastSimulationTick = 0;
 
@@ -22,6 +23,7 @@ export class PhysXManager {
   sceneDesc: PhysX.PxSceneDesc;
   scene: PhysX.PxScene;
   controllerManager: PhysX.PxControllerManager;
+  obstacleContext: PhysX.PxObstacleContext;
 
   updateInterval: any;
   tps: number = 120;
@@ -39,6 +41,7 @@ export class PhysXManager {
   indices: Map<number, number> = new Map<number, number>();
   controllers: Map<number, PhysX.PxController> = new Map<number, PhysX.PxController>();
   raycasts: Map<number, SceneQuery> = new Map<number, SceneQuery>();
+  obstacles: Map<number, number> = new Map<number, number>();
   // constraints: // TODO
   physx: any;
 
@@ -46,8 +49,8 @@ export class PhysXManager {
     (globalThis as any).PhysX = physx;
   }
 
-  initPhysX = async (config: PhysXConfig): Promise<void> => {
-    if (config?.tps) {
+  initPhysX = (config: PhysXConfig = {}): void => {
+    if (config.tps) {
       this.tps = config.tps;
     }
     this.physxVersion = PhysX.PX_PHYSICS_VERSION;
@@ -82,14 +85,6 @@ export class PhysXManager {
           idB: this.shapeIDByPointer.get(shapeB.$$.ptr),
         });
       },
-      onTrigger: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        console.log(shapeA, shapeB);
-        this.onEvent({
-          event: CollisionEvents.TRIGGER_START,
-          idA: this.shapeIDByPointer.get(shapeA.$$.ptr),
-          idB: this.shapeIDByPointer.get(shapeB.$$.ptr),
-        });
-      },
       onTriggerStart: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
         console.log(shapeA, shapeB);
         this.onEvent({
@@ -117,13 +112,14 @@ export class PhysXManager {
 
     this.scene = this.physics.createScene(this.sceneDesc);
     this.controllerManager = PhysX.PxCreateControllerManager(this.scene, false);
+    this.obstacleContext = this.controllerManager.createObstacleContext();
 
     if (config.start) {
       this.startPhysX(true);
     }
   };
 
-  simulate = async () => {
+  simulate = () => {
     const now = Date.now();
     const delta = now - lastSimulationTick;
     lastSimulationTick = now;
@@ -150,7 +146,7 @@ export class PhysXManager {
     this.onUpdate({ raycastResults, bodyArray }); //, shapeArray);
   };
 
-  update = async (kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array, raycastQueryArray: Float32Array, deltaTime: number) => {
+  update = (kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array, raycastQueryArray: Float32Array, deltaTime: number) => {
     let offset = 0;
     while (offset < kinematicBodiesArray.length) {
       const id = kinematicBodiesArray[offset];
@@ -178,7 +174,7 @@ export class PhysXManager {
       (controller as any)._delta.y += controllerBodiesArray[offset + 2];
       (controller as any)._delta.z += controllerBodiesArray[offset + 3];
       const filters = new PhysX.PxControllerFilters((controller as any)._filterData, null, null);
-      const collisionFlags = controller.move((controller as any)._delta, 0.001, deltaTime, filters, null);
+      const collisionFlags = controller.move((controller as any)._delta, 0.001, deltaTime, filters, this.obstacleContext);
       (controller as any)._delta = { x: 0, y: 0, z: 0 };
       (controller as any)._needsUpdate = false;
       const collisions = {
@@ -210,7 +206,7 @@ export class PhysXManager {
     }
   };
 
-  startPhysX = async (start: boolean = true) => {
+  startPhysX = (start: boolean = true) => {
     if (start) {
       lastSimulationTick = Date.now();
       this.updateInterval = setInterval(this.simulate, 1000 / this.tps);
@@ -219,7 +215,7 @@ export class PhysXManager {
     }
   };
 
-  addBody = async (config: RigidBody) => {
+  addBody = (config: RigidBody) => {
     const { id, transform, shapes, type } = config;
 
     let rigidBody: PhysX.PxRigidStatic | PhysX.PxRigidDynamic;
@@ -232,7 +228,6 @@ export class PhysXManager {
     (rigidBody as any)._type = type;
 
     const bodyShapes: PhysX.PxShape[] = [];
-    // console.log(shapes)
     shapes.forEach(({ id: shapeID, shape, transform, options, config }: Shape) => {
       const bodyShape = getShape({
         shape,
@@ -267,7 +262,7 @@ export class PhysXManager {
     this.updateBody(config);
   };
 
-  updateBody = async (config: RigidBody) => {
+  updateBody = (config: RigidBody) => {
     const body = this.bodies.get(config.id);
     if (!isStaticBody(body)) {
       if (typeof config.type !== 'undefined') {
@@ -353,7 +348,7 @@ export class PhysXManager {
     }
   }
 
-  removeBody = async ({ id }) => {
+  removeBody = ({ id }) => {
     const body = this.bodies.get(id);
     if (!body) return;
     try {
@@ -365,7 +360,7 @@ export class PhysXManager {
     }
   };
 
-  createController = async ({ id, config }: { id: number; config: ControllerConfig }) => {
+  createController = ({ id, config }: { id: number; config: ControllerConfig }) => {
     const controllerDesc = config.isCapsule ? new PhysX.PxCapsuleControllerDesc() : new PhysX.PxBoxControllerDesc();
     controllerDesc.position = { x: config.position?.x ?? 0, y: config.position?.y ?? 0, z: config.position?.z ?? 0 };
     if (config.isCapsule) {
@@ -402,17 +397,14 @@ export class PhysXManager {
           const length = event.getLength();
           this.onEvent({ event: ControllerEvents.CONTROLLER_CONTROLLER_HIT, controllerID: id, bodyID, shapeID, position, normal, length });
         },
-        onObstacleHit: (event) => {
+        onObstacleHit: (event: PhysX.PxControllerObstacleHit) => {
+          const obstacleID = event.getUserData();
           // TODO
-          // notes for future reference: use userData as an id to callback to main thread
-          //
-          // const obstacle = event.getObstacle();
-          // const obstacleID = this.obstaclesIDByPointer.get(obstacle.$$.ptr);
-          // const position = event.getWorldPos();
-          // const normal = event.getWorldNormal();
-          // const length = event.getLength();
-          // this.onEvent({ event: PhysXEvents.CONTROLLER_OBSTACLE_HIT, controllerID: id, obstacleID, position, normal, length });
-          console.warn('three-physx: onObstacleHit event not implemented');
+          // const data = getFromPhysXHeap(PhysX.HEAPU32, ptr, 1);
+          const position = event.getWorldPos();
+          const normal = event.getWorldNormal();
+          const length = event.getLength();
+          this.onEvent({ event: ControllerEvents.CONTROLLER_OBSTACLE_HIT, controllerID: id, obstacleID, position, normal, length });
         },
       }),
     );
@@ -436,7 +428,7 @@ export class PhysXManager {
     (controller as any)._delta = { x: 0, y: 0, z: 0 };
   };
 
-  updateController = async (config: ControllerConfig) => {
+  updateController = (config: ControllerConfig) => {
     const controller = this.controllers.get(config.id);
     if (!controller) return;
     if (typeof config.positionDelta !== 'undefined') {
@@ -479,7 +471,7 @@ export class PhysXManager {
     // TODO: implement rest of ControllerConfig
   };
 
-  removeController = async ({ id }) => {
+  removeController = ({ id }) => {
     const controller = this.controllers.get(id);
     if (!controller) return;
     const actor = controller.getActor();
@@ -492,7 +484,7 @@ export class PhysXManager {
     // todo
   };
 
-  addRaycastQuery = async (query: SceneQuery) => {
+  addRaycastQuery = (query: SceneQuery) => {
     (query as any)._filterData = new PhysX.PxQueryFilterData();
     (query as any)._filterData.setWords(query.collisionMask ?? 1, 0);
     if (typeof query.flags === 'undefined') {
@@ -502,7 +494,7 @@ export class PhysXManager {
     this.raycasts.set(query.id, query);
   };
 
-  updateRaycastQuery = async (newArgs: SceneQuery) => {
+  updateRaycastQuery = (newArgs: SceneQuery) => {
     const { id, flags, maxDistance, maxHits, collisionMask } = newArgs;
     const raycast = this.raycasts.get(id);
     if (!raycast) return;
@@ -521,15 +513,34 @@ export class PhysXManager {
     }
   };
 
-  removeRaycastQuery = async (id: number) => {
+  removeRaycastQuery = (id: number) => {
     this.raycasts.delete(id);
   };
 
-  addConstraint = async () => {
+  addObstacle = ({ id, isCapsule, position, rotation, halfExtents, halfHeight, radius }) => {
+    const obstacle = new (isCapsule ? PhysX.PxCapsuleObstacle : PhysX.PxBoxObstacle)();
+    // todo: allow for more than a single int in memory for userData
+    obstacle.setUserData(putIntoPhysXHeap(PhysX.HEAPU32, [id]));
+    obstacle.setPosition(position);
+    obstacle.setRotation(rotation);
+    halfExtents && (obstacle as PhysX.PxBoxObstacle).setHalfExtents(halfExtents);
+    halfHeight && (obstacle as PhysX.PxCapsuleObstacle).setHalfHeight(halfHeight);
+    radius && (obstacle as PhysX.PxCapsuleObstacle).setRadius(radius);
+    const handle = this.obstacleContext.addObstacle(obstacle);
+    this.obstacles.set(id, handle);
+  };
+
+  removeObstacle = (id: number) => {
+    const handle = this.obstacles.get(id);
+    this.obstacleContext.removeObstacle(handle);
+    this.obstacles.delete(id);
+  };
+
+  addConstraint = () => {
     // todo
   };
 
-  removeConstraint = async () => {
+  removeConstraint = () => {
     // todo
   };
 
@@ -575,11 +586,16 @@ export class PhysXManager {
     return hits;
   };
 
-  _classFunc = async (type, func, id, ...args) => {
+  _classFunc = (type, func, id, ...args) => {
     // console.log(this.bodies.get(id), this.bodies.get(id)[func]);
     switch (type) {
       case 'body':
         this.bodies.get(id)[func](...args);
+        break;
+      case 'obstacle':
+        const obstacle = this.obstacleContext.getObstacleByHandle(this.obstacles.get(id));
+        obstacle[func](...args);
+        break;
     }
   };
 
@@ -625,13 +641,14 @@ const defaultMask = 1 << 0;
 export const receiveWorker = async (physx): Promise<void> => {
   const messageQueue = new MessageQueue(globalThis as any);
   globalThis.messageQueue = messageQueue;
-  let latestCollisions = [];
+  let latestEvents = [];
   PhysXManager.instance = new PhysXManager(physx);
   messageQueue.sendEvent('init', {});
   messageQueue.sendQueue();
-  await new Promise((resolve) => {
+  await new Promise<void>((resolve) => {
     messageQueue.addEventListener('initphysx', ({ detail }) => {
-      PhysXManager.instance.initPhysX(detail).then(resolve);
+      PhysXManager.instance.initPhysX(detail);
+      resolve();
     });
     messageQueue.sendQueue();
   });
@@ -640,28 +657,24 @@ export const receiveWorker = async (physx): Promise<void> => {
   globalThis.physXManager = PhysXManager.instance;
   PhysXManager.instance.onUpdate = ({ raycastResults, bodyArray }) => {
     messageQueue.sendEvent('data', { raycastResults, bodyArray }, [bodyArray.buffer]);
-    messageQueue.sendEvent('colliderEvent', [...latestCollisions]);
+    messageQueue.sendEvent('colliderEvent', [...latestEvents]);
     messageQueue.sendQueue();
-    latestCollisions = [];
+    latestEvents = [];
   };
   PhysXManager.instance.onEvent = (data) => {
-    latestCollisions.push(data);
-  };
-  const addFunctionListener = (eventLabel) => {
-    messageQueue.addEventListener(eventLabel, async ({ detail }) => {
-      PhysXManager.instance[eventLabel](...detail.args).then((returnValue) => {
-        messageQueue.sendEvent(detail.uuid, { returnValue });
-      });
-    });
+    latestEvents.push(data);
   };
   Object.keys(PhysXManager.instance).forEach((key) => {
     if (typeof PhysXManager.instance[key] === 'function') {
-      addFunctionListener(key);
+      messageQueue.addEventListener(key, ({ detail }) => {
+        PhysXManager.instance[key](...detail.args);
+      });
     }
   });
 
   globalThis.diagnostic = () => {
     console.log('=== PhysXInstance Diagnostic ===');
     console.log(PhysXManager.instance._diagnostic());
+    console.log(PhysXManager.instance);
   };
 };

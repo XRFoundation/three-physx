@@ -19,7 +19,7 @@ import {
   MeshStandardMaterial,
   Material,
 } from 'three';
-import { Body, Controller, PhysXInstance } from '..';
+import { Body, BoxObstacle, CapsuleObstacle, Controller, Obstacle, PhysXInstance } from '..';
 import { Object3DBody, BodyType, SHAPES, Shape, SceneQuery } from '../types/ThreePhysX';
 import { CapsuleBufferGeometry } from './CapsuleBufferGeometry';
 const parentMatrix = new Matrix4();
@@ -32,6 +32,7 @@ const scale2 = new Vector3(1, 1, 1);
 export class DebugRenderer {
   private scene: Scene;
   private _meshes: Map<number, any> = new Map<number, any>();
+  private _obstacles: Map<number, any> = new Map<number, any>();
   private _raycasts: Map<number, any> = new Map<number, any>();
   private _materials: Material[];
   private _sphereGeometry: SphereBufferGeometry;
@@ -53,6 +54,7 @@ export class DebugRenderer {
       new MeshBasicMaterial({ color: 0x00aaff, wireframe: true }),
       new MeshBasicMaterial({ color: 0xffffff, wireframe: true }),
       new MeshStandardMaterial({ color: 0xff0000, transparent: true, opacity: 0.25 }),
+      new MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.25 }),
     ];
 
     this._lineMaterial = new LineBasicMaterial({ color: 0x0000ff });
@@ -70,8 +72,12 @@ export class DebugRenderer {
       this._raycasts.forEach((mesh) => {
         this.scene.remove(mesh);
       });
+      this._obstacles.forEach((mesh) => {
+        this.scene.remove(mesh);
+      });
       this._meshes.clear();
       this._raycasts.clear();
+      this._obstacles.clear();
     }
   }
 
@@ -109,6 +115,15 @@ export class DebugRenderer {
     PhysXInstance.instance._raycasts.forEach((raycast, id) => {
       this._updateRaycast(raycast, id);
     });
+    PhysXInstance.instance._obstacles.forEach((obstacle, id) => {
+      this._updateObstacle(obstacle, id);
+    });
+    this._obstacles.forEach((mesh, id) => {
+      if (!PhysXInstance.instance._obstacles.has(id)) {
+        this.scene.remove(mesh);
+        this._meshes.delete(id);
+      }
+    });
     this._meshes.forEach((mesh, id) => {
       if (!PhysXInstance.instance._shapes.has(id)) {
         this.scene.remove(mesh);
@@ -125,6 +140,19 @@ export class DebugRenderer {
       this._raycasts.set(id, line);
     } else {
       line.geometry.setFromPoints([new Vector3().add(raycast.origin), new Vector3().add(raycast.direction).multiplyScalar(raycast.maxDistance).add(raycast.origin)]);
+    }
+  }
+
+  private _updateObstacle(obstacle: Obstacle, id) {
+    if (!this._obstacles.get(id)) {
+      const geom = obstacle.isCapsule
+        ? new CapsuleBufferGeometry((obstacle as CapsuleObstacle).radius, (obstacle as CapsuleObstacle).radius, (obstacle as CapsuleObstacle).halfHeight * 2)
+        : new BoxBufferGeometry((obstacle as BoxObstacle).halfExtents.x * 2, (obstacle as BoxObstacle).halfExtents.y * 2, (obstacle as BoxObstacle).halfExtents.z * 2);
+      const mesh = new Mesh(geom, this._materials[5]);
+      mesh.position.copy(obstacle.position);
+      mesh.quaternion.copy(obstacle.rotation);
+      this.scene.add(mesh);
+      this._obstacles.set(id, mesh);
     }
   }
 

@@ -1,5 +1,6 @@
 import { Matrix4, Quaternion, Vector3 } from 'three';
-import { Transform, SHAPES } from './types/ThreePhysX';
+import { TransformType, SHAPES } from './types/ThreePhysX';
+import { putIntoPhysXHeap } from './utils/misc';
 import { PhysXManager } from './worker';
 
 const quat1 = new Quaternion();
@@ -72,9 +73,9 @@ const getGeometry = ({ shape, transform, options }): PhysX.PxGeometry => {
   return geometry;
 };
 
-const createTrimesh = (transform: Transform, cooking: PhysX.PxCooking, physics: PhysX.PxPhysics, vertices: ArrayLike<number>, indices: ArrayLike<number>): PhysX.PxTriangleMeshGeometry => {
-  const verticesPtr = createArrayPointers(vertices);
-  const indicesPtr = createArrayPointers(indices);
+const createTrimesh = (transform: TransformType, cooking: PhysX.PxCooking, physics: PhysX.PxPhysics, vertices: ArrayLike<number>, indices: ArrayLike<number>): PhysX.PxTriangleMeshGeometry => {
+  const verticesPtr = putIntoPhysXHeap(PhysX.HEAPF32, vertices);
+  const indicesPtr = putIntoPhysXHeap(PhysX.HEAPF32, indices);
   const trimesh = cooking.createTriMesh(verticesPtr, vertices.length / 3, indicesPtr, indices.length / 3, false, physics);
 
   if (trimesh === null) return;
@@ -92,8 +93,8 @@ const createTrimesh = (transform: Transform, cooking: PhysX.PxCooking, physics: 
   return geometry;
 };
 
-const createConvexMesh = (transform: Transform, cooking: PhysX.PxCooking, physics: PhysX.PxPhysics, vertices: ArrayLike<number>): PhysX.PxTriangleMeshGeometry => {
-  const verticesPtr = createArrayPointers(vertices);
+const createConvexMesh = (transform: TransformType, cooking: PhysX.PxCooking, physics: PhysX.PxPhysics, vertices: ArrayLike<number>): PhysX.PxTriangleMeshGeometry => {
+  const verticesPtr = putIntoPhysXHeap(PhysX.HEAPF32, vertices);
 
   const convexMesh = cooking.createConvexMesh(verticesPtr, vertices.length / 3, physics);
 
@@ -107,16 +108,4 @@ const createConvexMesh = (transform: Transform, cooking: PhysX.PxCooking, physic
   PhysX._free(verticesPtr);
 
   return geometry;
-};
-
-const createArrayPointers = (array: ArrayLike<number>) => {
-  const ptr = PhysX._malloc(4 * array.length);
-  let offset = 0;
-
-  for (let i = 0; i < array.length; i++) {
-    PhysX.HEAPF32[(ptr + offset) >> 2] = array[i];
-    offset += 4;
-  }
-
-  return ptr;
 };

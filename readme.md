@@ -21,12 +21,13 @@ Progress:
 - [x] collision filtering
 - [x] trimesh and convex
 - [x] raycasts
-- [ ] get rid of transform, make internal and rely entirely on Vector3 & Quaternion
+- [x] get rid of transform, make internal and rely entirely on Vector3 & Quaternion
+- [x] fix up updating body and shape data
+- [x] obstacles
+- [ ] fix root object scaling bug
 - [ ] raycasts ignore backface option
-- [ ] fix up updating body and shape data
 - [ ] vehicle controller
 - [ ] heightfield colliders
-- [ ] fix root object scaling bug
 - [ ] geometry per instance scaling
 - [ ] add subscribe for event listeners on worker to reduce redundant transfer overhead
 - [ ] advanced & customisable collision filtering
@@ -47,7 +48,7 @@ https://three-physx.netlify.app/
 This multithreaded PhysX API uses a singleton approach. This way the PhysX interface is accessible globally once instantiated.
 
 ```ts
-import { PhysXInstance, createNewTransform } from 'three-physx';
+import { PhysXInstance, Transform } from 'three-physx';
 
 // create the interface
 await PhysXInstance.instance.initPhysX(new Worker('./worker.js'), { tps: 60, start: true });
@@ -64,7 +65,6 @@ const body = PhysXInstance.instance.addBody(new Body({
       }
     }
   ],
-  transform: createNewTransform(),
   type: BodyType.DYNAMIC
 }));
 

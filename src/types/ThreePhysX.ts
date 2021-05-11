@@ -41,12 +41,12 @@ export interface Quat {
   w: number;
 }
 
-export interface Transform {
-  translation?: Vec3;
-  rotation?: Quat;
-  scale?: Vec3;
-  linearVelocity?: Vec3;
-  angularVelocity?: Vec3;
+export interface TransformType {
+  translation?: Vec3Fragment;
+  rotation?: QuatFragment;
+  scale?: Vec3Fragment;
+  linearVelocity?: Vec3Fragment;
+  angularVelocity?: Vec3Fragment;
 }
 
 export enum BodyType {
@@ -59,7 +59,7 @@ export enum BodyType {
 export interface Shape {
   id?: number;
   shape?: SHAPES;
-  transform?: Transform;
+  transform?: TransformType;
   config?: ShapeConfig;
   _debugNeedsUpdate?: any;
   options?: {
@@ -97,7 +97,7 @@ export interface BodyConfig {
 
 export interface RigidBody extends EventDispatcher, BodyConfig {
   id: number;
-  transform: Transform;
+  transform: TransformType;
   updateTransform?: ({ translation, rotation }: { translation?: Vec3Fragment; rotation?: QuatFragment }) => void;
   shapes: Shape[];
   userData?: any;
@@ -134,6 +134,11 @@ export interface ControllerConfig {
   halfForwardExtent?: number;
   halfHeight?: number;
   halfSideExtent?: number;
+}
+
+export interface ObstacleType {
+  id?: number;
+  isCapsule?: boolean;
 }
 
 export interface Object3DBody extends Object3D {
