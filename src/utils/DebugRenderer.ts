@@ -20,7 +20,7 @@ import {
   Material,
 } from 'three';
 import { Body, BoxObstacle, CapsuleObstacle, Controller, Obstacle, PhysXInstance } from '..';
-import { Object3DBody, BodyType, SHAPES, Shape, SceneQuery } from '../types/ThreePhysX';
+import { Object3DBody, BodyType, SHAPES, ShapeType, SceneQuery } from '../types/ThreePhysX';
 import { CapsuleBufferGeometry } from './CapsuleBufferGeometry';
 const parentMatrix = new Matrix4();
 const childMatrix = new Matrix4();
@@ -97,7 +97,7 @@ export class DebugRenderer {
       rot.set(body.transform.rotation.x, body.transform.rotation.y, body.transform.rotation.z, body.transform.rotation.w);
       parentMatrix.compose(pos, rot, scale);
 
-      body.shapes.forEach((shape: Shape) => {
+      body.shapes.forEach((shape: ShapeType) => {
         this._updateMesh(body, shape.id, shape);
 
         if (this._meshes.get(shape.id)) {
@@ -181,7 +181,7 @@ export class DebugRenderer {
     }
   }
 
-  private _updateMesh(body: Body, id: number, shape: Shape) {
+  private _updateMesh(body: Body, id: number, shape: ShapeType) {
     let mesh = this._meshes.get(id);
     let needsUpdate = false;
     if (shape._debugNeedsUpdate) {
@@ -198,7 +198,7 @@ export class DebugRenderer {
     this._scaleMesh(mesh, shape);
   }
 
-  private _createMesh(shape: Shape, type: BodyType): Mesh | Points {
+  private _createMesh(shape: ShapeType, type: BodyType): Mesh | Points {
     let mesh: Mesh | Points;
     let geometry: BufferGeometry;
     const material: Material = this._materials[shape.config.isTrigger ? 4 : type];
@@ -310,7 +310,7 @@ export class DebugRenderer {
     return mesh;
   }
 
-  private _scaleMesh(mesh: Mesh | Points, shape: Shape) {
+  private _scaleMesh(mesh: Mesh | Points, shape: ShapeType) {
     const scale = shape.transform.scale as Vector3;
     switch (shape.shape) {
       case SHAPES.Sphere:

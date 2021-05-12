@@ -1,4 +1,4 @@
-import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, SceneQueryType, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos, Body, Shape, BodyType, Controller, SHAPES, arrayOfPointsToArrayOfVector3, Transform, Obstacle, BoxObstacle } from '../../src';
+import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, SceneQueryType, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos, Body, ShapeType, BodyType, Controller, SHAPES, arrayOfPointsToArrayOfVector3, Transform, Obstacle, BoxObstacle } from '../../src';
 import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry, PlaneBufferGeometry, Raycaster, Vector2, Euler } from 'three';
 import { ConeBufferGeometry } from 'three';
 import { IcosahedronBufferGeometry } from 'three';
@@ -136,15 +136,16 @@ const load = async () => {
 
   createBalls().forEach(async (object) => {
     const body = PhysXInstance.instance.addBody(new Body({
-      shapes: getShapesFromObject(object).map((shape: Shape) => {
+      shapes: getShapesFromObject(object).map((shape: ShapeType) => {
         shape.config.collisionLayer = COLLISIONS.BALL;
         shape.config.collisionMask = COLLISIONS.FLOOR | COLLISIONS.HAMMER | COLLISIONS.BALL;
+        shape.config.material = { restitution: 0, staticFriction: 0, dynamicFriction: 0 };
         return shape;
       }),
       transform: getTransformFromWorldPos(object),
       type: BodyType.DYNAMIC
     }));
-    PhysXInstance.instance.updateBody(body, { mass: Math.random() * 4, shapes: [ { config: { material: { dynamicFriction: 0.5, staticFriction: 0.2, restitution: 0.5 } } } ] });
+    body.shapes[0].config.material = { dynamicFriction: 0.5, staticFriction: 0.2, restitution: 0.8 };
     object.body = body;
     objects.set(body.id, object);
     balls.set(body.id, object);
@@ -153,7 +154,7 @@ const load = async () => {
 
   const platform = new Mesh(new BoxBufferGeometry(platformSize, 1, platformSize), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide }));
   const platformBody = PhysXInstance.instance.addBody(new Body({
-    shapes: getShapesFromObject(platform).map((shape: Shape) => {
+    shapes: getShapesFromObject(platform).map((shape: ShapeType) => {
       shape.config.collisionLayer = COLLISIONS.FLOOR;
       shape.config.collisionMask = COLLISIONS.CHARACTER | COLLISIONS.BALL;
       return shape;
@@ -218,13 +219,13 @@ const load = async () => {
       debug.setEnabled(!debug.enabled)
     }
     if (ev.code === 'ShiftLeft') {
-      // characterBody.resize(0);
+      characterBody.resize(0);
     }
   });
   document.addEventListener('keyup', (ev) => {
     delete keys[ev.code];
     if (ev.code === 'ShiftLeft') {
-      // characterBody.resize(1);
+      characterBody.resize(1);
     }
     if (ev.code === 'KeyR') {
       characterBody.updateTransform({ translation: { x: 1, y: 1, z: 1 } })
@@ -321,7 +322,7 @@ const load = async () => {
         object.updateWorldMatrix(true, true)
         const newbody = PhysXInstance.instance.addBody(new Body({
           transform: getTransformFromWorldPos(object),
-          shapes: getShapesFromObject(object).map((shape: Shape) => {
+          shapes: getShapesFromObject(object).map((shape: ShapeType) => {
             shape.config.collisionLayer = COLLISIONS.BALL;
             shape.config.collisionMask = COLLISIONS.FLOOR | COLLISIONS.HAMMER | COLLISIONS.BALL;
             return shape;

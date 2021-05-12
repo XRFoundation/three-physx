@@ -377,11 +377,7 @@ declare namespace PhysX {
     getTouch(index: number): PxRaycastHit;
   }
 
-  class PxSceneDesc {
-    gravity: PxVec3;
-    flags: any;
-    bounceThresholdVelocity: number;
-  }
+  class PxSceneDesc {}
   class PxScene {
     addActor(actor: PxActor, unk: any): void;
     removeActor(actor: PxActor, unk: any): void;
@@ -394,6 +390,8 @@ declare namespace PhysX {
     raycastSingle(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, flags: number, hit: PxRaycastHit, filterData: PxQueryFilterData): boolean;
     raycastAny(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, hit: PxRaycastHit, filterData: PxQueryFilterData): boolean;
     // raycastMultiple(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, flags: number, hits: PxRaycastHit[], hbsize: number, filterData: PxQueryFilterData): boolean;
+    setBounceThresholdVelocity(threshold: number): void;
+    getBounceThresholdVelocity(): number;
     sweep(geometry: PxGeometry, pose: PxTransform, unitDir: PxVec3, maxDistance: number /*PxReal*/, hit: PxRaycastBuffer): boolean;
   }
 

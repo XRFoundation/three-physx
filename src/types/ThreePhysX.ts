@@ -5,6 +5,7 @@ export interface PhysXConfig {
   tps?: number;
   lengthScale?: number;
   start?: boolean;
+  bounceThresholdVelocity?: number;
 }
 
 export enum SHAPES {
@@ -56,11 +57,11 @@ export enum BodyType {
   CONTROLLER,
 }
 
-export interface Shape {
+export interface ShapeType {
   id?: number;
   shape?: SHAPES;
   transform?: TransformType;
-  config?: ShapeConfig;
+  config?: ShapeConfigType;
   _debugNeedsUpdate?: any;
   options?: {
     vertices?: number[];
@@ -72,18 +73,18 @@ export interface Shape {
   userData?: any;
 }
 
-export interface MaterialConfig {
+export interface MaterialConfigType {
   staticFriction?: number;
   dynamicFriction?: number;
   restitution?: number;
 }
 
-export interface ShapeConfig {
+export interface ShapeConfigType {
   contactOffset?: number;
   isTrigger?: boolean;
   collisionLayer?: number;
   collisionMask?: number;
-  material?: MaterialConfig;
+  material?: MaterialConfigType;
 }
 
 export interface BodyConfig {
@@ -99,7 +100,7 @@ export interface RigidBody extends EventDispatcher, BodyConfig {
   id: number;
   transform: TransformType;
   updateTransform?: ({ translation, rotation }: { translation?: Vec3Fragment; rotation?: QuatFragment }) => void;
-  shapes: Shape[];
+  shapes: ShapeType[];
   userData?: any;
 }
 
@@ -123,7 +124,7 @@ export interface ControllerConfig {
   invisibleWallHeight?: number;
   isCapsule?: boolean;
   resize?: number;
-  material?: MaterialConfig;
+  material?: MaterialConfigType;
   collisionLayer?: number;
   collisionMask?: number;
   // capsule
@@ -179,7 +180,7 @@ export enum ControllerEvents {
 
 export type ControllerHitEvent = {
   type: ControllerEvents;
-  shape: Shape;
+  shape: ShapeType;
   body: Body;
   position: Vec3;
   normal: Vec3;
@@ -199,6 +200,6 @@ export type ColliderHitEvent = {
   type: CollisionEvents;
   bodySelf: Body;
   bodyOther: Body;
-  shapeSelf: Shape;
-  shapeOther: Shape;
+  shapeSelf: ShapeType;
+  shapeOther: ShapeType;
 };

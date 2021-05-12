@@ -749,6 +749,8 @@ EMSCRIPTEN_BINDINGS(physx)
                   return PxSceneQueryExt::raycastMultiple(scene, origin, unitDir, distance, PxHitFlags(flags), hitBuffer.data(), hbsize, hitBlock, filterData, NULL, NULL);
                 }),
                 allow_raw_pointers())
+      .function("getBounceThresholdVelocity", &PxScene::getBounceThresholdVelocity)
+      .function("setBounceThresholdVelocity", &PxScene::setBounceThresholdVelocity)
       .function("sweep", &PxScene::sweep, allow_raw_pointers());
 
   class_<PxQueryHit>("PxQueryHit")

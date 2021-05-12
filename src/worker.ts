@@ -2,7 +2,7 @@
 
 import { Matrix4 } from 'three';
 import { getShape } from './getShape';
-import { PhysXConfig, BodyType, RigidBody, Shape, ControllerConfig, SceneQuery, SceneQueryType, RaycastHit, CollisionEvents, ControllerEvents } from './types/ThreePhysX';
+import { PhysXConfig, BodyType, RigidBody, ShapeType, ControllerConfig, SceneQuery, SceneQueryType, RaycastHit, CollisionEvents, ControllerEvents } from './types/ThreePhysX';
 import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
 import { getFromPhysXHeap, putIntoPhysXHeap } from './utils/misc';
@@ -42,8 +42,6 @@ export class PhysXManager {
   controllers: Map<number, PhysX.PxController> = new Map<number, PhysX.PxController>();
   raycasts: Map<number, SceneQuery> = new Map<number, SceneQuery>();
   obstacles: Map<number, number> = new Map<number, number>();
-  // constraints: // TODO
-  physx: any;
 
   constructor(physx) {
     (globalThis as any).PhysX = physx;
@@ -108,9 +106,10 @@ export class PhysXManager {
       this.scale.length = config.lengthScale;
     }
     this.sceneDesc = PhysX.getDefaultSceneDesc(this.scale, 0, PhysX.PxSimulationEventCallback.implement(triggerCallback as any));
-    this.sceneDesc.bounceThresholdVelocity = 0.001;
 
     this.scene = this.physics.createScene(this.sceneDesc);
+    this.scene.setBounceThresholdVelocity(config.bounceThresholdVelocity ?? 0.001);
+
     this.controllerManager = PhysX.PxCreateControllerManager(this.scene, false);
     this.obstacleContext = this.controllerManager.createObstacleContext();
 
@@ -227,8 +226,7 @@ export class PhysXManager {
     }
     (rigidBody as any)._type = type;
 
-    const bodyShapes: PhysX.PxShape[] = [];
-    shapes.forEach(({ id: shapeID, shape, transform, options, config }: Shape) => {
+    shapes.forEach(({ id: shapeID, shape, transform, options, config }: ShapeType) => {
       const bodyShape = getShape({
         shape,
         transform,
@@ -249,7 +247,6 @@ export class PhysXManager {
       }
       bodyShape.setSimulationFilterData(new PhysX.PxFilterData(collisionLayer, collisionMask, 0, 0));
       bodyShape.setQueryFilterData(new PhysX.PxFilterData(collisionLayer, collisionMask, 0, 0));
-      bodyShapes.push(bodyShape);
       rigidBody.attachShape(bodyShape);
       this.shapeIDByPointer.set(bodyShape.$$.ptr, shapeID);
       this.shapes.set(shapeID, bodyShape);
@@ -305,10 +302,10 @@ export class PhysXManager {
       transform.rotation.w = config.transform.rotation.w ?? transform.rotation.w;
       body.setGlobalPose(transform, true);
     }
-    config.shapes?.forEach((shape) => this._updateShape(shape));
+    config.shapes?.forEach((shape) => this.updateShape(shape));
   };
 
-  _updateShape({ id, config, options, shape, transform }: Shape) {
+  updateShape = ({ id, config, options, shape, transform }: ShapeType) => {
     const { isTrigger, contactOffset, collisionLayer, collisionMask, material } = config;
     const shapePx = this.shapes.get(id);
     if (!shapePx) return;
@@ -346,10 +343,19 @@ export class PhysXManager {
     if (typeof contactOffset !== 'undefined') {
       shapePx.setContactOffset(contactOffset);
     }
-  }
+  };
 
   removeBody = ({ id }) => {
     const body = this.bodies.get(id);
+    const shapes = body.getShapes();
+    const shapesArray = ((shapes as PhysX.PxShape[]).length ? shapes : [shapes]) as PhysX.PxShape[];
+    shapesArray.forEach((shape) => {
+      const shapeID = this.shapeIDByPointer.get(shape.$$.ptr);
+      this.shapes.delete(shapeID);
+      this.shapeIDByPointer.delete(shape.$$.ptr);
+      // TODO: properly clean up shape
+    });
+
     if (!body) return;
     try {
       this.scene.removeActor(body, false);
@@ -643,17 +649,18 @@ export const receiveWorker = async (physx): Promise<void> => {
   globalThis.messageQueue = messageQueue;
   let latestEvents = [];
   PhysXManager.instance = new PhysXManager(physx);
-  messageQueue.sendEvent('init', {});
-  messageQueue.sendQueue();
   await new Promise<void>((resolve) => {
-    messageQueue.addEventListener('initphysx', ({ detail }) => {
+    const interval = setInterval(() => {
+      messageQueue.sendEvent('init', {});
+      messageQueue.sendQueue();
+    }, 1000);
+    messageQueue.once('config', ({ detail }) => {
+      clearInterval(interval);
       PhysXManager.instance.initPhysX(detail);
       resolve();
     });
     messageQueue.sendQueue();
   });
-  messageQueue.sendEvent('initphysx', {});
-  messageQueue.sendQueue();
   globalThis.physXManager = PhysXManager.instance;
   PhysXManager.instance.onUpdate = ({ raycastResults, bodyArray }) => {
     messageQueue.sendEvent('data', { raycastResults, bodyArray }, [bodyArray.buffer]);

@@ -5,7 +5,7 @@ import {
   PhysXConfig,
   BodyType,
   RigidBody,
-  Shape,
+  ShapeType,
   SceneQuery,
   CollisionEvents,
   ControllerEvents,
@@ -15,13 +15,13 @@ import {
   Vec3,
   Vec3Fragment,
   ControllerRigidBody,
-  MaterialConfig,
+  MaterialConfigType,
   ControllerConfig,
   BodyConfig,
   SHAPES,
   ObstacleType,
+  ShapeConfigType,
 } from './types/ThreePhysX';
-import { proxyEventListener } from './utils/proxyEventListener';
 import { clone } from './utils/misc';
 import { EventDispatcher, Quaternion, Vector3 } from 'three';
 
@@ -37,7 +37,7 @@ export class PhysXInstance {
   _messageQueue: MessageQueue;
 
   _bodies: Map<number, Body> = new Map<number, Body>();
-  _shapes: Map<number, Shape> = new Map<number, Shape>();
+  _shapes: Map<number, ShapeType> = new Map<number, ShapeType>();
   _kinematicBodies: Map<number, Body> = new Map<number, Body>();
   _controllerBodies: Map<number, Controller> = new Map<number, Controller>();
   _raycasts: Map<number, SceneQuery> = new Map<number, SceneQuery>();
@@ -46,18 +46,10 @@ export class PhysXInstance {
   initPhysX = async (worker: Worker, config: PhysXConfig = {}): Promise<void> => {
     this._messageQueue = new MessageQueue(worker);
     await new Promise((resolve) => {
-      this._messageQueue.addEventListener('init', () => {
-        resolve(true);
-      });
+      this._messageQueue.once('init', resolve);
       this._messageQueue.sendQueue();
     });
-    await new Promise((resolve) => {
-      this._messageQueue.addEventListener('initphysx', (ev) => {
-        resolve(true);
-      });
-      this._messageQueue.sendEvent('initphysx', config);
-      this._messageQueue.sendQueue();
-    });
+    this._messageQueue.sendEvent('config', config);
     this._messageQueue.addEventListener('data', (ev) => {
       let offset = 0;
       const { raycastResults, bodyArray } = ev.detail;
@@ -176,6 +168,7 @@ export class PhysXInstance {
       startPhysX: pipeRemoteFunction(true, 'startPhysX'),
       addBody: pipeRemoteFunction(false, 'addBody'),
       updateBody: pipeRemoteFunction(false, 'updateBody'),
+      updateShape: pipeRemoteFunction(false, 'updateShape'),
       removeBody: pipeRemoteFunction(false, 'removeBody'),
       createController: pipeRemoteFunction(false, 'createController'),
       updateController: pipeRemoteFunction(false, 'updateController'),
@@ -244,19 +237,6 @@ export class PhysXInstance {
         transform: body.transform,
         shapes: body.shapes,
         type: body.type,
-      }),
-    ]);
-    return body;
-  }
-
-  updateBody(body: Body, config: Partial<RigidBody>) {
-    config.shapes.forEach((shape, i) => {
-      shape.id = body.shapes[i].id;
-    });
-    this._physicsProxy.updateBody([
-      clone({
-        id: body.id,
-        ...config,
       }),
     ]);
     return body;
@@ -420,6 +400,14 @@ export class Transform implements TransformType {
   constructor(args?: TransformType) {
     this.set(args);
   }
+  set(args: TransformType = {}) {
+    const { translation, rotation, scale, linearVelocity, angularVelocity } = args;
+    if (translation) this.translation.set(translation.x ?? this.translation.x, translation.y ?? this.translation.y, translation.z ?? this.translation.z);
+    if (rotation) this.rotation.set(rotation.x ?? this.rotation.x, rotation.y ?? this.rotation.y, rotation.z ?? this.rotation.z, rotation.w ?? this.rotation.w);
+    if (scale) this.scale.set(scale.x ?? this.scale.x, scale.y ?? this.scale.y, scale.z ?? this.scale.z);
+    if (linearVelocity) this.linearVelocity.set(linearVelocity.x ?? this.linearVelocity.x, linearVelocity.y ?? this.linearVelocity.y, linearVelocity.z ?? this.linearVelocity.z);
+    if (angularVelocity) this.angularVelocity.set(angularVelocity.x ?? this.angularVelocity.x, angularVelocity.y ?? this.angularVelocity.y, angularVelocity.z ?? this.angularVelocity.z);
+  }
   toJSON() {
     return {
       translation: { x: this.translation.x, y: this.translation.y, z: this.translation.z },
@@ -429,13 +417,156 @@ export class Transform implements TransformType {
       angularVelocity: { x: this.angularVelocity.x, y: this.angularVelocity.y, z: this.angularVelocity.z },
     };
   }
-  set(args: TransformType = {}) {
-    const { translation, rotation, scale, linearVelocity, angularVelocity } = args;
-    if (translation) this.translation.set(translation.x ?? this.translation.x, translation.y ?? this.translation.y, translation.z ?? this.translation.z);
-    if (rotation) this.rotation.set(rotation.x ?? this.rotation.x, rotation.y ?? this.rotation.y, rotation.z ?? this.rotation.z, rotation.w ?? this.rotation.w);
-    if (scale) this.scale.set(scale.x ?? this.scale.x, scale.y ?? this.scale.y, scale.z ?? this.scale.z);
-    if (linearVelocity) this.linearVelocity.set(linearVelocity.x ?? this.linearVelocity.x, linearVelocity.y ?? this.linearVelocity.y, linearVelocity.z ?? this.linearVelocity.z);
-    if (angularVelocity) this.angularVelocity.set(angularVelocity.x ?? this.angularVelocity.x, angularVelocity.y ?? this.angularVelocity.y, angularVelocity.z ?? this.angularVelocity.z);
+}
+
+class MaterialConfig implements MaterialConfigType {
+  private readonly id: number;
+  private _staticFriction: number;
+  private _dynamicFriction: number;
+  private _restitution: number;
+  constructor(id: number, config: MaterialConfigType = {}) {
+    this.id = id;
+    this._staticFriction = config.staticFriction ?? 0;
+    this._dynamicFriction = config.dynamicFriction ?? 0;
+    this._restitution = config.restitution ?? 0;
+  }
+  get staticFriction() {
+    return this._staticFriction;
+  }
+  set staticFriction(val: number) {
+    this._staticFriction = val;
+    PhysXInstance.instance._physicsProxy.updateShape([{ id: this.id, config: { material: { staticFriction: val } } }]);
+  }
+  get dynamicFriction() {
+    return this._dynamicFriction;
+  }
+  set dynamicFriction(val: number) {
+    this._dynamicFriction = val;
+    PhysXInstance.instance._physicsProxy.updateShape([{ id: this.id, config: { material: { dynamicFriction: val } } }]);
+  }
+  get restitution() {
+    return this._restitution;
+  }
+  set restitution(val: number) {
+    this._restitution = val;
+    PhysXInstance.instance._physicsProxy.updateShape([{ id: this.id, config: { material: { restitution: val } } }]);
+  }
+  toJSON() {
+    return {
+      staticFriction: this.staticFriction,
+      dynamicFriction: this.dynamicFriction,
+      restitution: this.restitution,
+    };
+  }
+}
+
+class ShapeConfig implements ShapeConfigType {
+  private readonly id: number;
+  private _contactOffset: number;
+  private _isTrigger: boolean;
+  private _collisionLayer: number;
+  private _collisionMask: number;
+  private _material: MaterialConfigType;
+  constructor(id: number, config: ShapeConfigType) {
+    this.id = id;
+    this._contactOffset = config.contactOffset;
+    this._isTrigger = config.isTrigger;
+    this._collisionLayer = config.collisionLayer;
+    this._collisionMask = config.collisionMask;
+    this._material = new MaterialConfig(id, config.material);
+  }
+  get contactOffset() {
+    return this._contactOffset;
+  }
+  set contactOffset(val: number) {
+    this._contactOffset = val;
+    PhysXInstance.instance._physicsProxy.updateShape([{ id: this.id, config: { contactOffset: val } }]);
+  }
+  get isTrigger() {
+    return this._isTrigger;
+  }
+  set isTrigger(val: boolean) {
+    this._isTrigger = val;
+    PhysXInstance.instance._physicsProxy.updateShape([{ id: this.id, config: { isTrigger: val } }]);
+  }
+  get collisionLayer() {
+    return this._collisionLayer;
+  }
+  set collisionLayer(val: number) {
+    this._collisionLayer = val;
+    PhysXInstance.instance._physicsProxy.updateShape([{ id: this.id, config: { collisionLayer: val } }]);
+  }
+  get collisionMask() {
+    return this._collisionMask;
+  }
+  set collisionMask(val: number) {
+    this._collisionMask = val;
+    PhysXInstance.instance._physicsProxy.updateShape([{ id: this.id, config: { collisionMask: val } }]);
+  }
+  get material() {
+    return this._material;
+  }
+  set material(val: MaterialConfigType) {
+    this._material = new MaterialConfig(this.id, val);
+    PhysXInstance.instance._physicsProxy.updateShape([{ id: this.id, config: { material: val } }]);
+  }
+  toJSON() {
+    return {
+      contactOffset: this.contactOffset,
+      isTrigger: this.isTrigger,
+      collisionLayer: this.collisionLayer,
+      collisionMask: this.collisionMask,
+      material: this.material,
+    };
+  }
+}
+
+export class Shape implements ShapeType {
+  _debugNeedsUpdate: any = false;
+
+  readonly id: number;
+  shape?: SHAPES;
+  private _transform?: Transform;
+  private _config?: ShapeConfig;
+  options?: {
+    vertices?: number[];
+    indices?: number[];
+    boxExtents?: Vec3;
+    radius?: number;
+    halfHeight?: number;
+  };
+  userData?: any;
+  constructor(config: ShapeType = {}) {
+    this.id = config.id ?? PhysXInstance.instance._getNextAvailableShapeID();
+    this.shape = config.shape ?? SHAPES.Box;
+    this._transform = new Transform(config.transform);
+    this._config = new ShapeConfig(this.id, config.config);
+    this.options = Object.assign({}, { ...config.options });
+    this.userData = config.userData ?? {};
+  }
+  get config() {
+    return this._config;
+  }
+  set config(val: ShapeConfigType) {
+    this._config = new ShapeConfig(this.id, val);
+    PhysXInstance.instance._physicsProxy.updateShape([{ id: this.id, config: this._config }]);
+  }
+  get transform() {
+    return this._transform;
+  }
+  set transform(val: TransformType) {
+    this._transform.set(val);
+    PhysXInstance.instance._physicsProxy.updateShape([{ id: this.id, transform: this._transform }]);
+  }
+  toJSON() {
+    return {
+      id: this.id,
+      shape: this.shape,
+      transform: this.transform,
+      options: this.options,
+      userData: this.userData,
+      config: this._config,
+    };
   }
 }
 
@@ -482,14 +613,14 @@ const assignGetterFunction = (type, assignee, id, func) => {
 };
 
 export class Body extends EventDispatcher implements RigidBody {
-  id: number;
+  readonly id: number;
   transform: Transform;
   shapes: Shape[];
   userData: any;
   private _type: BodyType;
   [x: string]: any;
 
-  constructor({ shapes, type, transform, userData }: { shapes?: Shape[]; type?: BodyType; transform?: TransformType; userData?: any } = {}) {
+  constructor({ shapes, type, transform, userData }: { shapes?: ShapeType[]; type?: BodyType; transform?: TransformType; userData?: any } = {}) {
     super();
 
     this.id = PhysXInstance.instance._getNextAvailableBodyID();
@@ -505,8 +636,7 @@ export class Body extends EventDispatcher implements RigidBody {
       assignGetterFunction('body', this, this.id, func);
     });
 
-    this.shapes = shapes ?? [];
-    this.shapes.forEach((shape) => {
+    this.shapes = (shapes ?? []).map((shape) => {
       if (!shape.options) shape.options = {};
       switch (shape.shape) {
         case SHAPES.Box:
@@ -518,7 +648,7 @@ export class Body extends EventDispatcher implements RigidBody {
           if (!shape.options?.radius) shape.options.radius = 0.5;
           break;
       }
-      shape.id = PhysXInstance.instance._getNextAvailableShapeID();
+      return new Shape(shape);
     });
   }
 

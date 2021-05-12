@@ -1,7 +1,7 @@
 import { Vector3, Matrix4, Mesh, Quaternion, Object3D, SphereGeometry, BufferGeometry } from 'three';
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry';
 import { PhysXInstance, Transform } from '.';
-import { SHAPES, Shape } from './types/ThreePhysX';
+import { SHAPES, ShapeType } from './types/ThreePhysX';
 
 const matrixA = new Matrix4();
 const matrixB = new Matrix4();
@@ -10,7 +10,7 @@ const rot = new Quaternion();
 const scale = new Vector3(1, 1, 1);
 
 export const getShapesFromObject = (object: any) => {
-  const shapes: Shape[] = [];
+  const shapes: ShapeType[] = [];
   object.updateMatrixWorld(true);
   iterateGeometries(object, { includeInvisible: true }, (data) => {
     shapes.push(...data);
@@ -27,11 +27,11 @@ export const createShapeFromConfig = (shape) => {
   return shape;
 };
 
-const createShapesFromUserData = (mesh, root): Shape[] => {
+const createShapesFromUserData = (mesh, root): ShapeType[] => {
   if (!mesh.userData.physx) {
     mesh.userData.physx = {};
   }
-  const shapes: Shape[] = [];
+  const shapes: ShapeType[] = [];
   if (mesh.userData.physx.shapes) {
     const relativeTransform = getTransformRelativeToRoot(mesh, root);
     mesh.userData.physx.shapes.forEach((shape) => {
@@ -73,7 +73,7 @@ const getShapeConfig = (data) => {
     isTrigger: data.isTrigger,
     collisionLayer: data.collisionLayer,
     collisionMask: data.collisionMask,
-    material: data.material,
+    material: data.material || {},
   };
 };
 

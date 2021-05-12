@@ -43,6 +43,14 @@ export class EventDispatcherProxy {
     });
   }
 
+  once(type: string, listener: any) {
+    const once = (ev) => {
+      listener(ev);
+      this.removeEventListener(type, once);
+    };
+    this.addEventListener(type, once);
+  }
+
   addEventListener(type: string, listener: any) {
     if (this._listeners[type] === undefined) {
       this._listeners[type] = [];
