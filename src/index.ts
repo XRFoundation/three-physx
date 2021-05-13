@@ -33,6 +33,7 @@ let lastUpdateTick = 0;
 
 export class PhysXInstance {
   static instance: PhysXInstance = new PhysXInstance();
+  tps: number;
   _physicsProxy: any;
   _messageQueue: MessageQueue;
 
@@ -44,6 +45,7 @@ export class PhysXInstance {
   _obstacles: Map<number, Obstacle> = new Map<number, Obstacle>();
 
   initPhysX = async (worker: Worker, config: PhysXConfig = {}): Promise<void> => {
+    this.tps = config.tps ?? 60;
     this._messageQueue = new MessageQueue(worker);
     await new Promise((resolve) => {
       this._messageQueue.once('init', resolve);
@@ -188,7 +190,7 @@ export class PhysXInstance {
   update() {
     // TODO: make this rely on kinematicBodies.size instead of bodies.size
     const now = Date.now();
-    const deltaTime = now - lastUpdateTick;
+    const deltaTime = Math.min(Math.max(now - lastUpdateTick, 1000 / this.tps), 10000 / this.tps); // clamp delta between 1*tps and 10*tps (in ms)
     lastUpdateTick = now;
     let offset = 0;
     const kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.KINEMATIC_DATA_SIZE * this._kinematicBodies.size));

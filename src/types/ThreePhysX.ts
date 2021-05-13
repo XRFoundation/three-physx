@@ -6,6 +6,7 @@ export interface PhysXConfig {
   lengthScale?: number;
   start?: boolean;
   bounceThresholdVelocity?: number;
+  verbose?: boolean;
 }
 
 export enum SHAPES {

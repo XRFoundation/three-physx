@@ -9,6 +9,12 @@ import { getFromPhysXHeap, putIntoPhysXHeap } from './utils/misc';
 
 let lastSimulationTick = 0;
 
+let logger = globalThis.logger = {
+  log(...any: any) { },
+  warn(...any: any) { },
+  error(...any: any) { }
+}
+
 export class PhysXManager {
   static instance: PhysXManager;
 
@@ -26,7 +32,7 @@ export class PhysXManager {
   obstacleContext: PhysX.PxObstacleContext;
 
   updateInterval: any;
-  tps: number = 120;
+  tps: number = 60;
   onUpdate: any;
   onEvent: any;
   transformArray: Float32Array;
@@ -50,6 +56,19 @@ export class PhysXManager {
   initPhysX = (config: PhysXConfig = {}): void => {
     if (config.tps) {
       this.tps = config.tps;
+    }
+    if (config.verbose) {
+      logger = globalThis.logger = {
+        log(...args) {
+          console.log('[three-physx]:', ...args);
+        },
+        warn(...args) {
+          console.warn('[three-physx]:', ...args);
+        },
+        error(...args) {
+          console.error('[three-physx]:', ...args);
+        },
+      }
     }
     this.physxVersion = PhysX.PX_PHYSICS_VERSION;
     this.defaultErrorCallback = new PhysX.PxDefaultErrorCallback();
@@ -151,7 +170,6 @@ export class PhysXManager {
       const id = kinematicBodiesArray[offset];
       const body = this.bodies.get(id) as PhysX.PxRigidDynamic;
       if (!body) return;
-
       const currentPose = body.getGlobalPose();
       currentPose.translation.x = kinematicBodiesArray[offset + 1];
       currentPose.translation.y = kinematicBodiesArray[offset + 2];
@@ -173,7 +191,13 @@ export class PhysXManager {
       (controller as any)._delta.y += controllerBodiesArray[offset + 2];
       (controller as any)._delta.z += controllerBodiesArray[offset + 3];
       const filters = new PhysX.PxControllerFilters((controller as any)._filterData, null, null);
+      const beforePosition = controller.getPosition();
       const collisionFlags = controller.move((controller as any)._delta, 0.001, deltaTime, filters, this.obstacleContext);
+      const afterPosition = controller.getPosition();
+      if (distSq(beforePosition, afterPosition) > 1) { // if we detect a huge jump, cancel our move (but still send our collision events)
+        logger.warn('detected large controller move', beforePosition, afterPosition)
+        controller.setPosition(beforePosition);
+      }
       (controller as any)._delta = { x: 0, y: 0, z: 0 };
       (controller as any)._needsUpdate = false;
       const collisions = {
@@ -644,6 +668,11 @@ const getBodyData = (body: PhysX.PxRigidActor) => {
 
 const defaultMask = 1 << 0;
 
+const distSq = (point1, point2) => {
+  const dx = point2.x - point1.x, dy = point2.y - point1.y, dz = point2.z - point1.z;
+  return dx * dx + dy * dy + dz * dz;
+}
+
 export const receiveWorker = async (physx): Promise<void> => {
   const messageQueue = new MessageQueue(globalThis as any);
   globalThis.messageQueue = messageQueue;
@@ -674,7 +703,9 @@ export const receiveWorker = async (physx): Promise<void> => {
   Object.keys(PhysXManager.instance).forEach((key) => {
     if (typeof PhysXManager.instance[key] === 'function') {
       messageQueue.addEventListener(key, ({ detail }) => {
-        PhysXManager.instance[key](...detail.args);
+        try {
+          PhysXManager.instance[key](...detail.args);
+        } catch (e) { console.error('[three-physx]: Failed to run function:', key, detail) }
       });
     }
   });
