@@ -526,6 +526,8 @@ class ShapeConfig implements ShapeConfigType {
 export class Shape implements ShapeType {
   _debugNeedsUpdate: any = false;
 
+  // ref to body for collisions
+  readonly body: Body;
   readonly id: number;
   shape?: SHAPES;
   private _transform?: Transform;
@@ -538,7 +540,8 @@ export class Shape implements ShapeType {
     halfHeight?: number;
   };
   userData?: any;
-  constructor(config: ShapeType = {}) {
+  constructor(body: Body, config: ShapeType = {}) {
+    this.body = body;
     this.id = config.id ?? PhysXInstance.instance._getNextAvailableShapeID();
     this.shape = config.shape ?? SHAPES.Box;
     this._transform = new Transform(config.transform);
@@ -650,7 +653,7 @@ export class Body extends EventDispatcher implements RigidBody {
           if (!shape.options?.radius) shape.options.radius = 0.5;
           break;
       }
-      return new Shape(shape);
+      return new Shape(this, shape);
     });
   }
 

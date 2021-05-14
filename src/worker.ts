@@ -709,7 +709,7 @@ export const receiveWorker = async (physx): Promise<void> => {
         try {
           PhysXManager.instance[key](...detail.args);
         } catch (e) {
-          console.error('[three-physx]: Failed to run function:', key, detail);
+          console.error('[three-physx]: Failed to run function:', e, key, detail);
         }
       });
     }

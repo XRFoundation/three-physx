@@ -150,6 +150,10 @@ const load = async () => {
     objects.set(body.id, object);
     balls.set(body.id, object);
     renderer.addToScene(object);
+
+    body.addEventListener(CollisionEvents.COLLISION_START, (ev) => {
+      // console.log('Hit shape', ev);
+    })
   });
 
   const platform = new Mesh(new BoxBufferGeometry(platformSize, 1, platformSize), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide }));
