@@ -14,6 +14,7 @@
 #include <chrono>
 #include <ctime>
 #include <string>
+#include "extensions/PxDefaultSimulationFilterShader.h"
 
 #include "PsFoundation.h"
 using namespace physx;
@@ -140,31 +141,31 @@ struct PxSimulationEventCallbackWrapper : public wrapper<PxSimulationEventCallba
 
       if (cp.events & PxPairFlag::eNOTIFY_TOUCH_FOUND)
       {
-        PxContactStreamIterator iter(cp.contactPatches, cp.contactPoints, cp.getInternalFaceIndices(), cp.patchCount, cp.contactCount);
+        // PxContactStreamIterator iter(cp.contactPatches, cp.contactPoints, cp.getInternalFaceIndices(), cp.patchCount, cp.contactCount);
 
-        PxU32 hasImpulses = (cp.flags & PxContactPairFlag::eINTERNAL_HAS_IMPULSES);
-        PxU32 nbContacts = 0;
+        // PxU32 hasImpulses = (cp.flags & PxContactPairFlag::eINTERNAL_HAS_IMPULSES);
+        // PxU32 nbContacts = 0;
 
-        std::vector<PxVec3> contactPoints;
-        std::vector<PxReal> impulses;
-        contactPoints.reserve(cp.contactCount);
-        impulses.reserve(cp.contactCount);
+        // std::vector<PxVec3> contactPoints;
+        // std::vector<PxReal> impulses;
+        // contactPoints.reserve(cp.contactCount);
+        // impulses.reserve(cp.contactCount);
 
-        while (iter.hasNextPatch())
-        {
-          iter.nextPatch();
-          while (iter.hasNextContact())
-          {
-            iter.nextContact();
-            PxVec3 point = iter.getContactPoint();
-            contactPoints.push_back(point);
-            PxReal impulse = hasImpulses ? cp.contactImpulses[nbContacts] : 0.0f;
-            impulses.push_back(impulse);
-            nbContacts++;
-          }
-        }
+        // while (iter.hasNextPatch())
+        // {
+        //   iter.nextPatch();
+        //   while (iter.hasNextContact())
+        //   {
+        //     iter.nextContact();
+        //     PxVec3 point = iter.getContactPoint();
+        //     contactPoints.push_back(point);
+        //     PxReal impulse = hasImpulses ? cp.contactImpulses[nbContacts] : 0.0f;
+        //     impulses.push_back(impulse);
+        //     nbContacts++;
+        //   }
+        // }
 
-        call<void>("onContactBegin", cp.shapes[0], cp.shapes[1], contactPoints, impulses);
+        call<void>("onContactBegin", cp.shapes[0], cp.shapes[1]); //, contactPoints, impulses);
       }
       else if (cp.events & PxPairFlag::eNOTIFY_TOUCH_LOST)
       {
@@ -178,14 +179,11 @@ struct PxSimulationEventCallbackWrapper : public wrapper<PxSimulationEventCallba
   }
   void onTrigger(PxTriggerPair *pairs, PxU32 count)
   {
-    physx::shdfnd::getFoundation().error(PxErrorCode::eDEBUG_INFO, __FILE__, __LINE__, "onTrigger");
     for (PxU32 i = 0; i < count; i++)
     {
       const PxTriggerPair &tp = pairs[i];
       if (tp.flags & (PxTriggerPairFlag::eREMOVED_SHAPE_TRIGGER | PxTriggerPairFlag::eREMOVED_SHAPE_OTHER))
         continue;
-
-      call<void>("onTrigger", tp.triggerShape, tp.otherShape);
 
       if (tp.status & PxPairFlag::eNOTIFY_TOUCH_FOUND)
       {
@@ -239,21 +237,21 @@ PxFilterFlags LayerMaskFilterShader(
     return PxFilterFlag::eSUPPRESS;
   }
 
-  // pairFlags = PxPairFlag::eCONTACT_DEFAULT | PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_TOUCH_LOST | PxPairFlag::eNOTIFY_TOUCH_PERSISTS |PxPairFlag::eDETECT_CCD_CONTACT;
-  pairFlags = PxPairFlag::eCONTACT_DEFAULT | PxPairFlag::eSOLVE_CONTACT | PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_TOUCH_LOST | PxPairFlag::eNOTIFY_TOUCH_PERSISTS | PxPairFlag::eDETECT_CCD_CONTACT | PxPairFlag::eDETECT_DISCRETE_CONTACT | PxPairFlag::eNOTIFY_CONTACT_POINTS;
+  // pairFlags = PxPairFlag::eCONTACT_DEFAULT | PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_TOUCH_LOST | PxPairFlag::eNOTIFY_TOUCH_PERSISTS | PxPairFlag::eDETECT_CCD_CONTACT;
+  pairFlags = PxPairFlag::eCONTACT_DEFAULT | PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_TOUCH_LOST | PxPairFlag::eNOTIFY_TOUCH_PERSISTS | PxPairFlag::eDETECT_CCD_CONTACT | PxPairFlag::eNOTIFY_CONTACT_POINTS;
   return PxFilterFlag::eDEFAULT;
 }
 
 // TODO: Getting the  global PxDefaultSimulationFilterShader into javascript
 // is problematic, so let's provide this custom factory function for now
 
-PxSceneDesc *getDefaultSceneDesc(PxTolerancesScale &scale, int numThreads, PxSimulationEventCallback *callback)
+PxSceneDesc *getDefaultSceneDesc(PxTolerancesScale &scale, int numThreads, PxSimulationEventCallback *eventCallback)
 {
   PxSceneDesc *sceneDesc = new PxSceneDesc(scale);
   sceneDesc->gravity = PxVec3(0.0f, -9.81f, 0.0f);
   sceneDesc->cpuDispatcher = PxDefaultCpuDispatcherCreate(numThreads);
   sceneDesc->filterShader = LayerMaskFilterShader;
-  sceneDesc->simulationEventCallback = callback;
+  sceneDesc->simulationEventCallback = eventCallback;
   sceneDesc->kineKineFilteringMode = PxPairFilteringMode::eKEEP;
   sceneDesc->staticKineFilteringMode = PxPairFilteringMode::eKEEP;
   sceneDesc->flags |= PxSceneFlag::eENABLE_CCD;
@@ -1428,7 +1426,7 @@ EMSCRIPTEN_BINDINGS(physx)
                 }),
                 allow_raw_pointers())
       .function("getUserData", optional_override([](PxController &controller) {
-                  return *(int*)controller.getUserData();
+                  return *(int *)controller.getUserData();
                 }),
                 allow_raw_pointers())
       .function("getState", &PxController::getState, allow_raw_pointers())
@@ -1531,7 +1529,7 @@ EMSCRIPTEN_BINDINGS(physx)
   class_<PxControllerObstacleHit, base<PxControllerHit>>("PxControllerObstacleHit")
       .constructor<>()
       .function("getUserData", optional_override([](PxControllerObstacleHit &hit) {
-                  return *(int*)hit.userData;
+                  return *(int *)hit.userData;
                 }),
                 allow_raw_pointers());
 
@@ -1551,7 +1549,7 @@ EMSCRIPTEN_BINDINGS(physx)
   class_<PxObstacle>("PxObstacle")
       .function("getType", &PxObstacle::getType)
       .function("getUserData", optional_override([](PxObstacle &obstacle) {
-                  return *(int*)obstacle.mUserData;
+                  return *(int *)obstacle.mUserData;
                 }),
                 allow_raw_pointers())
       .function("setUserData", optional_override([](PxObstacle &obstacle, int userData) {

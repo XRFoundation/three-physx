@@ -102,16 +102,23 @@ export class PhysXManager {
           idB: this.shapeIDByPointer.get(shapeB.$$.ptr),
         });
       },
-      onTriggerStart: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        console.log(shapeA, shapeB);
+      onTriggerBegin: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
+        // console.log('onTriggerBegin')
         this.onEvent({
           event: CollisionEvents.TRIGGER_START,
           idA: this.shapeIDByPointer.get(shapeA.$$.ptr),
           idB: this.shapeIDByPointer.get(shapeB.$$.ptr),
         });
       },
+      // onTriggerPersist: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
+      //   this.onEvent({
+      //     event: CollisionEvents.TRIGGER_PERSIST,
+      //     idA: this.shapeIDByPointer.get(shapeA.$$.ptr),
+      //     idB: this.shapeIDByPointer.get(shapeB.$$.ptr),
+      //   });
+      // },
       onTriggerEnd: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        console.log(shapeA, shapeB);
+        // console.log('onTriggerEnd')
         this.onEvent({
           event: CollisionEvents.TRIGGER_END,
           idA: this.shapeIDByPointer.get(shapeA.$$.ptr),
@@ -318,13 +325,17 @@ export class PhysXManager {
     }
     if (config.transform) {
       const transform = body.getGlobalPose();
-      transform.translation.x = config.transform.translation.x ?? transform.translation.x;
-      transform.translation.y = config.transform.translation.y ?? transform.translation.y;
-      transform.translation.z = config.transform.translation.z ?? transform.translation.z;
-      transform.rotation.x = config.transform.rotation.x ?? transform.rotation.x;
-      transform.rotation.y = config.transform.rotation.y ?? transform.rotation.y;
-      transform.rotation.z = config.transform.rotation.z ?? transform.rotation.z;
-      transform.rotation.w = config.transform.rotation.w ?? transform.rotation.w;
+      if (config.transform.translation) {
+        transform.translation.x = config.transform.translation.x ?? transform.translation.x;
+        transform.translation.y = config.transform.translation.y ?? transform.translation.y;
+        transform.translation.z = config.transform.translation.z ?? transform.translation.z;
+      }
+      if (config.transform.rotation) {
+        transform.rotation.x = config.transform.rotation.x ?? transform.rotation.x;
+        transform.rotation.y = config.transform.rotation.y ?? transform.rotation.y;
+        transform.rotation.z = config.transform.rotation.z ?? transform.rotation.z;
+        transform.rotation.w = config.transform.rotation.w ?? transform.rotation.w;
+      }
       body.setGlobalPose(transform, true);
     }
     config.shapes?.forEach((shape) => this.updateShape(shape));
@@ -334,22 +345,22 @@ export class PhysXManager {
     const { isTrigger, contactOffset, collisionLayer, collisionMask, material } = config;
     const shapePx = this.shapes.get(id);
     if (!shapePx) return;
-    if (typeof isTrigger !== 'undefined') {
-      if (isTrigger) {
-        shapePx.setFlag(PhysX.PxShapeFlag.eSIMULATION_SHAPE, !isTrigger);
-        shapePx.setFlag(PhysX.PxShapeFlag.eTRIGGER_SHAPE, isTrigger);
-      } else {
-        shapePx.setFlag(PhysX.PxShapeFlag.eTRIGGER_SHAPE, isTrigger);
-        shapePx.setFlag(PhysX.PxShapeFlag.eSIMULATION_SHAPE, !isTrigger);
-      }
-    }
+    // if (typeof isTrigger !== 'undefined') {
+    //   if (isTrigger) {
+    //     shapePx.setFlag(PhysX.PxShapeFlag.eSIMULATION_SHAPE, !isTrigger);
+    //     shapePx.setFlag(PhysX.PxShapeFlag.eTRIGGER_SHAPE, isTrigger);
+    //   } else {
+    //     shapePx.setFlag(PhysX.PxShapeFlag.eTRIGGER_SHAPE, isTrigger);
+    //     shapePx.setFlag(PhysX.PxShapeFlag.eSIMULATION_SHAPE, !isTrigger);
+    //   }
+    // }
     if (typeof collisionLayer !== 'undefined') {
       (shapePx as any)._collisionLayer = collisionLayer;
-      shapePx.setSimulationFilterData(new PhysX.PxFilterData((shapePx as any)._collisionLayer, (shapePx as any)._collisionMask, 0, 0));
-      shapePx.setQueryFilterData(new PhysX.PxFilterData((shapePx as any)._collisionLayer, (shapePx as any)._collisionMask, 0, 0));
     }
     if (typeof collisionMask !== 'undefined') {
       (shapePx as any)._collisionMask = collisionMask;
+    }
+    if (typeof collisionLayer !== 'undefined' || typeof collisionMask !== 'undefined') {
       shapePx.setSimulationFilterData(new PhysX.PxFilterData((shapePx as any)._collisionLayer, (shapePx as any)._collisionMask, 0, 0));
       shapePx.setQueryFilterData(new PhysX.PxFilterData((shapePx as any)._collisionLayer, (shapePx as any)._collisionMask, 0, 0));
     }
@@ -457,6 +468,7 @@ export class PhysXManager {
     shapes.setQueryFilterData(new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0));
     (controller as any)._filterData = new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0);
     (controller as any)._delta = { x: 0, y: 0, z: 0 };
+    this.updateController(config);
   };
 
   updateController = (config: ControllerConfig) => {

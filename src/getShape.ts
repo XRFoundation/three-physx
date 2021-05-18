@@ -14,7 +14,7 @@ export const getShape = ({ shape, transform, options, config }): PhysX.PxShape =
   if (!geometry) return;
 
   const material = PhysXManager.instance.physics.createMaterial(config.material?.staticFriction ?? 0, config.material?.dynamicFriction ?? 0, config.material?.restitution ?? 0);
-  const flags = new PhysX.PxShapeFlags(PhysX.PxShapeFlag.eSCENE_QUERY_SHAPE.value | PhysX.PxShapeFlag.eSIMULATION_SHAPE.value);
+  const flags = new PhysX.PxShapeFlags(PhysX.PxShapeFlag.eSCENE_QUERY_SHAPE.value | (config?.isTrigger ? PhysX.PxShapeFlag.eTRIGGER_SHAPE.value : PhysX.PxShapeFlag.eSIMULATION_SHAPE.value));
 
   const newShape = PhysXManager.instance.physics.createShape(geometry, material, false, flags);
   // rotate 90 degrees on Z axis as PhysX capsule extend along X axis not the Y axis

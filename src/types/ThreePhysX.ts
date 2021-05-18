@@ -182,7 +182,7 @@ export enum ControllerEvents {
 export type ControllerHitEvent = {
   type: ControllerEvents;
   shape: ShapeType;
-  body: Body;
+  body: RigidBody;
   position: Vec3;
   normal: Vec3;
   length: number;
@@ -192,15 +192,15 @@ export enum CollisionEvents {
   COLLISION_START = 'COLLISION_START',
   COLLISION_PERSIST = 'COLLISION_PERSIST',
   COLLISION_END = 'COLLISION_END',
-
   TRIGGER_START = 'TRIGGER_START',
+  TRIGGER_PERSIST = 'TRIGGER_PERSIST',
   TRIGGER_END = 'TRIGGER_END',
 }
 
 export type ColliderHitEvent = {
   type: CollisionEvents;
-  bodySelf: Body;
-  bodyOther: Body;
+  bodySelf: RigidBody;
+  bodyOther: RigidBody;
   shapeSelf: ShapeType;
   shapeOther: ShapeType;
 };

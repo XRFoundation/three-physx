@@ -1,7 +1,7 @@
 import { Vector3, Matrix4, Mesh, Quaternion, Object3D, SphereGeometry, BufferGeometry } from 'three';
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry';
 import { PhysXInstance, Transform } from '.';
-import { SHAPES, ShapeType } from './types/ThreePhysX';
+import { ShapeConfigType, SHAPES, ShapeType } from './types/ThreePhysX';
 
 const matrixA = new Matrix4();
 const matrixB = new Matrix4();
@@ -18,12 +18,12 @@ export const getShapesFromObject = (object: any) => {
   return shapes;
 };
 
-export const createShapeFromConfig = (shape) => {
+export const createShapeFromConfig = (shape: ShapeType) => {
   const transform = shape.transform || new Transform();
   const id = PhysXInstance.instance._getNextAvailableShapeID();
   shape.id = id;
   shape.transform = transform;
-  shape.config = getShapeConfig(shape ?? {});
+  shape.config = getShapeConfig(shape.config ?? {});
   return shape;
 };
 
@@ -34,14 +34,14 @@ const createShapesFromUserData = (mesh, root): ShapeType[] => {
   const shapes: ShapeType[] = [];
   if (mesh.userData.physx.shapes) {
     const relativeTransform = getTransformRelativeToRoot(mesh, root);
-    mesh.userData.physx.shapes.forEach((shape) => {
+    mesh.userData.physx.shapes.forEach((shape: ShapeType) => {
       const data = getShapeData(mesh, shape);
       if (!data) return;
       const transform = shape.transform || relativeTransform;
       const id = PhysXInstance.instance._getNextAvailableShapeID();
       data.id = id;
       data.transform = transform;
-      data.config = getShapeConfig(shape ?? {});
+      data.config = getShapeConfig(shape.config ?? {});
       shapes.push(data);
     });
   } else {
@@ -68,12 +68,12 @@ export const iterateGeometries = (function () {
   };
 })();
 
-const getShapeConfig = (data) => {
+const getShapeConfig = (config: ShapeConfigType) => {
   return {
-    isTrigger: data.isTrigger,
-    collisionLayer: data.collisionLayer,
-    collisionMask: data.collisionMask,
-    material: data.material || {},
+    isTrigger: config.isTrigger,
+    collisionLayer: config.collisionLayer,
+    collisionMask: config.collisionMask,
+    material: config.material || {},
   };
 };
 

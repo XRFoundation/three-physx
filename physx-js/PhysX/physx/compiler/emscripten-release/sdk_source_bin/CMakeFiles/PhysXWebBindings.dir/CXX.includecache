@@ -1871,6 +1871,8 @@ ctime
 -
 string
 -
+extensions/PxDefaultSimulationFilterShader.h
+/src/PhysX/physx/source/physxwebbindings/src/extensions/PxDefaultSimulationFilterShader.h
 PsFoundation.h
 /src/PhysX/physx/source/physxwebbindings/src/PsFoundation.h
 

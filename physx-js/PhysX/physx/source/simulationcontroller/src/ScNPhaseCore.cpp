@@ -41,6 +41,7 @@
 #include "PsThread.h"
 #include "BpBroadPhase.h"
 #include "common/PxProfileZone.h"
+// #include <string> 
 
 using namespace physx;
 using namespace Sc;
@@ -105,7 +106,7 @@ static PX_FORCE_INLINE PxU32 hasTriggerFlags(PxShapeFlags flags)	{ return PxU32(
 static void getFilterInfo_ShapeSim(PxFilterObjectAttributes& filterAttr, PxFilterData& filterData, const Sc::ShapeSim& shape)
 {
 	filterAttr = hasTriggerFlags(shape.getCore().getFlags()) ? PxFilterObjectFlag::eTRIGGER : PxFilterObjectFlag::Enum(0);
-
+  // physx::shdfnd::getFoundation().error(PxErrorCode::eDEBUG_INFO, __FILE__, __LINE__, "trigger?");
 	BodySim* b = shape.getBodySim();
 	if(b)
 	{

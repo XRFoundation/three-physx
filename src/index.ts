@@ -469,7 +469,7 @@ class ShapeConfig implements ShapeConfigType {
   private _collisionLayer: number;
   private _collisionMask: number;
   private _material: MaterialConfigType;
-  constructor(id: number, config: ShapeConfigType) {
+  constructor(id: number, config: ShapeConfigType = {}) {
     this.id = id;
     this._contactOffset = config.contactOffset;
     this._isTrigger = config.isTrigger;
@@ -658,8 +658,8 @@ export class Body extends EventDispatcher implements RigidBody {
   }
 
   set type(value: BodyType) {
-    if (this._type === BodyType.STATIC && typeof value !== 'undefined') {
-      throw new Error('three-physx! Tried to change the type of a static object. This is not allowed, instead remove the body and create a new one.');
+    if (this._type === BodyType.STATIC || this._type === BodyType.CONTROLLER) {
+      throw new Error('three-physx! Tried to change the type of a static or controller object. This is not allowed, instead remove the body and create a new one.');
     }
     if (this._type === BodyType.DYNAMIC && value === BodyType.KINEMATIC) {
       PhysXInstance.instance._kinematicBodies.set(this.id, this);
@@ -703,6 +703,7 @@ const controllerSetterFunctions = ['setPosition', 'setFootPosition', 'setStepOff
 
 const controllerGetterFunctions = ['getPosition', 'getFootPosition', 'getActor', 'getStepOffset', 'getContactOffset', 'getNonWalkableMode', 'getUpDirection', 'getSlopeLimit', 'getScene', 'getUserData', 'getState', 'getStats'];
 
+// TODO: refactor ControllerConfig to have a ShapeType
 export class Controller extends Body implements ControllerRigidBody {
   // internal
   _debugNeedsUpdate?: any;
@@ -727,6 +728,28 @@ export class Controller extends Body implements ControllerRigidBody {
       ...config,
       id: PhysXInstance.instance._getNextAvailableShapeID(),
     };
+
+    this.shapes = [];
+    const shape = new Shape(this, {
+      id: this._shape.id,
+      shape: config.isCapsule ? SHAPES.Capsule : SHAPES.Box,
+      options: {
+        boxExtents: {
+          x: config.halfSideExtent,
+          y: config.halfHeight,
+          z: config.halfForwardExtent,
+        },
+        radius: config.radius,
+        halfHeight: config.halfHeight,
+      },
+      config: {
+        collisionLayer: config.collisionLayer,
+        collisionMask: config.collisionMask,
+        contactOffset: config.contactOffset,
+        material: config.material,
+      },
+    });
+    this.shapes.push(shape);
 
     this.collisions = { down: false, sides: false, up: false };
     this.delta = new Vector3();
