@@ -91,6 +91,7 @@ export class MessageQueue extends EventDispatcherProxy {
   queue: Message[];
   eventTarget: EventDispatcher = new EventDispatcher();
   toTransfer: Transferable[] = [];
+  hasStopped = false;
 
   constructor(messagePort: any) {
     super();
@@ -110,7 +111,7 @@ export class MessageQueue extends EventDispatcherProxy {
     } as Message);
   }
   sendQueue() {
-    if (!this.queue?.length) return;
+    if (!this.queue?.length || this.hasStopped) return;
     const messages: object[] = [];
     const transferables: Transferable[] = [];
     this.queue.forEach((message: Message) => {
@@ -164,6 +165,12 @@ export class MessageQueue extends EventDispatcherProxy {
       } as Message);
     }
     super.dispatchEvent(ev);
+  }
+
+  dispose() {
+    this.hasStopped = true;
+    this.messageTypeFunctions.clear();
+    this._listeners = {};
   }
 }
 

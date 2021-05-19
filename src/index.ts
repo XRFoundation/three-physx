@@ -368,6 +368,24 @@ export class PhysXInstance {
     // todo, make this smart
     return nextAvailableObstacleID++;
   };
+
+  dispose = () => {
+    this.startPhysX(false);
+    this._messageQueue.sendQueue();
+    this._messageQueue.dispose();
+    nextAvailableBodyIndex = 0;
+    nextAvailableShapeID = 0;
+    nextAvailableRaycastID = 0;
+    nextAvailableObstacleID = 0;
+    lastUpdateTick = 0;
+    this._bodies.clear();
+    this._shapes.clear();
+    this._kinematicBodies.clear();
+    this._controllerBodies.clear();
+    this._raycasts.clear();
+    this._obstacles.clear();
+    PhysXInstance.instance = undefined;
+  };
 }
 
 const pipeRemoteFunction = (awaitResponse: boolean, id: string) => {
@@ -387,10 +405,7 @@ const pipeRemoteFunction = (awaitResponse: boolean, id: string) => {
 };
 
 const generateUUID = (): string => {
-  return new Array(4)
-    .fill(0)
-    .map(() => Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16))
-    .join('-');
+  return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16);
 };
 
 export class Transform implements TransformType {

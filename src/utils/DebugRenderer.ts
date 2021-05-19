@@ -46,8 +46,6 @@ export class DebugRenderer {
     this.scene = scene;
     this.enabled = false;
 
-    globalThis.meshes = this._meshes;
-
     this._materials = [
       new MeshBasicMaterial({ color: 0xff0000, wireframe: true }),
       new MeshBasicMaterial({ color: 0x00ff00, wireframe: true }),
@@ -188,14 +186,15 @@ export class DebugRenderer {
       if (mesh) {
         this.scene.remove(mesh);
         needsUpdate = true;
+        this._scaleMesh(mesh, shape);
       }
       delete shape._debugNeedsUpdate;
     }
     if (!mesh || needsUpdate) {
       mesh = this._createMesh(shape, body.type);
       this._meshes.set(id, mesh);
+      this._scaleMesh(mesh, shape);
     }
-    this._scaleMesh(mesh, shape);
   }
 
   private _createMesh(shape: ShapeType, type: BodyType): Mesh | Points {
@@ -315,7 +314,7 @@ export class DebugRenderer {
     switch (shape.shape) {
       case SHAPES.Sphere:
         const radius = clampNonzeroPositive(shape.options.radius);
-        mesh.scale.multiplyScalar(radius);
+        mesh.scale.set(radius, radius, radius);
         break;
 
       case SHAPES.Box:

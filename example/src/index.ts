@@ -45,10 +45,10 @@ const load = async () => {
     type: BodyType.KINEMATIC,
   }));
   let isKinematic = true;
-  // setInterval(() => {
-  //   isKinematic = !isKinematic;
-  //   kinematicBody.type = isKinematic ? BodyType.KINEMATIC : BodyType.DYNAMIC;
-  // }, 2000);
+  setInterval(() => {
+    isKinematic = !isKinematic;
+    kinematicBody.type = isKinematic ? BodyType.KINEMATIC : BodyType.DYNAMIC;
+  }, 2000);
   objects.set(kinematicBody.id, kinematicObject);
   renderer.addToScene(kinematicObject);
   (kinematicObject as any).body = kinematicBody;
@@ -384,7 +384,7 @@ const createBalls = () => {
     new TorusKnotBufferGeometry(),
   ])
   const meshes = [];
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 200; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     meshes.push(mesh);
