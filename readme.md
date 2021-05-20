@@ -85,9 +85,7 @@ PHYSX().then(receiveWorker);
 cd physx-js
 npm install
 npm run generate
-npm run make
+npm run dev
 ```
 
-The scripts will be copied to /lib and /example/dist
-
-[This file](https://github.com/XRFoundation/three-physx/blob/master/physx-js/PhysX/physx/source/compiler/cmake/emscripten/PhysXWebBindings.cmake) contains the build parameters, to build for cjs you will need to remove the `-s EXPORT_ES6=1` flag
+This will copy files to /lib
