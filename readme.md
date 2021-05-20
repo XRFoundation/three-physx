@@ -58,7 +58,6 @@ const body = PhysXInstance.instance.addBody(new Body({
   shapes: [
     {
       shape: SHAPES.Box,
-      transform: createNewTransform(),
       config: {
         collisionLayer: COLLISIONS.FLOOR,
         collisionMask: COLLISIONS.ALL
