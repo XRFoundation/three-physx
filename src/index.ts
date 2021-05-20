@@ -824,13 +824,19 @@ export class Controller extends Body implements ControllerRigidBody {
     PhysXInstance.instance._physicsProxy.updateController([{ id: this.id, halfHeight: value }]);
     this._debugNeedsUpdate = true;
   }
-  get halfSideExtent() {
-    return this._shape.halfSideExtent;
+  get collisionLayer() {
+    return this._shape.collisionLayer;
   }
-  set halfSideExtent(value: number) {
-    this._shape.halfSideExtent = value;
-    PhysXInstance.instance._physicsProxy.updateController([{ id: this.id, halfSideExtent: value }]);
-    this._debugNeedsUpdate = true;
+  set collisionLayer(value: number) {
+    this._shape.collisionLayer = value;
+    PhysXInstance.instance._physicsProxy.updateController([{ id: this.id, collisionLayer: value }]);
+  }
+  get collisionMask() {
+    return this._shape.collisionMask;
+  }
+  set collisionMask(value: number) {
+    this._shape.collisionMask = value;
+    PhysXInstance.instance._physicsProxy.updateController([{ id: this.id, collisionMask: value }]);
   }
 }
 

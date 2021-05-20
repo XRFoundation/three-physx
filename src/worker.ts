@@ -30,6 +30,7 @@ export class PhysXManager {
   scene: PhysX.PxScene;
   controllerManager: PhysX.PxControllerManager;
   obstacleContext: PhysX.PxObstacleContext;
+  defaultCCTQueryCallback: PhysX.PxQueryFilterCallback;
 
   updateInterval: any;
   tps: number = 60;
@@ -139,6 +140,22 @@ export class PhysXManager {
     this.controllerManager = PhysX.PxCreateControllerManager(this.scene, false);
     this.obstacleContext = this.controllerManager.createObstacleContext();
 
+    this.defaultCCTQueryCallback = PhysX.getDefaultCCTQueryFilter();
+    // TODO: expose functions here as an API
+    // PhysX.PxQueryFilterCallback.implement({
+    //   preFilter: (filterData, shape, actor) => {
+    //     if (!(filterData.word0 & shape.getQueryFilterData().word1) && !(shape.getQueryFilterData().word0 & filterData.word1))
+    //     {
+    //       return PhysX.PxQueryHitType.eNONE;
+    //     }
+    //     return PhysX.PxQueryHitType.eBLOCK;
+    //   },
+    //   postFilter: (filterData, hit) => {
+    //     // console.log('postFilter', filterData, hit);
+    //     return PhysX.PxQueryHitType.eBLOCK;
+    //   }
+    // });
+
     if (config.start) {
       this.startPhysX(true);
     }
@@ -197,7 +214,7 @@ export class PhysXManager {
       (controller as any)._delta.x += controllerBodiesArray[offset + 1];
       (controller as any)._delta.y += controllerBodiesArray[offset + 2];
       (controller as any)._delta.z += controllerBodiesArray[offset + 3];
-      const filters = new PhysX.PxControllerFilters((controller as any)._filterData, null, null);
+      const filters = new PhysX.PxControllerFilters((controller as any)._filterData, this.defaultCCTQueryCallback, null);
       const beforePosition = controller.getPosition();
       const collisionFlags = controller.move((controller as any)._delta, 0.001, deltaTime, filters, this.obstacleContext);
       const afterPosition = controller.getPosition();
@@ -271,12 +288,12 @@ export class PhysXManager {
       let collisionMask = defaultMask;
       if (typeof config?.collisionLayer !== 'undefined') {
         collisionLayer = config.collisionLayer;
-        (bodyShape as any)._collisionLayer = collisionLayer;
       }
       if (typeof config?.collisionMask !== 'undefined') {
         collisionMask = config.collisionMask;
-        (bodyShape as any)._collisionMask = collisionMask;
       }
+      (bodyShape as any)._collisionLayer = collisionLayer;
+      (bodyShape as any)._collisionMask = collisionMask;
       bodyShape.setSimulationFilterData(new PhysX.PxFilterData(collisionLayer, collisionMask, 0, 0));
       bodyShape.setQueryFilterData(new PhysX.PxFilterData(collisionLayer, collisionMask, 0, 0));
       rigidBody.attachShape(bodyShape);
@@ -463,9 +480,6 @@ export class PhysXManager {
     this.shapeIDByPointer.set(shapes.$$.ptr, config.id);
     (controller as any)._collisions = [];
     (actor as any)._type = BodyType.CONTROLLER;
-    // todo
-    shapes.setSimulationFilterData(new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0));
-    shapes.setQueryFilterData(new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0));
     (controller as any)._filterData = new PhysX.PxFilterData(config.collisionLayer ?? defaultMask, config.collisionMask ?? defaultMask, 0, 0);
     (controller as any)._delta = { x: 0, y: 0, z: 0 };
     this.updateController(config);
@@ -511,7 +525,12 @@ export class PhysXManager {
     if (typeof config.halfSideExtent !== 'undefined') {
       (controller as PhysX.PxBoxController).setHalfSideExtent(config.halfSideExtent);
     }
-    // TODO: implement rest of ControllerConfig
+    if (typeof config.collisionLayer !== 'undefined') {
+      (controller as any)._filterData.word0 = config.collisionLayer;
+    }
+    if (typeof config.collisionMask !== 'undefined') {
+      (controller as any)._filterData.word1 = config.collisionMask;
+    }
   };
 
   removeController = ({ id }) => {
@@ -679,7 +698,7 @@ const getBodyData = (body: PhysX.PxRigidActor) => {
   return [transform.translation.x, transform.translation.y, transform.translation.z, transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w, linVel.x, linVel.y, linVel.z, angVel.x, angVel.y, angVel.z];
 };
 
-const defaultMask = 1 << 0;
+const defaultMask = 0; //1 << 0;
 
 const distSq = (point1, point2) => {
   const dx = point2.x - point1.x,

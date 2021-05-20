@@ -45,10 +45,10 @@ const load = async () => {
     type: BodyType.KINEMATIC,
   }));
   let isKinematic = true;
-  setInterval(() => {
-    isKinematic = !isKinematic;
-    kinematicBody.type = isKinematic ? BodyType.KINEMATIC : BodyType.DYNAMIC;
-  }, 2000);
+  // setInterval(() => {
+  //   isKinematic = !isKinematic;
+  //   kinematicBody.type = isKinematic ? BodyType.KINEMATIC : BodyType.DYNAMIC;
+  // }, 2000);
   objects.set(kinematicBody.id, kinematicObject);
   renderer.addToScene(kinematicObject);
   (kinematicObject as any).body = kinematicBody;
@@ -62,9 +62,9 @@ const load = async () => {
     isCapsule: true,
     radius: 0.5,
     position: { y: 5 },
-    collisionLayer: COLLISIONS.CHARACTER,
-    collisionMask: COLLISIONS.ALL
   }));
+  characterBody.collisionLayer = COLLISIONS.CHARACTER;
+  characterBody.collisionMask = COLLISIONS.ALL;
   renderer.addToScene(character);
 
   (character as any).body = characterBody;
@@ -137,9 +137,9 @@ const load = async () => {
   createBalls().forEach(async (object) => {
     const body = PhysXInstance.instance.addBody(new Body({
       shapes: getShapesFromObject(object).map((shape: ShapeType) => {
-        shape.config.collisionLayer = COLLISIONS.BALL;
-        shape.config.collisionMask = COLLISIONS.ALL;
-        shape.config.material = { restitution: 0, staticFriction: 0, dynamicFriction: 0 };
+        // shape.config.collisionLayer = COLLISIONS.BALL;
+        // shape.config.collisionMask = COLLISIONS.ALL;
+        // shape.config.material = { restitution: 0, staticFriction: 0, dynamicFriction: 0 };
         return shape;
       }),
       transform: getTransformFromWorldPos(object),

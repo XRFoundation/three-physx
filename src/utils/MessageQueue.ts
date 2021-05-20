@@ -35,12 +35,13 @@ export class EventDispatcherProxy {
       delete event.target;
       this.dispatchEvent(event, true);
     });
-    this.messageTypeFunctions.set(MessageType.ADD_EVENT, ({ type }: { type: string }) => {
-      this.eventTarget.addEventListener(type, this.eventListener);
-    });
-    this.messageTypeFunctions.set(MessageType.REMOVE_EVENT, ({ type }: { type: string }) => {
-      this.eventTarget.removeEventListener(type, this.eventListener);
-    });
+    // TODO: this needs to have fromSelf in the same way dispatch does
+    // this.messageTypeFunctions.set(MessageType.ADD_EVENT, ({ type }: { type: string }) => {
+    //   this.eventTarget.addEventListener(type, this.eventListener);
+    // });
+    // this.messageTypeFunctions.set(MessageType.REMOVE_EVENT, ({ type }: { type: string }) => {
+    //   this.eventTarget.removeEventListener(type, this.eventListener);
+    // });
   }
 
   once(type: string, listener: any) {
@@ -89,7 +90,7 @@ export class EventDispatcherProxy {
 export class MessageQueue extends EventDispatcherProxy {
   messagePort: any;
   queue: Message[];
-  eventTarget: EventDispatcher = new EventDispatcher();
+  // eventTarget: EventDispatcher = new EventDispatcher();
   toTransfer: Transferable[] = [];
   hasStopped = false;
 

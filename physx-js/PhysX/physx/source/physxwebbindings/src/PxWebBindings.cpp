@@ -100,6 +100,22 @@ struct PxQueryFilterCallbackWrapper : public wrapper<PxQueryFilterCallback>
   }
 };
 
+struct DefaultPxQueryFilterCallback : public PxQueryFilterCallback
+{
+  PxQueryHitType::Enum postFilter(const PxFilterData &filterData, const PxQueryHit &hit)
+  {
+    return PxQueryHitType::Enum::eBLOCK;
+  }
+  PxQueryHitType::Enum preFilter(const PxFilterData &filterData, const PxShape *shape, const PxRigidActor *actor, PxHitFlags &)
+  {
+    if(!(filterData.word0 & shape->getQueryFilterData().word1) && !(shape->getQueryFilterData().word0 & filterData.word1))
+    {
+      return PxQueryHitType::Enum::eNONE;
+    }
+    return PxQueryHitType::Enum::eBLOCK;
+  }
+};
+
 struct PxUserControllerHitReportWrapper : public wrapper<PxUserControllerHitReport>
 {
   EMSCRIPTEN_WRAPPER(PxUserControllerHitReportWrapper)
@@ -240,6 +256,12 @@ PxFilterFlags LayerMaskFilterShader(
   // pairFlags = PxPairFlag::eCONTACT_DEFAULT | PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_TOUCH_LOST | PxPairFlag::eNOTIFY_TOUCH_PERSISTS | PxPairFlag::eDETECT_CCD_CONTACT;
   pairFlags = PxPairFlag::eCONTACT_DEFAULT | PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_TOUCH_LOST | PxPairFlag::eNOTIFY_TOUCH_PERSISTS | PxPairFlag::eDETECT_CCD_CONTACT | PxPairFlag::eNOTIFY_CONTACT_POINTS;
   return PxFilterFlag::eDEFAULT;
+}
+
+PxQueryFilterCallback *getDefaultCCTQueryFilter()
+{
+  PxQueryFilterCallback *defaultCCTQueryFilter = new DefaultPxQueryFilterCallback();
+  return defaultCCTQueryFilter;
 }
 
 // TODO: Getting the  global PxDefaultSimulationFilterShader into javascript
@@ -441,6 +463,7 @@ EMSCRIPTEN_BINDINGS(physx)
   function("PxCreateCooking", &PxCreateCooking, allow_raw_pointers());
   function("PxCreatePlane", &PxCreatePlane, allow_raw_pointers());
   function("getDefaultSceneDesc", &getDefaultSceneDesc, allow_raw_pointers());
+  function("getDefaultCCTQueryFilter", &getDefaultCCTQueryFilter, allow_raw_pointers());
 
   class_<PxUserControllerHitReport>("PxUserControllerHitReport")
       .allow_subclass<PxUserControllerHitReportWrapper>("PxUserControllerHitReportWrapper");
@@ -1430,16 +1453,7 @@ EMSCRIPTEN_BINDINGS(physx)
                 }),
                 allow_raw_pointers())
       .function("getState", &PxController::getState, allow_raw_pointers())
-      .function("getStats", &PxController::getStats, allow_raw_pointers())
-      // custom functions
-      .function("setSimulationFilterData", optional_override(
-                                               [](PxController &ctrl, PxFilterData &data) {
-                                                 PxRigidDynamic *actor = ctrl.getActor();
-                                                 PxShape *shape;
-                                                 actor->getShapes(&shape, 1);
-                                                 shape->setSimulationFilterData(data);
-                                                 return;
-                                               }));
+      .function("getStats", &PxController::getStats, allow_raw_pointers());
 
   class_<PxCapsuleController, base<PxController>>("PxCapsuleController")
       .function("getRadius", &PxCapsuleController::getRadius)

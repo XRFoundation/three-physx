@@ -194,6 +194,7 @@ declare namespace PhysX {
 
   function PxCreateFoundation(a: number, b: PxAllocatorCallback, c: PxErrorCallback): PxFoundation;
   function getDefaultSceneDesc(scale: PxTolerancesScale, numThreads: number, simulationCallback: PxSimulationEventCallback): PxSceneDesc;
+  function getDefaultCCTQueryFilter(): PxQueryFilterCallback;
   class PxTransform {
     constructor(p: number[], q: number[]);
     constructor();
@@ -499,8 +500,8 @@ declare namespace PhysX {
   class PxQueryFilterCallback {
     static implement(queryFilterCallback: PxQueryFilterCallback): PxQueryFilterCallback;
 
-    postFilter(filterData: any, hit: any): void;
-    preFilter(filterData: any, shape: any, actor: any): void;
+    postFilter(filterData: PxFilterData, hit: PxQueryHit): void;
+    preFilter(filterData: PxFilterData, shape: PxShape, actor: PxRigidActor): void;
   }
 
   class PxControllerFilterCallback {}
