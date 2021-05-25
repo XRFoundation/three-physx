@@ -103,7 +103,7 @@ export class PhysXInstance {
           case CollisionEvents.TRIGGER_END:
             {
               try {
-                const { event, idA, idB } = collision;
+                const { event, idA, idB, contacts } = collision;
                 const shapeA = this._shapes.get(idA);
                 const shapeB = this._shapes.get(idB);
                 if (!shapeA || !shapeB) return;
@@ -116,6 +116,7 @@ export class PhysXInstance {
                   bodyOther: bodyB,
                   shapeSelf: shapeA,
                   shapeOther: shapeB,
+                  contacts,
                 });
                 bodyB.dispatchEvent({
                   type: event,
@@ -123,6 +124,7 @@ export class PhysXInstance {
                   bodyOther: bodyA,
                   shapeSelf: shapeB,
                   shapeOther: shapeA,
+                  contacts,
                 });
               } catch (e) {}
             }

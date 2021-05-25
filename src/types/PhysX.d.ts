@@ -348,6 +348,23 @@ declare namespace PhysX {
     z: number;
   }
 
+  class PxVec3Vector {
+    get(index: number): PxVec3;
+    push_back(value: PxVec3): void;
+    resize(index: number): void;
+    set(index: number, value: PxVec3): void; // need to double check the ordering here
+    size(): number;
+  }
+
+  type PxReal = number;
+  class PxRealVector {
+    get(index: number): PxReal;
+    push_back(value: PxReal): void;
+    resize(index: number): void;
+    set(index: number, value: PxReal): void; // need to double check the ordering here
+    size(): number;
+  }
+
   class PxLocationHit {
     position: PxVec3;
     normal: PxVec3;
@@ -381,13 +398,13 @@ declare namespace PhysX {
     getActiveActors(len: number): PxActor[];
     setGravity(value: PxVec3): void;
 
-    raycast(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, hits: PxRaycastBuffer): boolean;
-    raycastSingle(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, flags: number, hit: PxRaycastHit, filterData: PxQueryFilterData): boolean;
-    raycastAny(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, hit: PxRaycastHit, filterData: PxQueryFilterData): boolean;
-    // raycastMultiple(origin: PxVec3, unitDir: PxVec3, maxDistance: number /*PxReal*/, flags: number, hits: PxRaycastHit[], hbsize: number, filterData: PxQueryFilterData): boolean;
+    raycast(origin: PxVec3, unitDir: PxVec3, maxDistance: PxReal, hits: PxRaycastBuffer): boolean;
+    raycastSingle(origin: PxVec3, unitDir: PxVec3, maxDistance: PxReal, flags: number, hit: PxRaycastHit, filterData: PxQueryFilterData): boolean;
+    raycastAny(origin: PxVec3, unitDir: PxVec3, maxDistance: PxReal, hit: PxRaycastHit, filterData: PxQueryFilterData): boolean;
+    // raycastMultiple(origin: PxVec3, unitDir: PxVec3, maxDistance: PxReal, flags: number, hits: PxRaycastHit[], hbsize: number, filterData: PxQueryFilterData): boolean;
     setBounceThresholdVelocity(threshold: number): void;
     getBounceThresholdVelocity(): number;
-    sweep(geometry: PxGeometry, pose: PxTransform, unitDir: PxVec3, maxDistance: number /*PxReal*/, hit: PxRaycastBuffer): boolean;
+    sweep(geometry: PxGeometry, pose: PxTransform, unitDir: PxVec3, maxDistance: PxReal, hit: PxRaycastBuffer): boolean;
   }
 
   class PxCookingParams {

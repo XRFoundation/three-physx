@@ -7,6 +7,7 @@ export interface PhysXConfig {
   start?: boolean;
   bounceThresholdVelocity?: number;
   verbose?: boolean;
+  substeps?: number;
 }
 
 export enum SHAPES {
@@ -199,10 +200,17 @@ export enum CollisionEvents {
   TRIGGER_END = 'TRIGGER_END',
 }
 
+type ContactData = {
+  points: Vec3;
+  normal: Vec3;
+  impulse: number;
+};
+
 export type ColliderHitEvent = {
   type: CollisionEvents;
   bodySelf: RigidBody;
   bodyOther: RigidBody;
   shapeSelf: ShapeType;
   shapeOther: ShapeType;
+  contacts: ContactData[];
 };

@@ -1,4 +1,4 @@
-import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, SceneQueryType, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos, Body, ShapeType, BodyType, Controller, SHAPES, arrayOfPointsToArrayOfVector3, Transform, Obstacle, BoxObstacle, Shape } from '../../src';
+import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, SceneQueryType, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos, Body, ShapeType, BodyType, Controller, SHAPES, arrayOfPointsToArrayOfVector3, Transform, Obstacle, BoxObstacle, Shape, ColliderHitEvent } from '../../src';
 import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry, PlaneBufferGeometry, Raycaster, Vector2, Euler } from 'three';
 import { ConeBufferGeometry } from 'three';
 import { IcosahedronBufferGeometry } from 'three';
@@ -28,7 +28,7 @@ const load = async () => {
   (globalThis as any).objects = objects;
 
   // @ts-ignore
-  await PhysXInstance.instance.initPhysX(new Worker(new URL('./worker.ts', import.meta.url), { type: "module" }), {});
+  await PhysXInstance.instance.initPhysX(new Worker(new URL('./worker.ts', import.meta.url), { type: "module" }), { substeps: 8 });
 
   const kinematicObject = new Group();
   // kinematicObject.scale.setScalar(2)
@@ -139,13 +139,13 @@ const load = async () => {
       shapes: getShapesFromObject(object).map((shape: ShapeType) => {
         // shape.config.collisionLayer = COLLISIONS.BALL;
         // shape.config.collisionMask = COLLISIONS.ALL;
-        // shape.config.material = { restitution: 0, staticFriction: 0, dynamicFriction: 0 };
+        shape.config.material = { restitution: 0.1, staticFriction: 0.1, dynamicFriction: 0.1 };
         return shape;
       }),
       transform: getTransformFromWorldPos(object),
       type: BodyType.DYNAMIC
     }));
-    body.shapes[0].config.material = { dynamicFriction: 0.5, staticFriction: 0.2, restitution: 0.8 };
+    // body.shapes[0].config.material = { dynamicFriction: 0.5, staticFriction: 0.2, restitution: 0.8 };
     body.shapes[0].config.collisionLayer = COLLISIONS.BALL;
     body.shapes[0].config.collisionMask = COLLISIONS.ALL;
     object.body = body;
@@ -153,8 +153,13 @@ const load = async () => {
     balls.set(body.id, object);
     renderer.addToScene(object);
 
-    body.addEventListener(CollisionEvents.COLLISION_START, (ev) => {
+    body.addEventListener(CollisionEvents.COLLISION_START, (ev: ColliderHitEvent) => {
       // console.log('start', ev);
+      body.addForce({
+        x: ev.contacts[0].normal.x * 10000,
+        y: ev.contacts[0].normal.y * 10000,
+        z: ev.contacts[0].normal.z * 10000,
+      })
     })
     body.addEventListener(CollisionEvents.COLLISION_PERSIST, (ev) => {
       // console.log('persist', ev);
@@ -273,12 +278,12 @@ const load = async () => {
     const timeSecs = time / 1000;
     const delta = time - lastTime;
 
-    if (kinematicBody.type === BodyType.KINEMATIC) {
-      kinematicObject.position.set(Math.sin(timeSecs) * 10, 0, Math.cos(timeSecs) * 10);
-      kinematicObject.lookAt(0, 0, 0);
-      kinematicObject.position.setY(2);
-      kinematicBody.updateTransform({ translation: kinematicObject.position, rotation: kinematicObject.quaternion });
-    }
+    // if (kinematicBody.type === BodyType.KINEMATIC) {
+    //   kinematicObject.position.set(Math.sin(timeSecs) * 10, 0, Math.cos(timeSecs) * 10);
+    //   kinematicObject.lookAt(0, 0, 0);
+    //   kinematicObject.position.setY(2);
+    //   kinematicBody.updateTransform({ translation: kinematicObject.position, rotation: kinematicObject.quaternion });
+    // }
     if (characterBody.collisions.down) {
       if (characterBody.velocity.y < 0)
         characterBody.velocity.y = 0;
@@ -384,7 +389,7 @@ const createBalls = () => {
     new TorusKnotBufferGeometry(),
   ])
   const meshes = [];
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < 1; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     meshes.push(mesh);

@@ -25,7 +25,6 @@ export class PhysXManager {
   cookingParamas: PhysX.PxCookingParams;
   cooking: PhysX.PxCooking;
   physics: PhysX.PxPhysics;
-  scale: PhysX.PxTolerancesScale;
   sceneDesc: PhysX.PxSceneDesc;
   scene: PhysX.PxScene;
   controllerManager: PhysX.PxControllerManager;
@@ -34,6 +33,7 @@ export class PhysXManager {
 
   updateInterval: any;
   tps: number = 60;
+  substeps: number = 1;
   onUpdate: any;
   onEvent: any;
   transformArray: Float32Array;
@@ -58,6 +58,9 @@ export class PhysXManager {
     if (config.tps) {
       this.tps = config.tps;
     }
+    if (config.substeps) {
+      this.substeps = config.substeps;
+    }
     if (config.verbose) {
       logger = globalThis.logger = {
         log(...args) {
@@ -75,18 +78,29 @@ export class PhysXManager {
     this.defaultErrorCallback = new PhysX.PxDefaultErrorCallback();
     this.allocator = new PhysX.PxDefaultAllocator();
     const tolerance = new PhysX.PxTolerancesScale();
-    tolerance.length = 0.01;
+    tolerance.length = config.lengthScale ?? 1;
     this.foundation = PhysX.PxCreateFoundation(this.physxVersion, this.allocator, this.defaultErrorCallback);
     this.cookingParamas = new PhysX.PxCookingParams(tolerance);
     this.cooking = PhysX.PxCreateCooking(this.physxVersion, this.foundation, this.cookingParamas);
     this.physics = PhysX.PxCreatePhysics(this.physxVersion, this.foundation, tolerance, false, null);
 
     const triggerCallback = {
-      onContactBegin: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
+      onContactBegin: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape, contactPoints: PhysX.PxVec3Vector, contactNormals: PhysX.PxVec3Vector, impulses: PhysX.PxRealVector) => {
+        const contacts = [];
+        for (let i = 0; i < contactPoints.size(); i++) {
+          if (impulses.get(i) > 0) {
+            contacts.push({
+              point: contactPoints.get(i),
+              normal: contactNormals.get(i),
+              impulse: impulses.get(i),
+            });
+          }
+        }
         this.onEvent({
           event: CollisionEvents.COLLISION_START,
           idA: this.shapeIDByPointer.get(shapeA.$$.ptr),
           idB: this.shapeIDByPointer.get(shapeB.$$.ptr),
+          contacts,
         });
       },
       onContactEnd: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
@@ -128,11 +142,7 @@ export class PhysXManager {
       },
     };
 
-    this.scale = this.physics.getTolerancesScale();
-    if (config.lengthScale) {
-      this.scale.length = config.lengthScale;
-    }
-    this.sceneDesc = PhysX.getDefaultSceneDesc(this.scale, 0, PhysX.PxSimulationEventCallback.implement(triggerCallback as any));
+    this.sceneDesc = PhysX.getDefaultSceneDesc(tolerance, 0, PhysX.PxSimulationEventCallback.implement(triggerCallback as any));
 
     this.scene = this.physics.createScene(this.sceneDesc);
     this.scene.setBounceThresholdVelocity(config.bounceThresholdVelocity ?? 0.001);
@@ -165,8 +175,10 @@ export class PhysXManager {
     const now = Date.now();
     const delta = now - lastSimulationTick;
     lastSimulationTick = now;
-    this.scene.simulate(delta / 1000, true);
-    this.scene.fetchResults(true);
+    for (let i = 0; i < this.substeps; i++) {
+      this.scene.simulate(delta / (1000 * this.substeps), true);
+      this.scene.fetchResults(true);
+    }
     const bodyArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
     let offset = 0;
     this.bodies.forEach((body: PhysX.PxRigidActor, id: number) => {
@@ -645,7 +657,7 @@ export class PhysXManager {
   };
 
   _classFunc = (type, func, id, ...args) => {
-    // console.log(this.bodies.get(id), this.bodies.get(id)[func]);
+    // console.log(func, ...args, this.bodies.get(id), this.bodies.get(id)[func]);
     switch (type) {
       case 'body':
         this.bodies.get(id)[func](...args);

@@ -157,31 +157,34 @@ struct PxSimulationEventCallbackWrapper : public wrapper<PxSimulationEventCallba
 
       if (cp.events & PxPairFlag::eNOTIFY_TOUCH_FOUND)
       {
-        // PxContactStreamIterator iter(cp.contactPatches, cp.contactPoints, cp.getInternalFaceIndices(), cp.patchCount, cp.contactCount);
+        PxContactStreamIterator iter(cp.contactPatches, cp.contactPoints, cp.getInternalFaceIndices(), cp.patchCount, cp.contactCount);
 
-        // PxU32 hasImpulses = (cp.flags & PxContactPairFlag::eINTERNAL_HAS_IMPULSES);
-        // PxU32 nbContacts = 0;
+        PxU32 hasImpulses = (cp.flags & PxContactPairFlag::eINTERNAL_HAS_IMPULSES);
+        PxU32 nbContacts = 0;
 
-        // std::vector<PxVec3> contactPoints;
-        // std::vector<PxReal> impulses;
-        // contactPoints.reserve(cp.contactCount);
-        // impulses.reserve(cp.contactCount);
+        std::vector<PxVec3> contactPoints;
+        std::vector<PxVec3> contactNormals;
+        std::vector<PxReal> impulses;
+        contactPoints.reserve(cp.contactCount);
+        contactNormals.reserve(cp.contactCount);
+        impulses.reserve(cp.contactCount);
 
-        // while (iter.hasNextPatch())
-        // {
-        //   iter.nextPatch();
-        //   while (iter.hasNextContact())
-        //   {
-        //     iter.nextContact();
-        //     PxVec3 point = iter.getContactPoint();
-        //     contactPoints.push_back(point);
-        //     PxReal impulse = hasImpulses ? cp.contactImpulses[nbContacts] : 0.0f;
-        //     impulses.push_back(impulse);
-        //     nbContacts++;
-        //   }
-        // }
-
-        call<void>("onContactBegin", cp.shapes[0], cp.shapes[1]); //, contactPoints, impulses);
+        while (iter.hasNextPatch())
+        {
+          iter.nextPatch();
+          while (iter.hasNextContact())
+          {
+            PxReal impulse = hasImpulses ? cp.contactImpulses[nbContacts] : 0.0f;
+            impulses.push_back(impulse);
+            iter.nextContact();
+            PxVec3 point = iter.getContactPoint();
+            contactPoints.push_back(point);
+            PxVec3 normal = iter.getContactNormal();
+            contactNormals.push_back(normal);
+            nbContacts++;
+          }
+        }
+        call<void>("onContactBegin", cp.shapes[0], cp.shapes[1], contactPoints, contactNormals, impulses);
       }
       else if (cp.events & PxPairFlag::eNOTIFY_TOUCH_LOST)
       {
