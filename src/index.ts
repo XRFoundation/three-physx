@@ -239,6 +239,7 @@ export class PhysXInstance {
         transform: body.transform,
         shapes: body.shapes,
         type: body.type,
+        useCCD: body.useCCD,
       }),
     ]);
     return body;
@@ -648,15 +649,17 @@ export class Body extends EventDispatcher implements RigidBody {
   shapes: Shape[];
   userData: any;
   private _type: BodyType;
+  useCCD: boolean;
   [x: string]: any;
 
-  constructor({ shapes, type, transform, userData }: { shapes?: ShapeType[]; type?: BodyType; transform?: TransformType; userData?: any } = {}) {
+  constructor({ shapes, type, transform, userData, useCCD }: { shapes?: ShapeType[]; type?: BodyType; transform?: TransformType; userData?: any; useCCD?: boolean } = {}) {
     super();
 
     this.id = PhysXInstance.instance._getNextAvailableBodyID();
     this._type = type;
     this.transform = new Transform(transform);
     this.userData = userData;
+    this.useCCD = Boolean(useCCD);
 
     bodySetterFunctions.forEach((func) => {
       assignSetterFunction('body', this, this.id, func);
