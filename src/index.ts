@@ -480,6 +480,7 @@ class MaterialConfig implements MaterialConfigType {
 class ShapeConfig implements ShapeConfigType {
   private readonly id: number;
   private _contactOffset: number;
+  private _restOffset: number;
   private _isTrigger: boolean;
   private _collisionLayer: number;
   private _collisionMask: number;
@@ -487,6 +488,7 @@ class ShapeConfig implements ShapeConfigType {
   constructor(id: number, config: ShapeConfigType = {}) {
     this.id = id;
     this._contactOffset = config.contactOffset;
+    this._restOffset = config.restOffset;
     this._isTrigger = config.isTrigger;
     this._collisionLayer = config.collisionLayer;
     this._collisionMask = config.collisionMask;
@@ -498,6 +500,13 @@ class ShapeConfig implements ShapeConfigType {
   set contactOffset(val: number) {
     this._contactOffset = val;
     PhysXInstance.instance._physicsProxy.updateShape([{ id: this.id, config: { contactOffset: val } }]);
+  }
+  get restOffset() {
+    return this._restOffset;
+  }
+  set restOffset(val: number) {
+    this._restOffset = val;
+    PhysXInstance.instance._physicsProxy.updateShape([{ id: this.id, config: { restOffset: val } }]);
   }
   get isTrigger() {
     return this._isTrigger;
@@ -529,6 +538,7 @@ class ShapeConfig implements ShapeConfigType {
   }
   toJSON() {
     return {
+      restOffset: this.restOffset,
       contactOffset: this.contactOffset,
       isTrigger: this.isTrigger,
       collisionLayer: this.collisionLayer,

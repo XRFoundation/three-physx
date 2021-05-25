@@ -283,7 +283,6 @@ export class PhysXManager {
         config,
       });
       if (!bodyShape) return;
-      bodyShape.setContactOffset(config?.contactOffset ?? 0.0000001);
       let collisionLayer = defaultMask;
       let collisionMask = defaultMask;
       if (typeof config?.collisionLayer !== 'undefined') {
@@ -311,6 +310,9 @@ export class PhysXManager {
   updateBody = (config: RigidBody) => {
     const body = this.bodies.get(config.id);
     if (!isStaticBody(body)) {
+      if (typeof config.useCCD !== 'undefined') {
+        (body as PhysX.PxRigidDynamic).setRigidBodyFlag(PhysX.PxRigidBodyFlag.eENABLE_CCD, config.useCCD);
+      }
       if (typeof config.type !== 'undefined') {
         const transform = body.getGlobalPose();
         if (config.type === BodyType.KINEMATIC) {
@@ -359,18 +361,9 @@ export class PhysXManager {
   };
 
   updateShape = ({ id, config, options, shape, transform }: ShapeType) => {
-    const { isTrigger, contactOffset, collisionLayer, collisionMask, material } = config;
+    const { contactOffset, restOffset, collisionLayer, collisionMask, material } = config;
     const shapePx = this.shapes.get(id);
     if (!shapePx) return;
-    // if (typeof isTrigger !== 'undefined') {
-    //   if (isTrigger) {
-    //     shapePx.setFlag(PhysX.PxShapeFlag.eSIMULATION_SHAPE, !isTrigger);
-    //     shapePx.setFlag(PhysX.PxShapeFlag.eTRIGGER_SHAPE, isTrigger);
-    //   } else {
-    //     shapePx.setFlag(PhysX.PxShapeFlag.eTRIGGER_SHAPE, isTrigger);
-    //     shapePx.setFlag(PhysX.PxShapeFlag.eSIMULATION_SHAPE, !isTrigger);
-    //   }
-    // }
     if (typeof collisionLayer !== 'undefined') {
       (shapePx as any)._collisionLayer = collisionLayer;
     }
@@ -395,6 +388,9 @@ export class PhysXManager {
     }
     if (typeof contactOffset !== 'undefined') {
       shapePx.setContactOffset(contactOffset);
+    }
+    if (typeof restOffset !== 'undefined') {
+      shapePx.setRestOffset(restOffset);
     }
   };
 

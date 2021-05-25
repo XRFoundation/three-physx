@@ -134,23 +134,17 @@ declare namespace PhysX {
     };
   }
 
-  type Constructor<T = {}> = new (...args: any[]) => T;
-  type VoidPtr = number;
   const NULL: {};
   const HEAPF32: Float32Array;
+  const HEAPF64: Float64Array;
   const HEAPU8: Uint8Array;
   const HEAPU16: Uint16Array;
   const HEAPU32: Uint32Array;
-  function destroy(obj: PhysX.Type): void;
-  function castObject<T1, T2 extends PhysX.Type>(obj: T1, fun: Constructor<T2>): T2;
-  function wrapPointer<T extends PhysX.Type>(params: number, obj: Constructor<T>): T;
-  function addFunction(params: Function): number;
-  function getClass(obj: PhysX.Type): void;
-  function getPointer(obj: PhysX.Type): void;
-  function getCache(fun: Constructor<PhysX.Type>): void;
+  const HEAP8: Int8Array;
+  const HEAP16: Int16Array;
+  const HEAP32: Int32Array;
   function _malloc(byte: number): number;
   function _free(...args: any): any;
-  function compare(obj1: PhysX.Type, obj2: PhysX.Type): boolean;
 
   class GeometryType {
     Enum: {
@@ -277,7 +271,7 @@ declare namespace PhysX {
     // getBoxGeometry(geometry: PxGeometry): void; // TO DO
     // getSphereGeometry(geometry: PxGeometry): void; // TO DO
     // getPlaneGeometry(geometry: PxGeometry): void; // TO DO
-    setRestOffset(value: number);
+    setRestOffset(restOffset: number): void;
     // setMaterials(materials: PxMaterial[]): void; // TO DO
     getMaterials(): PxMaterial[] | PxMaterial; // TO DO
     // getWorldBounds(actor: PxActor, inflation: number): PxBounds3; // TO DO

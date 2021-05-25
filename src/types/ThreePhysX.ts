@@ -81,6 +81,7 @@ export interface MaterialConfigType {
 }
 
 export interface ShapeConfigType {
+  restOffset?: number;
   contactOffset?: number;
   isTrigger?: boolean;
   collisionLayer?: number;
@@ -91,6 +92,7 @@ export interface ShapeConfigType {
 export interface BodyConfig {
   type?: BodyType;
   mass?: number;
+  useCCD?: boolean;
   linearDamping?: number;
   angularDamping?: number;
   linearVelocity?: Vec3;
