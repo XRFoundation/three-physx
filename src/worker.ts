@@ -201,11 +201,13 @@ export class PhysXManager {
   };
 
   update = (kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array, raycastQueryArray: Float32Array, deltaTime: number) => {
-    let offset = 0;
-    while (offset < kinematicBodiesArray.length) {
+    for (let offset = 0; offset < kinematicBodiesArray.length; offset += BufferConfig.KINEMATIC_DATA_SIZE) {
       const id = kinematicBodiesArray[offset];
       const body = this.bodies.get(id) as PhysX.PxRigidDynamic;
-      if (!body) return;
+      if (!body) {
+        logger.warn('Body with id', id, 'not found!');
+        continue;
+      }
       const currentPose = body.getGlobalPose();
       currentPose.translation.x = kinematicBodiesArray[offset + 1];
       currentPose.translation.y = kinematicBodiesArray[offset + 2];
@@ -216,13 +218,14 @@ export class PhysXManager {
       currentPose.rotation.w = kinematicBodiesArray[offset + 7];
       body.setKinematicTarget(currentPose);
       body.setGlobalPose(currentPose, true);
-      offset += BufferConfig.KINEMATIC_DATA_SIZE;
     }
-    offset = 0;
-    while (offset < controllerBodiesArray.length) {
+    for (let offset = 0; offset < controllerBodiesArray.length; offset += BufferConfig.CONTROLLER_DATA_SIZE) {
       const id = controllerBodiesArray[offset];
       const controller = this.controllers.get(id) as PhysX.PxController;
-      if (!controller) return;
+      if (!controller) {
+        logger.warn('Controller with id', id, 'not found!');
+        continue;
+      }
       (controller as any)._delta.x += controllerBodiesArray[offset + 1];
       (controller as any)._delta.y += controllerBodiesArray[offset + 2];
       (controller as any)._delta.z += controllerBodiesArray[offset + 3];
@@ -243,13 +246,14 @@ export class PhysXManager {
         up: collisionFlags.isSet(PhysX.PxControllerCollisionFlag.eCOLLISION_UP) ? 1 : 0,
       };
       (controller as any)._collisions = [collisions.down, collisions.sides, collisions.up];
-      offset += BufferConfig.CONTROLLER_DATA_SIZE;
     }
-    offset = 0;
-    while (offset < raycastQueryArray.length) {
+    for (let offset = 0; offset < raycastQueryArray.length; offset += BufferConfig.RAYCAST_DATA_SIZE) {
       const id = raycastQueryArray[offset];
       const raycast = this.raycasts.get(id);
-      if (!raycast) return;
+      if (!raycast) {
+        logger.warn('Raycast with id', id, 'not found!');
+        continue;
+      }
       const newOriginPos = {
         x: raycastQueryArray[offset + 1],
         y: raycastQueryArray[offset + 2],
@@ -262,7 +266,6 @@ export class PhysXManager {
       };
       raycast.origin = newOriginPos;
       raycast.direction = newDir;
-      offset += BufferConfig.RAYCAST_DATA_SIZE;
     }
   };
 
@@ -373,36 +376,53 @@ export class PhysXManager {
   };
 
   updateShape = ({ id, config, options, shape, transform }: ShapeType) => {
-    const { contactOffset, restOffset, collisionLayer, collisionMask, material } = config;
+    if (!config) config = {};
     const shapePx = this.shapes.get(id);
     if (!shapePx) return;
-    if (typeof collisionLayer !== 'undefined') {
-      (shapePx as any)._collisionLayer = collisionLayer;
+    if (typeof config.collisionLayer !== 'undefined') {
+      (shapePx as any)._collisionLayer = config.collisionLayer;
     }
-    if (typeof collisionMask !== 'undefined') {
-      (shapePx as any)._collisionMask = collisionMask;
+    if (typeof config.collisionMask !== 'undefined') {
+      (shapePx as any)._collisionMask = config.collisionMask;
     }
-    if (typeof collisionLayer !== 'undefined' || typeof collisionMask !== 'undefined') {
+    if (typeof config.collisionLayer !== 'undefined' || typeof config.collisionMask !== 'undefined') {
       shapePx.setSimulationFilterData(new PhysX.PxFilterData((shapePx as any)._collisionLayer, (shapePx as any)._collisionMask, 0, 0));
       shapePx.setQueryFilterData(new PhysX.PxFilterData((shapePx as any)._collisionLayer, (shapePx as any)._collisionMask, 0, 0));
     }
-    if (typeof material !== 'undefined') {
+    if (typeof config.material !== 'undefined') {
       const materials = shapePx.getMaterials() as PhysX.PxMaterial;
-      if (typeof material.staticFriction !== 'undefined') {
-        materials.setStaticFriction(material.staticFriction);
+      if (typeof config.material.staticFriction !== 'undefined') {
+        materials.setStaticFriction(config.material.staticFriction);
       }
-      if (typeof material.dynamicFriction !== 'undefined') {
-        materials.setDynamicFriction(material.dynamicFriction);
+      if (typeof config.material.dynamicFriction !== 'undefined') {
+        materials.setDynamicFriction(config.material.dynamicFriction);
       }
-      if (typeof material.restitution !== 'undefined') {
-        materials.setRestitution(material.restitution);
+      if (typeof config.material.restitution !== 'undefined') {
+        materials.setRestitution(config.material.restitution);
       }
     }
-    if (typeof contactOffset !== 'undefined') {
-      shapePx.setContactOffset(contactOffset);
+    if (typeof config.contactOffset !== 'undefined') {
+      shapePx.setContactOffset(config.contactOffset);
     }
-    if (typeof restOffset !== 'undefined') {
-      shapePx.setRestOffset(restOffset);
+    if (typeof config.restOffset !== 'undefined') {
+      shapePx.setRestOffset(config.restOffset);
+    }
+    if (typeof transform !== 'undefined') {
+      if (transform) {
+        const localPose = shapePx.getLocalPose();
+        if (localPose.translation) {
+          localPose.translation.x = transform.translation.x ?? localPose.translation.x;
+          localPose.translation.y = transform.translation.y ?? localPose.translation.y;
+          localPose.translation.z = transform.translation.z ?? localPose.translation.z;
+        }
+        if (transform.rotation) {
+          localPose.rotation.x = transform.rotation.x ?? localPose.rotation.x;
+          localPose.rotation.y = transform.rotation.y ?? localPose.rotation.y;
+          localPose.rotation.z = transform.rotation.z ?? localPose.rotation.z;
+          localPose.rotation.w = transform.rotation.w ?? localPose.rotation.w;
+        }
+        shapePx.setLocalPose(localPose);
+      }
     }
   };
 
@@ -736,7 +756,6 @@ export const receiveWorker = async (physx): Promise<void> => {
   PhysXManager.instance.onUpdate = ({ raycastResults, bodyArray }) => {
     messageQueue.sendEvent('data', { raycastResults, bodyArray }, [bodyArray.buffer]);
     messageQueue.sendEvent('colliderEvent', [...latestEvents]);
-    messageQueue.sendQueue();
     latestEvents = [];
   };
   PhysXManager.instance.onEvent = (data) => {

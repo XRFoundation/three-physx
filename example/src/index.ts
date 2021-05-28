@@ -28,7 +28,7 @@ const load = async () => {
   (globalThis as any).objects = objects;
 
   // @ts-ignore
-  await PhysXInstance.instance.initPhysX(new Worker(new URL('./worker.ts', import.meta.url), { type: "module" }), { substeps: 8 });
+  await PhysXInstance.instance.initPhysX(new Worker(new URL('./worker.ts', import.meta.url), { type: "module" }), { substeps: 8, verbose: true });
 
   const kinematicObject = new Group();
   // kinematicObject.scale.setScalar(2)
@@ -148,6 +148,7 @@ const load = async () => {
     // body.shapes[0].config.material = { dynamicFriction: 0.5, staticFriction: 0.2, restitution: 0.8 };
     body.shapes[0].config.collisionLayer = COLLISIONS.BALL;
     body.shapes[0].config.collisionMask = COLLISIONS.ALL;
+    // body.shapes[0].transform = { translation: { x: 1 }}
     object.body = body;
     objects.set(body.id, object);
     balls.set(body.id, object);
@@ -278,12 +279,12 @@ const load = async () => {
     const timeSecs = time / 1000;
     const delta = time - lastTime;
 
-    // if (kinematicBody.type === BodyType.KINEMATIC) {
-    //   kinematicObject.position.set(Math.sin(timeSecs) * 10, 0, Math.cos(timeSecs) * 10);
-    //   kinematicObject.lookAt(0, 0, 0);
-    //   kinematicObject.position.setY(2);
-    //   kinematicBody.updateTransform({ translation: kinematicObject.position, rotation: kinematicObject.quaternion });
-    // }
+    if (kinematicBody.type === BodyType.KINEMATIC) {
+      kinematicObject.position.set(Math.sin(timeSecs) * 10, 0, Math.cos(timeSecs) * 10);
+      kinematicObject.lookAt(0, 0, 0);
+      kinematicObject.position.setY(2);
+      kinematicBody.updateTransform({ translation: kinematicObject.position, rotation: kinematicObject.quaternion });
+    }
     if (characterBody.collisions.down) {
       if (characterBody.velocity.y < 0)
         characterBody.velocity.y = 0;
@@ -389,7 +390,7 @@ const createBalls = () => {
     new TorusKnotBufferGeometry(),
   ])
   const meshes = [];
-  for (let i = 0; i < 1; i++) {
+  for (let i = 0; i < 100; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     meshes.push(mesh);

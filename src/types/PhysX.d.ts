@@ -267,6 +267,7 @@ declare namespace PhysX {
     getFlags(): PxShapeFlags;
     release(): void;
     setLocalPose(transform: PxTransform): void;
+    getLocalPose(): PxTransform;
     // setGeometry(geometry: PxGeometry): void; // TO DO
     // getBoxGeometry(geometry: PxGeometry): void; // TO DO
     // getSphereGeometry(geometry: PxGeometry): void; // TO DO

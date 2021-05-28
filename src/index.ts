@@ -220,7 +220,6 @@ export class PhysXInstance {
       offset += BufferConfig.RAYCAST_DATA_SIZE;
     });
     this._physicsProxy.update([kinematicArray, controllerArray, raycastArray, deltaTime], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);
-    this._messageQueue.sendQueue();
   }
 
   startPhysX(start: boolean) {
