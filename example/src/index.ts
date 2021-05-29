@@ -87,20 +87,20 @@ const load = async () => {
     collisionMask: COLLISIONS.ALL
   });
 
-  const character2 = new Group();
-  character2.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
-  character2.position.set(2, 1.5, 2);
-  const characterBody2 = PhysXInstance.instance.createController(new Controller({
-    isCapsule: true,
-    radius: 0.5,
-    position: character2.position,
-    collisionLayer: COLLISIONS.CHARACTER,
-    collisionMask: COLLISIONS.ALL
-  }));
+  // const character2 = new Group();
+  // character2.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
+  // character2.position.set(2, 1.5, 2);
+  // const characterBody2 = PhysXInstance.instance.createController(new Controller({
+  //   isCapsule: true,
+  //   radius: 0.5,
+  //   position: character2.position,
+  //   collisionLayer: COLLISIONS.CHARACTER,
+  //   collisionMask: COLLISIONS.ALL
+  // }));
 
-  renderer.addToScene(character2);
-  (character2 as any).body = characterBody2;
-  objects.set(characterBody2.id, character2);
+  // renderer.addToScene(character2);
+  // (character2 as any).body = characterBody2;
+  // objects.set(characterBody2.id, character2);
 
   const triggerBody = PhysXInstance.instance.addBody(new Body({
     shapes: [

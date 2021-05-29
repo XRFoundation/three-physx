@@ -756,6 +756,7 @@ export const receiveWorker = async (physx): Promise<void> => {
   PhysXManager.instance.onUpdate = ({ raycastResults, bodyArray }) => {
     messageQueue.sendEvent('data', { raycastResults, bodyArray }, [bodyArray.buffer]);
     messageQueue.sendEvent('colliderEvent', [...latestEvents]);
+    messageQueue.sendQueue();
     latestEvents = [];
   };
   PhysXManager.instance.onEvent = (data) => {
