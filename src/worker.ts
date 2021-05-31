@@ -118,7 +118,7 @@ export class PhysXManager {
         });
       },
       onTriggerBegin: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        // console.log('onTriggerBegin')
+        // console.log('onTriggerBegin', shapeA, shapeB)
         this.onEvent({
           event: CollisionEvents.TRIGGER_START,
           idA: this.shapeIDByPointer.get(shapeA.$$.ptr),
@@ -133,7 +133,7 @@ export class PhysXManager {
       //   });
       // },
       onTriggerEnd: (shapeA: PhysX.PxShape, shapeB: PhysX.PxShape) => {
-        // console.log('onTriggerEnd')
+        // console.log('onTriggerEnd', shapeA, shapeB)
         this.onEvent({
           event: CollisionEvents.TRIGGER_END,
           idA: this.shapeIDByPointer.get(shapeA.$$.ptr),

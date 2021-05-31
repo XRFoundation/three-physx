@@ -58,7 +58,6 @@ export class PhysXInstance {
         const body = this._bodies.get(bodyArray[offset]) as Body | Controller;
         if (body) {
           if (body.type === BodyType.CONTROLLER) {
-            body.controllerCollisionEvents = [];
             body.transform.translation.x = bodyArray[offset + 1];
             body.transform.translation.y = bodyArray[offset + 2];
             body.transform.translation.z = bodyArray[offset + 3];
@@ -68,7 +67,6 @@ export class PhysXInstance {
               up: Boolean(bodyArray[offset + 6]),
             };
           } else if (body.type === BodyType.DYNAMIC) {
-            body.collisionEvents = [];
             body.transform.translation.x = bodyArray[offset + 1];
             body.transform.translation.y = bodyArray[offset + 2];
             body.transform.translation.z = bodyArray[offset + 3];
@@ -95,6 +93,12 @@ export class PhysXInstance {
       });
     });
     this._messageQueue.addEventListener('colliderEvent', ({ detail }) => {
+      this._bodies.forEach((body) => {
+        body.collisionEvents.splice(0, body.collisionEvents.length);
+      });
+      this._controllerBodies.forEach((body) => {
+        body.controllerCollisionEvents.splice(0, body.controllerCollisionEvents.length);
+      });
       detail.forEach((collision) => {
         switch (collision.event) {
           case CollisionEvents.COLLISION_START:

@@ -303,9 +303,9 @@ const load = async () => {
       body.collisionEvents.forEach((ev: ColliderHitEvent) => {
         if(ev.type === CollisionEvents.COLLISION_START && ev.contacts.length) {
           body.addForce({
-            x: ev.contacts[0].normal.x * 10000,
-            y: ev.contacts[0].normal.y * 10000,
-            z: ev.contacts[0].normal.z * 10000,
+            x: ev.contacts[0].normal.x * 1000,
+            y: ev.contacts[0].normal.y * 1000,
+            z: ev.contacts[0].normal.z * 1000,
           })
         }
       })
@@ -378,7 +378,7 @@ const createBalls = () => {
     new TorusKnotBufferGeometry(),
   ])
   const meshes = [];
-  for (let i = 0; i < 1; i++) {
+  for (let i = 0; i < 10; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     meshes.push(mesh);
