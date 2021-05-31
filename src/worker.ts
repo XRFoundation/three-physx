@@ -5,7 +5,7 @@ import { getShape } from './getShape';
 import { PhysXConfig, BodyType, RigidBody, ShapeType, ControllerConfig, SceneQuery, SceneQueryType, RaycastHit, CollisionEvents, ControllerEvents } from './types/ThreePhysX';
 import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
-import { getFromPhysXHeap, putIntoPhysXHeap } from './utils/misc';
+import { putIntoPhysXHeap } from './utils/misc';
 
 let lastSimulationTick = 0;
 
@@ -166,9 +166,9 @@ export class PhysXManager {
     //   }
     // });
 
-    if (config.start) {
-      this.startPhysX(true);
-    }
+    // if (config.start) {
+    //   this.startPhysX(true);
+    // }
   };
 
   simulate = () => {
@@ -267,16 +267,17 @@ export class PhysXManager {
       raycast.origin = newOriginPos;
       raycast.direction = newDir;
     }
+    this.simulate();
   };
 
-  startPhysX = (start: boolean = true) => {
-    if (start) {
-      lastSimulationTick = Date.now();
-      this.updateInterval = setInterval(this.simulate, 1000 / this.tps);
-    } else {
-      clearInterval(this.updateInterval);
-    }
-  };
+  // startPhysX = (start: boolean = true) => {
+  //   if (start) {
+  //     lastSimulationTick = Date.now();
+  //     this.updateInterval = setInterval(this.simulate, 1000 / this.tps);
+  //   } else {
+  //     clearInterval(this.updateInterval);
+  //   }
+  // };
 
   addBody = (config: RigidBody) => {
     const { id, transform, shapes, type } = config;

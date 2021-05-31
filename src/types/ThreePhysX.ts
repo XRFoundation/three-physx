@@ -100,12 +100,13 @@ export interface BodyConfig {
   angularVelocity?: Vec3;
 }
 
-export interface RigidBody extends EventDispatcher, BodyConfig {
+export interface RigidBody extends BodyConfig {
   id: number;
   transform: TransformType;
   updateTransform?: ({ translation, rotation }: { translation?: Vec3Fragment; rotation?: QuatFragment }) => void;
   shapes: ShapeType[];
   userData?: any;
+  [x: string]: any;
 }
 
 export interface ControllerRigidBody extends RigidBody {
@@ -182,15 +183,6 @@ export enum ControllerEvents {
   CONTROLLER_OBSTACLE_HIT = 'CONTROLLER_OBSTACLE_HIT',
 }
 
-export type ControllerHitEvent = {
-  type: ControllerEvents;
-  shape: ShapeType;
-  body: RigidBody;
-  position: Vec3;
-  normal: Vec3;
-  length: number;
-};
-
 export enum CollisionEvents {
   COLLISION_START = 'COLLISION_START',
   COLLISION_PERSIST = 'COLLISION_PERSIST',
@@ -199,18 +191,3 @@ export enum CollisionEvents {
   TRIGGER_PERSIST = 'TRIGGER_PERSIST',
   TRIGGER_END = 'TRIGGER_END',
 }
-
-type ContactData = {
-  points: Vec3;
-  normal: Vec3;
-  impulse: number;
-};
-
-export type ColliderHitEvent = {
-  type: CollisionEvents;
-  bodySelf: RigidBody;
-  bodyOther: RigidBody;
-  shapeSelf: ShapeType;
-  shapeOther: ShapeType;
-  contacts: ContactData[];
-};

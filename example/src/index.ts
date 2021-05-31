@@ -52,9 +52,6 @@ const load = async () => {
   objects.set(kinematicBody.id, kinematicObject);
   renderer.addToScene(kinematicObject);
   (kinematicObject as any).body = kinematicBody;
-  kinematicBody.addEventListener(CollisionEvents.TRIGGER_START, ({ bodySelf, bodyOther, shapeSelf, shapeOther }) => {
-    // console.log('TRIGGER DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
-  });
 
   const character = new Group();
   character.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
@@ -69,15 +66,6 @@ const load = async () => {
 
   (character as any).body = characterBody;
   objects.set(characterBody.id, character);
-  characterBody.addEventListener(ControllerEvents.CONTROLLER_SHAPE_HIT, (ev) => {
-    // console.log('Hit shape', ev);
-  });
-  characterBody.addEventListener(ControllerEvents.CONTROLLER_CONTROLLER_HIT, (ev) => {
-    // console.log('Hit controller', ev);
-  });
-  characterBody.addEventListener(ControllerEvents.CONTROLLER_OBSTACLE_HIT, (ev) => {
-    // console.log('Hit obstacle', ev);
-  });
 
   const characterRaycastQuery = PhysXInstance.instance.addRaycastQuery(new RaycastQuery({
     type: SceneQueryType.Closest,
@@ -122,10 +110,6 @@ const load = async () => {
     type: BodyType.STATIC,
   }));
 
-  triggerBody.addEventListener(CollisionEvents.TRIGGER_START, (ev) => {
-    // console.log(ev)
-  })
-
   const cameraRaycastQuery = PhysXInstance.instance.addRaycastQuery(new RaycastQuery({
     type: SceneQueryType.Closest,
     origin: new Vector3(0, 0, 0),
@@ -153,21 +137,6 @@ const load = async () => {
     objects.set(body.id, object);
     balls.set(body.id, object);
     renderer.addToScene(object);
-
-    body.addEventListener(CollisionEvents.COLLISION_START, (ev: ColliderHitEvent) => {
-      // console.log('start', ev);
-      body.addForce({
-        x: ev.contacts[0].normal.x * 10000,
-        y: ev.contacts[0].normal.y * 10000,
-        z: ev.contacts[0].normal.z * 10000,
-      })
-    })
-    body.addEventListener(CollisionEvents.COLLISION_PERSIST, (ev) => {
-      // console.log('persist', ev);
-    })
-    body.addEventListener(CollisionEvents.COLLISION_END, (ev) => {
-      // console.log('end', ev);
-    })
   });
 
   const platform = new Mesh(new BoxBufferGeometry(platformSize, 1, platformSize), new MeshStandardMaterial({ color: randomColor(), side: DoubleSide }));
@@ -331,7 +300,17 @@ const load = async () => {
     });
     balls.forEach(async (object: any, id) => {
       const { body } = object;
-      if (object.position.y < -10 && body) {
+      body.collisionEvents.forEach((ev: ColliderHitEvent) => {
+        if(ev.type === CollisionEvents.COLLISION_START && ev.contacts.length) {
+          body.addForce({
+            x: ev.contacts[0].normal.x * 10000,
+            y: ev.contacts[0].normal.y * 10000,
+            z: ev.contacts[0].normal.z * 10000,
+          })
+        }
+      })
+      if(!body) return;
+      if (object.position.y < -10) {
         delete object.body;
         PhysXInstance.instance.removeBody(body);
         balls.delete(id);
@@ -351,7 +330,16 @@ const load = async () => {
         balls.set(newbody.id, object);
         objects.set(newbody.id, object);
       }
+
     })
+    kinematicBody.collisionEvents.forEach(({ type, bodySelf, bodyOther, shapeSelf, shapeOther }) => {
+      // if(type === CollisionEvents.TRIGGER_START)
+      // console.log('TRIGGER DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
+    });
+
+
+
+
     PhysXInstance.instance.update();
     debug.update();
     renderer.update();
@@ -390,7 +378,7 @@ const createBalls = () => {
     new TorusKnotBufferGeometry(),
   ])
   const meshes = [];
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 1; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     meshes.push(mesh);

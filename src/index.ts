@@ -11,13 +11,10 @@ import {
   ControllerEvents,
   TransformType,
   Quat,
-  QuatFragment,
   Vec3,
-  Vec3Fragment,
   ControllerRigidBody,
   MaterialConfigType,
   ControllerConfig,
-  BodyConfig,
   SHAPES,
   ObstacleType,
   ShapeConfigType,
@@ -25,7 +22,7 @@ import {
   RaycastHit,
 } from './types/ThreePhysX';
 import { clone } from './utils/misc';
-import { EventDispatcher, Quaternion, Scene, Vector3 } from 'three';
+import { Quaternion, Vector3 } from 'three';
 
 let nextAvailableBodyIndex = 0;
 let nextAvailableShapeID = 0;
@@ -58,9 +55,10 @@ export class PhysXInstance {
       let offset = 0;
       const { raycastResults, bodyArray } = ev.detail;
       while (offset < bodyArray.length) {
-        const body = this._bodies.get(bodyArray[offset]);
+        const body = this._bodies.get(bodyArray[offset]) as Body | Controller;
         if (body) {
           if (body.type === BodyType.CONTROLLER) {
+            body.controllerCollisionEvents = [];
             body.transform.translation.x = bodyArray[offset + 1];
             body.transform.translation.y = bodyArray[offset + 2];
             body.transform.translation.z = bodyArray[offset + 3];
@@ -70,6 +68,7 @@ export class PhysXInstance {
               up: Boolean(bodyArray[offset + 6]),
             };
           } else if (body.type === BodyType.DYNAMIC) {
+            body.collisionEvents = [];
             body.transform.translation.x = bodyArray[offset + 1];
             body.transform.translation.y = bodyArray[offset + 2];
             body.transform.translation.z = bodyArray[offset + 3];
@@ -109,25 +108,25 @@ export class PhysXInstance {
                 const shapeA = this._shapes.get(idA);
                 const shapeB = this._shapes.get(idB);
                 if (!shapeA || !shapeB) return;
-                const bodyA = (shapeA as any).body;
-                const bodyB = (shapeB as any).body;
+                const bodyA: Body = (shapeA as any).body;
+                const bodyB: Body = (shapeB as any).body;
                 if (!bodyA || !bodyB) return;
-                bodyA.dispatchEvent({
+                bodyA.collisionEvents.push({
                   type: event,
                   bodySelf: bodyA,
                   bodyOther: bodyB,
                   shapeSelf: shapeA,
                   shapeOther: shapeB,
                   contacts,
-                });
-                bodyB.dispatchEvent({
+                } as ColliderHitEvent);
+                bodyB.collisionEvents.push({
                   type: event,
                   bodySelf: bodyB,
                   bodyOther: bodyA,
                   shapeSelf: shapeB,
                   shapeOther: shapeA,
                   contacts,
-                });
+                } as ColliderHitEvent);
               } catch (e) {}
             }
             break;
@@ -135,33 +134,33 @@ export class PhysXInstance {
           case ControllerEvents.CONTROLLER_CONTROLLER_HIT:
             {
               const { event, controllerID, shapeID, bodyID, position, normal, length } = collision;
-              const controllerBody: RigidBody = this._bodies.get(controllerID);
+              const controllerBody: Controller = this._controllerBodies.get(controllerID);
               if (!controllerBody) return;
               const shape = this._shapes.get(shapeID);
               const body = this._bodies.get(bodyID);
-              controllerBody.dispatchEvent({
+              controllerBody.controllerCollisionEvents.push({
                 type: event,
                 body,
                 shape,
                 position,
                 normal,
                 length,
-              });
+              } as ControllerHitEvent);
             }
             break;
           case ControllerEvents.CONTROLLER_OBSTACLE_HIT:
             {
               const { event, controllerID, obstacleID, position, normal, length } = collision;
-              const controllerBody: RigidBody = this._bodies.get(controllerID);
+              const controllerBody: Controller = this._controllerBodies.get(controllerID);
               if (!controllerBody) return;
               const obstacle = this._obstacles.get(obstacleID);
-              controllerBody.dispatchEvent({
+              controllerBody.controllerCollisionEvents.push({
                 type: event,
                 obstacle,
                 position,
                 normal,
                 length,
-              });
+              } as ControllerObstacleHitEvent);
             }
             break;
         }
@@ -635,23 +634,25 @@ const assignGetterFunction = (type, assignee, id, func) => {
   };
 };
 
-export class Body extends EventDispatcher implements RigidBody {
+export class Body implements RigidBody {
   readonly id: number;
   transform: Transform;
   shapes: Shape[];
   userData: any;
   private _type: BodyType;
   useCCD: boolean;
+  collisionEvents: ColliderHitEvent[];
   [x: string]: any;
 
   constructor({ shapes, type, transform, userData, useCCD }: { shapes?: ShapeType[]; type?: BodyType; transform?: TransformType; userData?: any; useCCD?: boolean } = {}) {
-    super();
 
     this.id = PhysXInstance.instance._getNextAvailableBodyID();
     this._type = type;
     this.transform = new Transform(transform);
     this.userData = userData;
     this.useCCD = Boolean(useCCD);
+
+    this.collisionEvents = [];
 
     bodySetterFunctions.forEach((func) => {
       assignSetterFunction('body', this, this.id, func);
@@ -729,12 +730,13 @@ export class Controller extends Body implements ControllerRigidBody {
   _debugNeedsUpdate?: any;
   _shape: ControllerConfig;
   collisions: { down: boolean; sides: boolean; up: boolean };
+  controllerCollisionEvents: (ControllerHitEvent | ControllerObstacleHitEvent)[];
   delta: { x: number; y: number; z: number };
   velocity: { x: number; y: number; z: number };
 
   constructor(config: ControllerConfig) {
     super({ type: BodyType.CONTROLLER, transform: { translation: config.position }, userData: config.userData });
-
+    this.controllerCollisionEvents = []
     controllerSetterFunctions.forEach((func) => {
       assignSetterFunction('body', this, this.id, func);
     });
@@ -934,6 +936,39 @@ export class RaycastQuery implements SceneQuery {
     this.hits = [];
   }
 }
+
+export type ControllerHitEvent = {
+  type: ControllerEvents;
+  shape: ShapeType;
+  body: RigidBody;
+  position: Vec3;
+  normal: Vec3;
+  length: number;
+};
+
+export type ControllerObstacleHitEvent = {
+  type: ControllerEvents;
+  obstacle: ObstacleType;
+  position: Vec3;
+  normal: Vec3;
+  length: number;
+};
+
+type ContactData = {
+  points: Vec3;
+  normal: Vec3;
+  impulse: number;
+};
+
+export type ColliderHitEvent = {
+  type: CollisionEvents;
+  bodySelf: RigidBody;
+  bodyOther: RigidBody;
+  shapeSelf: ShapeType;
+  shapeOther: ShapeType;
+  contacts: ContactData[];
+};
+
 
 export { CapsuleBufferGeometry } from './utils/CapsuleBufferGeometry';
 export { DebugRenderer } from './utils/DebugRenderer';
