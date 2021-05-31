@@ -645,7 +645,6 @@ export class Body implements RigidBody {
   [x: string]: any;
 
   constructor({ shapes, type, transform, userData, useCCD }: { shapes?: ShapeType[]; type?: BodyType; transform?: TransformType; userData?: any; useCCD?: boolean } = {}) {
-
     this.id = PhysXInstance.instance._getNextAvailableBodyID();
     this._type = type;
     this.transform = new Transform(transform);
@@ -736,7 +735,7 @@ export class Controller extends Body implements ControllerRigidBody {
 
   constructor(config: ControllerConfig) {
     super({ type: BodyType.CONTROLLER, transform: { translation: config.position }, userData: config.userData });
-    this.controllerCollisionEvents = []
+    this.controllerCollisionEvents = [];
     controllerSetterFunctions.forEach((func) => {
       assignSetterFunction('body', this, this.id, func);
     });
@@ -968,7 +967,6 @@ export type ColliderHitEvent = {
   shapeOther: ShapeType;
   contacts: ContactData[];
 };
-
 
 export { CapsuleBufferGeometry } from './utils/CapsuleBufferGeometry';
 export { DebugRenderer } from './utils/DebugRenderer';
