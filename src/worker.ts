@@ -599,7 +599,7 @@ export class PhysXManager {
     }
     if (typeof collisionMask !== 'undefined') {
       raycast.collisionMask = collisionMask;
-      (raycast as any)._filterData.setWords(raycast.collisionMask ?? 1, 1);
+      (raycast as any)._filterData.setWords(raycast.collisionMask ?? 1, 0);
     }
   };
 
@@ -645,7 +645,6 @@ export class PhysXManager {
       //   postFilter: (filterData, hit) => { return PhysX.PxQueryHitType.eBLOCK  }
       // });
       const hasHit = this.scene.raycastSingle(raycastQuery.origin, raycastQuery.direction, raycastQuery.maxDistance, raycastQuery.flags, buffer, filterData);
-      // console.log(buffer.distance)
       if (hasHit) {
         hits.push({
           distance: buffer.distance,

@@ -21,9 +21,11 @@ import {
   SHAPES,
   ObstacleType,
   ShapeConfigType,
+  SceneQueryType,
+  RaycastHit,
 } from './types/ThreePhysX';
 import { clone } from './utils/misc';
-import { EventDispatcher, Quaternion, Vector3 } from 'three';
+import { EventDispatcher, Quaternion, Scene, Vector3 } from 'three';
 
 let nextAvailableBodyIndex = 0;
 let nextAvailableShapeID = 0;
@@ -85,7 +87,7 @@ export class PhysXInstance {
         }
         offset += BufferConfig.BODY_DATA_SIZE;
       }
-      this._raycasts.forEach((raycastQuery) => {
+      this._raycasts.forEach((raycastQuery: RaycastQuery) => {
         raycastQuery.hits = raycastResults[raycastQuery.id] ?? [];
         raycastQuery.hits.forEach((hit) => {
           hit.body = this._bodies.get(hit._bodyID);
@@ -214,9 +216,7 @@ export class PhysXInstance {
     offset = 0;
     const raycastArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.RAYCAST_DATA_SIZE * this._raycasts.size));
     this._raycasts.forEach((raycast, id) => {
-      const ori = raycast.origin;
-      const dir = raycast.direction;
-      raycastArray.set([id, ori.x, ori.y, ori.z, dir.x, dir.y, dir.z], offset);
+      raycastArray.set([id, raycast.origin.x, raycast.origin.y, raycast.origin.z, raycast.direction.x, raycast.direction.y, raycast.direction.z], offset);
       offset += BufferConfig.RAYCAST_DATA_SIZE;
     });
     this._physicsProxy.update([kinematicArray, controllerArray, raycastArray, deltaTime], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);
@@ -281,18 +281,8 @@ export class PhysXInstance {
     this._bodies.delete(id);
   }
 
-  addRaycastQuery(raycastQuery: SceneQuery) {
-    if (typeof raycastQuery.type === 'undefined') throw new Error('Scene raycast query must have a type!');
-    if (typeof raycastQuery.origin === 'undefined') throw new Error('Scene raycast query must include origin!');
-    if (typeof raycastQuery.direction === 'undefined') throw new Error('Scene raycast query must include direction!');
-
-    raycastQuery.maxDistance = raycastQuery.maxDistance ?? 1;
-    raycastQuery.maxHits = raycastQuery.maxHits ?? 1;
-
-    const id = this._getNextAvailableRaycastID();
-    this._raycasts.set(id, raycastQuery);
-    raycastQuery.id = id;
-    raycastQuery.hits = []; // init
+  addRaycastQuery(raycastQuery: RaycastQuery) {
+    this._raycasts.set(raycastQuery.id, raycastQuery);
     this._physicsProxy.addRaycastQuery([clone(raycastQuery)]);
     return raycastQuery;
   }
@@ -920,8 +910,29 @@ export class BoxObstacle extends Obstacle {
   }
 }
 
-export class RaycastQuery {
-  constructor() {}
+export class RaycastQuery implements SceneQuery {
+  readonly id: number;
+  readonly type: SceneQueryType;
+  // flags: number; // PxQueryFlag
+  collisionMask: number;
+  origin: Vector3;
+  direction: Vector3;
+  maxDistance: number;
+  maxHits: number;
+  hits: RaycastHit[];
+
+  constructor(args: { type: SceneQueryType; origin: Vector3; direction: Vector3; maxDistance?: number; maxHits?: number; collisionMask?: number }) {
+    const id = PhysXInstance.instance._getNextAvailableRaycastID();
+    this.id = id;
+    this.type = args.type;
+    // this.flags = args.flags ?? 0;
+    this.collisionMask = args.collisionMask ?? 0;
+    this.origin = args.origin ?? new Vector3();
+    this.direction = args.direction ?? new Vector3();
+    this.maxDistance = args.maxDistance ?? 1;
+    this.maxHits = args.maxHits ?? 1;
+    this.hits = [];
+  }
 }
 
 export { CapsuleBufferGeometry } from './utils/CapsuleBufferGeometry';

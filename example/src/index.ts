@@ -1,4 +1,4 @@
-import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, SceneQueryType, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos, Body, ShapeType, BodyType, Controller, SHAPES, arrayOfPointsToArrayOfVector3, Transform, Obstacle, BoxObstacle, Shape, ColliderHitEvent } from '../../src';
+import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, SceneQueryType, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos, Body, ShapeType, BodyType, Controller, SHAPES, arrayOfPointsToArrayOfVector3, Transform, Obstacle, BoxObstacle, Shape, ColliderHitEvent, RaycastQuery } from '../../src';
 import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry, PlaneBufferGeometry, Raycaster, Vector2, Euler } from 'three';
 import { ConeBufferGeometry } from 'three';
 import { IcosahedronBufferGeometry } from 'three';
@@ -79,13 +79,13 @@ const load = async () => {
     // console.log('Hit obstacle', ev);
   });
 
-  const characterRaycastQuery = PhysXInstance.instance.addRaycastQuery({
+  const characterRaycastQuery = PhysXInstance.instance.addRaycastQuery(new RaycastQuery({
     type: SceneQueryType.Closest,
-    origin: character.position,
+    origin: new Vector3(),
     direction: new Vector3(0, -1, 0),
     maxDistance: 1,
     collisionMask: COLLISIONS.ALL
-  });
+  }));
 
   // const character2 = new Group();
   // character2.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
@@ -126,13 +126,13 @@ const load = async () => {
     // console.log(ev)
   })
 
-  const cameraRaycastQuery = PhysXInstance.instance.addRaycastQuery({
+  const cameraRaycastQuery = PhysXInstance.instance.addRaycastQuery(new RaycastQuery({
     type: SceneQueryType.Closest,
-    origin: character.position,
+    origin: new Vector3(0, 0, 0),
     direction: new Vector3(0, -1, 0),
     maxDistance: 10,
     collisionMask: COLLISIONS.ALL
-  });
+  }));
 
   createBalls().forEach(async (object) => {
     const body = PhysXInstance.instance.addBody(new Body({
@@ -309,14 +309,14 @@ const load = async () => {
       }
     })
     characterBody.delta.y += characterBody.velocity.y;
-    characterRaycastQuery.origin = new Vector3().copy(character.position).add(new Vector3(0, -1, 0));
+    characterRaycastQuery.origin.copy(character.position).y -= 1;
 
-    const raycastDirection = new Vector3().subVectors(renderer.camera.position, renderer.controls.target).normalize();
-    cameraRaycastQuery.origin = renderer.camera.position;
-    cameraRaycastQuery.direction = new Vector3(raycastDirection.x, raycastDirection.y, raycastDirection.z);
+    vector3.subVectors(renderer.camera.position, renderer.controls.target).normalize();
+    cameraRaycastQuery.origin.copy(renderer.camera.position);
+    cameraRaycastQuery.direction.copy(vector3);
 
-    // console.log('cam', cameraRaycastQuery.hits.length, 'char', raycastQuery.hits.length)
-    // console.log(cameraRaycastQuery.hits)
+    // console.log('cam', cameraRaycastQuery.hits.length, 'char', characterRaycastQuery.hits.length)
+    // console.log(cameraRaycastQuery.hits, characterRaycastQuery.hits)
     objects.forEach((obj: any) => {
       if (!obj.body) return;
       if ((obj.body as Body).type === BodyType.DYNAMIC) {
