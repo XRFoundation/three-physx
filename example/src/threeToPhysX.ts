@@ -1,7 +1,7 @@
 import { Vector3, Matrix4, Mesh, Quaternion, Object3D, SphereGeometry, BufferGeometry } from 'three';
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry';
-import { PhysXInstance, Transform } from '.';
-import { ShapeConfigType, SHAPES, ShapeType } from './types/ThreePhysX';
+import { PhysXInstance, Transform } from '../../src';
+import { ShapeConfigType, SHAPES, ShapeType } from '../../src/types/ThreePhysX';
 
 const matrixA = new Matrix4();
 const matrixB = new Matrix4();

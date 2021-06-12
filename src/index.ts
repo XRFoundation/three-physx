@@ -22,7 +22,7 @@ import {
   RaycastHit,
 } from './types/ThreePhysX';
 import { clone } from './utils/misc';
-import { Quaternion, Vector3 } from 'three';
+import type { Vector3, Quaternion } from 'three';
 
 let nextAvailableBodyIndex = 0;
 let nextAvailableShapeID = 0;
@@ -213,6 +213,7 @@ export class PhysXInstance {
       if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
         controllerArray.set([id, x, y, z], offset);
       }
+      // @ts-ignore
       body.delta = { x: 0, y: 0, z: 0 };
       offset += BufferConfig.CONTROLLER_DATA_SIZE;
     });
@@ -405,21 +406,46 @@ const generateUUID = (): string => {
 };
 
 export class Transform implements TransformType {
-  translation: Vector3 = new Vector3();
-  rotation: Quaternion = new Quaternion();
-  scale: Vector3 = new Vector3();
-  linearVelocity: Vector3 = new Vector3();
-  angularVelocity: Vector3 = new Vector3();
+  // @ts-ignore
+  translation: Vector3 = { x: 0, y: 0, z: 0 };
+  // @ts-ignore
+  rotation: Quaternion = { x: 0, y: 0, z: 0, w: 0 };
+  // @ts-ignore
+  scale: Vector3 = { x: 0, y: 0, z: 0 };
+  // @ts-ignore
+  linearVelocity: Vector3 = { x: 0, y: 0, z: 0 }
+  // @ts-ignore
+  angularVelocity: Vector3 = { x: 0, y: 0, z: 0 }
   constructor(args?: TransformType) {
     this.set(args);
   }
   set(args: TransformType = {}) {
-    const { translation, rotation, scale, linearVelocity, angularVelocity } = args;
-    if (translation) this.translation.set(translation.x ?? this.translation.x, translation.y ?? this.translation.y, translation.z ?? this.translation.z);
-    if (rotation) this.rotation.set(rotation.x ?? this.rotation.x, rotation.y ?? this.rotation.y, rotation.z ?? this.rotation.z, rotation.w ?? this.rotation.w);
-    if (scale) this.scale.set(scale.x ?? this.scale.x, scale.y ?? this.scale.y, scale.z ?? this.scale.z);
-    if (linearVelocity) this.linearVelocity.set(linearVelocity.x ?? this.linearVelocity.x, linearVelocity.y ?? this.linearVelocity.y, linearVelocity.z ?? this.linearVelocity.z);
-    if (angularVelocity) this.angularVelocity.set(angularVelocity.x ?? this.angularVelocity.x, angularVelocity.y ?? this.angularVelocity.y, angularVelocity.z ?? this.angularVelocity.z);
+    if (args.translation) {
+      this.translation.x = args.translation.x ?? this.translation.x;
+      this.translation.y = args.translation.y ?? this.translation.y;
+      this.translation.z = args.translation.z ?? this.translation.z;
+    }
+    if (args.rotation) {
+      this.rotation.x = args.rotation.x ?? this.rotation.x;
+      this.rotation.y = args.rotation.y ?? this.rotation.y;
+      this.rotation.z = args.rotation.z ?? this.rotation.z;
+      this.rotation.w = args.rotation.w ?? this.rotation.w;
+    }
+    if (args.scale) {
+      this.scale.x = args.scale.x ?? this.scale.x;
+      this.scale.y = args.scale.y ?? this.scale.y;
+      this.scale.z = args.scale.z ?? this.scale.z;
+    }
+    if (args.linearVelocity) {
+      this.linearVelocity.x = args.linearVelocity.x ?? this.linearVelocity.x;
+      this.linearVelocity.y = args.linearVelocity.y ?? this.linearVelocity.y;
+      this.linearVelocity.z = args.linearVelocity.z ?? this.linearVelocity.z;
+    }
+    if (args.angularVelocity) {
+      this.angularVelocity.x = args.angularVelocity.x ?? this.angularVelocity.x;
+      this.angularVelocity.y = args.angularVelocity.y ?? this.angularVelocity.y;
+      this.angularVelocity.z = args.angularVelocity.z ?? this.angularVelocity.z;
+    }
   }
   toJSON() {
     return {
@@ -734,8 +760,8 @@ export class Controller extends Body implements ControllerRigidBody {
   _shape: ControllerConfig;
   collisions: { down: boolean; sides: boolean; up: boolean };
   controllerCollisionEvents: (ControllerHitEvent | ControllerObstacleHitEvent)[];
-  delta: { x: number; y: number; z: number };
-  velocity: { x: number; y: number; z: number };
+  delta: Vector3;
+  velocity: Vector3;
 
   constructor(config: ControllerConfig) {
     super({ type: BodyType.CONTROLLER, transform: { translation: config.position }, userData: config.userData });
@@ -777,8 +803,10 @@ export class Controller extends Body implements ControllerRigidBody {
     this.shapes.push(shape);
 
     this.collisions = { down: false, sides: false, up: false };
-    this.delta = new Vector3();
-    this.velocity = new Vector3();
+    // @ts-ignore
+    this.delta = config.delta;
+    // @ts-ignore
+    this.velocity = config.velocity;
   }
   updateTransform = (newTransform) => {
     PhysXInstance.instance._physicsProxy.updateController([clone({ id: this.id, position: newTransform.translation })]);
@@ -853,27 +881,39 @@ export class Controller extends Body implements ControllerRigidBody {
 export class Obstacle implements ObstacleType {
   id: number;
   readonly isCapsule: boolean;
-  private _position: Vector3 = new Vector3();
-  private _rotation: Quaternion = new Quaternion();
+  // @ts-ignore
+  private _position: Vector3 = { x: 0, y: 0, z: 0 };
+  // @ts-ignore
+  private _rotation: Quaternion = { x: 0, y: 0, z: 0, w: 0 };
   constructor(args: { isCapsule: boolean; position?: Vec3; rotation?: Quat }) {
     const { isCapsule } = args;
     this.isCapsule = isCapsule;
     this.id = PhysXInstance.instance._getNextAvailableObstacleID();
-    this._position.set(args.position.x, args.position.y, args.position.z);
-    this._rotation.set(args.rotation.x, args.rotation.y, args.rotation.z, args.rotation.w);
+    this._position.x = args.position.x;
+    this._position.y = args.position.y;
+    this._position.z = args.position.z;
+    this._rotation.x = args.rotation.x;
+    this._rotation.y = args.rotation.y;
+    this._rotation.z = args.rotation.z;
+    this._rotation.w = args.rotation.w;
   }
   get position(): Vector3 {
     return this._position;
   }
   set position(val: Vector3) {
-    this._position.set(val.x, val.y, val.z);
+    this._position.x = val.x;
+    this._position.y = val.y;
+    this._position.z = val.z;
     PhysXInstance.instance._physicsProxy._classSetter(clone(['obstacle', 'setPosition', this.id, val]));
   }
   get rotation(): Quaternion {
     return this._rotation;
   }
   set rotation(val: Quaternion) {
-    this._rotation.set(val.x, val.y, val.z, val.w);
+    this._rotation.x = val.x;
+    this._rotation.y = val.y;
+    this._rotation.z = val.z;
+    this._rotation.w = val.w;
     PhysXInstance.instance._physicsProxy._classSetter(clone(['obstacle', 'setPosition', this.id, { x: val.x, y: val.y, z: val.z, w: val.w }]));
   }
 }
@@ -901,17 +941,22 @@ export class CapsuleObstacle extends Obstacle {
 }
 
 export class BoxObstacle extends Obstacle {
-  private _halfExtents?: Vector3 = new Vector3();
+  // @ts-ignore
+  private _halfExtents?: Vector3 = { x: 0, y: 0, z: 0 };
   constructor(args: { isCapsule: boolean; position?: Vec3; rotation?: Quat; halfExtents?: Vec3 }) {
     super(args);
-    this._halfExtents.set(args.halfExtents.x, args.halfExtents.y, args.halfExtents.z);
+    this._halfExtents.x = args.halfExtents.x;
+    this._halfExtents.y = args.halfExtents.y;
+    this._halfExtents.z = args.halfExtents.z;
   }
   get halfExtents(): Vector3 {
     return this._halfExtents;
   }
   set halfExtents(val: Vector3) {
-    this._halfExtents.set(val.x, val.y, val.z);
-    PhysXInstance.instance._physicsProxy._classSetter(clone(['obstacle', 'setHalfExtents', this.id, val]));
+    this._halfExtents.x = val.x;
+    this._halfExtents.y = val.y;
+    this._halfExtents.z = val.z;
+    PhysXInstance.instance._physicsProxy._classSetter(clone(['obstacle', 'setHalfExtents', this.id, { x: val.x, y: val.y, z: val.z }]));
   }
 }
 
@@ -920,7 +965,9 @@ export class RaycastQuery implements SceneQuery {
   readonly type: SceneQueryType;
   // flags: number; // PxQueryFlag
   collisionMask: number;
+  // @ts-ignore
   origin: Vector3;
+  // @ts-ignore
   direction: Vector3;
   maxDistance: number;
   maxHits: number;
@@ -932,8 +979,10 @@ export class RaycastQuery implements SceneQuery {
     this.type = args.type;
     // this.flags = args.flags ?? 0;
     this.collisionMask = args.collisionMask ?? 0;
-    this.origin = args.origin ?? new Vector3();
-    this.direction = args.direction ?? new Vector3();
+    // @ts-ignore
+    this.origin = args.origin;
+    // @ts-ignore
+    this.direction = args.direction;
     this.maxDistance = args.maxDistance ?? 1;
     this.maxHits = args.maxHits ?? 1;
     this.hits = [];
@@ -972,8 +1021,5 @@ export type ColliderHitEvent = {
   contacts: ContactData[];
 };
 
-export { CapsuleBufferGeometry } from './utils/CapsuleBufferGeometry';
-export { DebugRenderer } from './utils/DebugRenderer';
 export * from './types/ThreePhysX';
-export * from './threeToPhysX';
 export { PhysXManager, receiveWorker } from './worker';

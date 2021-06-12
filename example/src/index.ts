@@ -1,4 +1,4 @@
-import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, SceneQueryType, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos, Body, ShapeType, BodyType, Controller, SHAPES, arrayOfPointsToArrayOfVector3, Transform, Obstacle, BoxObstacle, Shape, ColliderHitEvent, RaycastQuery } from '../../src';
+import { PhysXInstance, SceneQueryType, CollisionEvents, ControllerEvents, Body, ShapeType, BodyType, Controller, SHAPES, Transform, Obstacle, BoxObstacle, Shape, ColliderHitEvent, RaycastQuery } from '../../src';
 import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry, PlaneBufferGeometry, Raycaster, Vector2, Euler } from 'three';
 import { ConeBufferGeometry } from 'three';
 import { IcosahedronBufferGeometry } from 'three';
@@ -7,6 +7,9 @@ import { TorusBufferGeometry } from 'three';
 import { TubeBufferGeometry } from 'three';
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry';
 import { Quaternion } from 'three';
+import { arrayOfPointsToArrayOfVector3, getShapesFromObject, getTransformFromWorldPos } from './threeToPhysX';
+import { CapsuleBufferGeometry } from './CapsuleBufferGeometry';
+import { DebugRenderer } from './DebugRenderer';
 
 const vector3 = new Vector3();
 
