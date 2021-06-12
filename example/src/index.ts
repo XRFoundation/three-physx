@@ -1,4 +1,4 @@
-import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, SceneQueryType, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos, Body, ShapeType, BodyType, Controller, SHAPES, arrayOfPointsToArrayOfVector3, Transform, Obstacle, BoxObstacle, Shape, ColliderHitEvent, RaycastQuery } from '../../src';
+import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, SceneQueryType, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos, Body, ShapeType, BodyType, Controller, SHAPES, arrayOfPointsToArrayOfVector3, Transform, Obstacle, BoxObstacle, Shape, ColliderHitEvent, RaycastQuery, ControllerHitEvent } from '../../src';
 import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry, PlaneBufferGeometry, Raycaster, Vector2, Euler } from 'three';
 import { ConeBufferGeometry } from 'three';
 import { IcosahedronBufferGeometry } from 'three';
@@ -337,6 +337,10 @@ const load = async () => {
       // console.log('TRIGGER DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
     });
 
+    characterBody.controllerCollisionEvents.forEach((ev: ControllerHitEvent) => {
+      if(ev.body === platformBody) return;
+      console.log(ev)
+    })
 
 
 
