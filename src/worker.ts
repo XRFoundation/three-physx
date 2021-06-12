@@ -167,7 +167,7 @@ export class PhysXManager {
     // if (config.start) {
     //   this.startPhysX(true);
     // }
-    if(config.gravity) {
+    if (config.gravity) {
       this.scene.setGravity(config.gravity);
     }
   };

@@ -413,9 +413,9 @@ export class Transform implements TransformType {
   // @ts-ignore
   scale: Vector3 = { x: 0, y: 0, z: 0 };
   // @ts-ignore
-  linearVelocity: Vector3 = { x: 0, y: 0, z: 0 }
+  linearVelocity: Vector3 = { x: 0, y: 0, z: 0 };
   // @ts-ignore
-  angularVelocity: Vector3 = { x: 0, y: 0, z: 0 }
+  angularVelocity: Vector3 = { x: 0, y: 0, z: 0 };
   constructor(args?: TransformType) {
     this.set(args);
   }
