@@ -1,6 +1,5 @@
-///<reference path="./types/PhysX.d.ts"/>
+///<reference path="../PhysX.d.ts"/>
 
-import { Matrix4 } from 'three';
 import { getShape } from './getShape';
 import { PhysXConfig, BodyType, RigidBody, ShapeType, ControllerConfig, SceneQuery, SceneQueryType, RaycastHit, CollisionEvents, ControllerEvents } from './types/ThreePhysX';
 import { MessageQueue } from './utils/MessageQueue';
@@ -44,7 +43,6 @@ export class PhysXManager {
   shapeIDByPointer: Map<number, number> = new Map<number, number>();
   controllerIDByPointer: Map<number, number> = new Map<number, number>();
   bodyIDByShapeID: Map<number, number> = new Map<number, number>();
-  matrices: Map<number, Matrix4> = new Map<number, Matrix4>();
   indices: Map<number, number> = new Map<number, number>();
   controllers: Map<number, PhysX.PxController> = new Map<number, PhysX.PxController>();
   raycasts: Map<number, SceneQuery> = new Map<number, SceneQuery>();

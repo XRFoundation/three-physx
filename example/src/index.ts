@@ -1,4 +1,4 @@
-import { PhysXInstance, CapsuleBufferGeometry, DebugRenderer, SceneQueryType, CollisionEvents, ControllerEvents, getShapesFromObject, getTransformFromWorldPos, Body, ShapeType, BodyType, Controller, SHAPES, arrayOfPointsToArrayOfVector3, Transform, Obstacle, BoxObstacle, Shape, ColliderHitEvent, RaycastQuery, ControllerHitEvent } from '../../src';
+import { PhysXInstance, SceneQueryType, CollisionEvents, ControllerEvents, Body, ShapeType, BodyType, Controller, SHAPES, Transform, Obstacle, BoxObstacle, Shape, ColliderHitEvent, RaycastQuery, ControllerHitEvent } from '../../src';
 import { Mesh, MeshBasicMaterial, BoxBufferGeometry, SphereBufferGeometry, DoubleSide, Color, Object3D, Group, MeshStandardMaterial, Vector3, BufferGeometry, BufferAttribute, DodecahedronBufferGeometry, TetrahedronBufferGeometry, CylinderBufferGeometry, TorusKnotBufferGeometry, PlaneBufferGeometry, Raycaster, Vector2, Euler } from 'three';
 import { ConeBufferGeometry } from 'three';
 import { IcosahedronBufferGeometry } from 'three';
@@ -7,6 +7,9 @@ import { TorusBufferGeometry } from 'three';
 import { TubeBufferGeometry } from 'three';
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry';
 import { Quaternion } from 'three';
+import { arrayOfPointsToArrayOfVector3, getShapesFromObject, getTransformFromWorldPos } from './threeToPhysX';
+import { CapsuleBufferGeometry } from './CapsuleBufferGeometry';
+import { DebugRenderer } from './DebugRenderer';
 
 const vector3 = new Vector3();
 
@@ -17,7 +20,7 @@ enum COLLISIONS {
   BALL = 1 << 2,
   HAMMER = 1 << 3,
   TRIGGER = 1 << 4,
-  ALL = FLOOR | CHARACTER | BALL  | TRIGGER ,
+  ALL = FLOOR | CHARACTER | BALL | HAMMER | TRIGGER ,
 }
 
 const load = async () => {
@@ -28,7 +31,9 @@ const load = async () => {
   (globalThis as any).objects = objects;
 
   // @ts-ignore
-  await PhysXInstance.instance.initPhysX(new Worker(new URL('./worker.ts', import.meta.url), { type: "module" }), { substeps: 8, verbose: true });
+  await PhysXInstance.instance.initPhysX(new Worker(new URL('./worker.ts', import.meta.url), { type: "module" }), { 
+    // substeps: 8, verbose: true 
+  });
 
   const kinematicObject = new Group();
   // kinematicObject.scale.setScalar(2)
@@ -45,10 +50,10 @@ const load = async () => {
     type: BodyType.KINEMATIC,
   }));
   let isKinematic = true;
-  // setInterval(() => {
-  //   isKinematic = !isKinematic;
-  //   kinematicBody.type = isKinematic ? BodyType.KINEMATIC : BodyType.DYNAMIC;
-  // }, 2000);
+  setInterval(() => {
+    isKinematic = !isKinematic;
+    kinematicBody.type = isKinematic ? BodyType.KINEMATIC : BodyType.DYNAMIC;
+  }, 2000);
   objects.set(kinematicBody.id, kinematicObject);
   renderer.addToScene(kinematicObject);
   (kinematicObject as any).body = kinematicBody;
@@ -75,20 +80,20 @@ const load = async () => {
     collisionMask: COLLISIONS.ALL
   }));
 
-  // const character2 = new Group();
-  // character2.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
-  // character2.position.set(2, 1.5, 2);
-  // const characterBody2 = PhysXInstance.instance.createController(new Controller({
-  //   isCapsule: true,
-  //   radius: 0.5,
-  //   position: character2.position,
-  //   collisionLayer: COLLISIONS.CHARACTER,
-  //   collisionMask: COLLISIONS.ALL
-  // }));
+  const character2 = new Group();
+  character2.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
+  character2.position.set(2, 1.5, 2);
+  const characterBody2 = PhysXInstance.instance.createController(new Controller({
+    isCapsule: true,
+    radius: 0.5,
+    position: character2.position,
+    collisionLayer: COLLISIONS.CHARACTER,
+    collisionMask: COLLISIONS.ALL
+  }));
 
-  // renderer.addToScene(character2);
-  // (character2 as any).body = characterBody2;
-  // objects.set(characterBody2.id, character2);
+  renderer.addToScene(character2);
+  (character2 as any).body = characterBody2;
+  objects.set(characterBody2.id, character2);
 
   const triggerBody = PhysXInstance.instance.addBody(new Body({
     shapes: [
@@ -333,8 +338,8 @@ const load = async () => {
 
     })
     kinematicBody.collisionEvents.forEach(({ type, bodySelf, bodyOther, shapeSelf, shapeOther }) => {
-      // if(type === CollisionEvents.TRIGGER_START)
-      // console.log('TRIGGER DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
+      if(type === CollisionEvents.TRIGGER_START)
+      console.log('TRIGGER DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
     });
 
     characterBody.controllerCollisionEvents.forEach((ev: ControllerHitEvent) => {
@@ -382,7 +387,7 @@ const createBalls = () => {
     new TorusKnotBufferGeometry(),
   ])
   const meshes = [];
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 100; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     meshes.push(mesh);

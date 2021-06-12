@@ -141,6 +141,9 @@ export interface ControllerConfig {
   halfForwardExtent?: number;
   halfHeight?: number;
   halfSideExtent?: number;
+  // api
+  delta?: Vec3;
+  velocity?: Vec3;
 }
 
 export interface ObstacleType {

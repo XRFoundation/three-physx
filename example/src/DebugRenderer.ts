@@ -19,8 +19,8 @@ import {
   MeshStandardMaterial,
   Material,
 } from 'three';
-import { Body, BoxObstacle, CapsuleObstacle, Controller, Obstacle, PhysXInstance } from '..';
-import { Object3DBody, BodyType, SHAPES, ShapeType, SceneQuery } from '../types/ThreePhysX';
+import { Body, BoxObstacle, CapsuleObstacle, Controller, Obstacle, PhysXInstance } from '../../src';
+import { Object3DBody, BodyType, SHAPES, ShapeType, SceneQuery } from '../../src/types/ThreePhysX';
 import { CapsuleBufferGeometry } from './CapsuleBufferGeometry';
 const parentMatrix = new Matrix4();
 const childMatrix = new Matrix4();
