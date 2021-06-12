@@ -21,7 +21,7 @@
   "homepage": "https://github.com/HexaField/three-physx#readme",
   "devDependencies": {
     "prettier": "^2.0.5",
-    "three": "^0.129.1",
+    "three": "^0.129.0",
     "typescript": "^4.2.3",
     "vite": "^2.2.3"
   },

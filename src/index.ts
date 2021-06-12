@@ -409,7 +409,7 @@ export class Transform implements TransformType {
   // @ts-ignore
   translation: Vector3 = { x: 0, y: 0, z: 0 };
   // @ts-ignore
-  rotation: Quaternion = { x: 0, y: 0, z: 0, w: 0 };
+  rotation: Quaternion = { x: 0, y: 0, z: 0, w: 1 };
   // @ts-ignore
   scale: Vector3 = { x: 0, y: 0, z: 0 };
   // @ts-ignore
@@ -446,15 +446,6 @@ export class Transform implements TransformType {
       this.angularVelocity.y = args.angularVelocity.y ?? this.angularVelocity.y;
       this.angularVelocity.z = args.angularVelocity.z ?? this.angularVelocity.z;
     }
-  }
-  toJSON() {
-    return {
-      translation: { x: this.translation.x, y: this.translation.y, z: this.translation.z },
-      rotation: { x: this.rotation.x, y: this.rotation.y, z: this.rotation.z, w: this.rotation.w },
-      scale: { x: this.scale.x, y: this.scale.y, z: this.scale.z },
-      linearVelocity: { x: this.linearVelocity.x, y: this.linearVelocity.y, z: this.linearVelocity.z },
-      angularVelocity: { x: this.angularVelocity.x, y: this.angularVelocity.y, z: this.angularVelocity.z },
-    };
   }
 }
 
@@ -804,9 +795,9 @@ export class Controller extends Body implements ControllerRigidBody {
 
     this.collisions = { down: false, sides: false, up: false };
     // @ts-ignore
-    this.delta = config.delta;
+    this.delta = config.delta || { x: 0, y: 0, z: 0 };
     // @ts-ignore
-    this.velocity = config.velocity;
+    this.velocity = config.velocity || { x: 0, y: 0, z: 0 };
   }
   updateTransform = (newTransform) => {
     PhysXInstance.instance._physicsProxy.updateController([clone({ id: this.id, position: newTransform.translation })]);

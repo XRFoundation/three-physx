@@ -1,4 +1,5 @@
-import { Vector3, Matrix4, Mesh, Quaternion, Object3D, SphereGeometry, BufferGeometry, BufferGeometryUtils } from 'three';
+import { Vector3, Matrix4, Mesh, Quaternion, Object3D, SphereGeometry, BufferGeometry } from 'three';
+import { BufferGeometryUtils } from 'three/examples/jsm/utils/BufferGeometryUtils';
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry';
 import { PhysXInstance, Transform } from '../../src';
 import { ShapeConfigType, SHAPES, ShapeType } from '../../src/types/ThreePhysX';
