@@ -1,4 +1,4 @@
-import { Vector3, Matrix4, Mesh, Quaternion, Object3D, SphereGeometry, BufferGeometry } from 'three';
+import { Vector3, Matrix4, Mesh, Quaternion, Object3D, SphereGeometry, BufferGeometry, BufferGeometryUtils } from 'three';
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry';
 import { PhysXInstance, Transform } from '../../src';
 import { ShapeConfigType, SHAPES, ShapeType } from '../../src/types/ThreePhysX';
@@ -227,8 +227,6 @@ export function getGeometry(object) {
     tmp = new BufferGeometry();
   const meshes = getMeshes(object);
 
-  const combined = new BufferGeometry();
-
   if (meshes.length === 0) return null;
 
   // Apply scale  – it can't easily be applied to a CANNON.Shape later.
@@ -250,18 +248,7 @@ export function getGeometry(object) {
   }
 
   // Recursively merge geometry, preserving local transforms.
-  while ((mesh = meshes.pop())) {
-    mesh.updateMatrixWorld();
-    if (mesh.geometry.isBufferGeometry) {
-      if (mesh.geometry.attributes.position && mesh.geometry.attributes.position.itemSize > 2) {
-        const tmpGeom = mesh.geometry;
-        combined.merge(tmpGeom, mesh.matrixWorld);
-        tmpGeom.dispose();
-      }
-    } else {
-      combined.merge(mesh.geometry, mesh.matrixWorld);
-    }
-  }
+  const combined = BufferGeometryUtils.mergeBufferGeometries(meshes.map(mesh => mesh.geometry));
 
   const matrix = new Matrix4();
   matrix.scale(object.scale);

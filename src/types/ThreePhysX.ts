@@ -8,6 +8,7 @@ export interface PhysXConfig {
   bounceThresholdVelocity?: number;
   verbose?: boolean;
   substeps?: number;
+  gravity?: Vec3;
 }
 
 export enum SHAPES {
