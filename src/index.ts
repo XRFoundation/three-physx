@@ -22,7 +22,7 @@ import {
   RaycastHit,
 } from './types/ThreePhysX';
 import { clone } from './utils/misc';
-import type { Vector3, Quaternion } from 'three';
+import { Vector3, Quaternion } from 'three';
 
 let nextAvailableBodyIndex = 0;
 let nextAvailableShapeID = 0;
@@ -406,16 +406,11 @@ const generateUUID = (): string => {
 };
 
 export class Transform implements TransformType {
-  // @ts-ignore
-  translation: Vector3 = { x: 0, y: 0, z: 0 };
-  // @ts-ignore
-  rotation: Quaternion = { x: 0, y: 0, z: 0, w: 1 };
-  // @ts-ignore
-  scale: Vector3 = { x: 0, y: 0, z: 0 };
-  // @ts-ignore
-  linearVelocity: Vector3 = { x: 0, y: 0, z: 0 };
-  // @ts-ignore
-  angularVelocity: Vector3 = { x: 0, y: 0, z: 0 };
+  translation: Vector3 = new Vector3();
+  rotation: Quaternion = new Quaternion();
+  scale: Vector3 = new Vector3();
+  linearVelocity: Vector3 = new Vector3();
+  angularVelocity: Vector3 = new Vector3();
   constructor(args?: TransformType) {
     this.set(args);
   }
@@ -446,6 +441,15 @@ export class Transform implements TransformType {
       this.angularVelocity.y = args.angularVelocity.y ?? this.angularVelocity.y;
       this.angularVelocity.z = args.angularVelocity.z ?? this.angularVelocity.z;
     }
+  }
+  toJSON() {
+    return {
+      translation: { x: this.translation.x, y: this.translation.y, z: this.translation.z },
+      rotation: { x: this.rotation.x, y: this.rotation.y, z: this.rotation.z, w: this.rotation.w },
+      scale: { x: this.scale.x, y: this.scale.y, z: this.scale.z },
+      linearVelocity: { x: this.linearVelocity.x, y: this.linearVelocity.y, z: this.linearVelocity.z },
+      angularVelocity: { x: this.angularVelocity.x, y: this.angularVelocity.y, z: this.angularVelocity.z },
+    };
   }
 }
 
@@ -795,9 +799,9 @@ export class Controller extends Body implements ControllerRigidBody {
 
     this.collisions = { down: false, sides: false, up: false };
     // @ts-ignore
-    this.delta = config.delta || { x: 0, y: 0, z: 0 };
+    this.delta = config.delta ?? new Vector3();
     // @ts-ignore
-    this.velocity = config.velocity || { x: 0, y: 0, z: 0 };
+    this.velocity = config.velocity ?? new Vector3();
   }
   updateTransform = (newTransform) => {
     PhysXInstance.instance._physicsProxy.updateController([clone({ id: this.id, position: newTransform.translation })]);
@@ -872,10 +876,8 @@ export class Controller extends Body implements ControllerRigidBody {
 export class Obstacle implements ObstacleType {
   id: number;
   readonly isCapsule: boolean;
-  // @ts-ignore
-  private _position: Vector3 = { x: 0, y: 0, z: 0 };
-  // @ts-ignore
-  private _rotation: Quaternion = { x: 0, y: 0, z: 0, w: 0 };
+  private _position: Vector3 = new Vector3();
+  private _rotation: Quaternion = new Quaternion();
   constructor(args: { isCapsule: boolean; position?: Vec3; rotation?: Quat }) {
     const { isCapsule } = args;
     this.isCapsule = isCapsule;
@@ -932,8 +934,7 @@ export class CapsuleObstacle extends Obstacle {
 }
 
 export class BoxObstacle extends Obstacle {
-  // @ts-ignore
-  private _halfExtents?: Vector3 = { x: 0, y: 0, z: 0 };
+  private _halfExtents?: Vector3 = new Vector3();
   constructor(args: { isCapsule: boolean; position?: Vec3; rotation?: Quat; halfExtents?: Vec3 }) {
     super(args);
     this._halfExtents.x = args.halfExtents.x;
@@ -956,9 +957,7 @@ export class RaycastQuery implements SceneQuery {
   readonly type: SceneQueryType;
   // flags: number; // PxQueryFlag
   collisionMask: number;
-  // @ts-ignore
   origin: Vector3;
-  // @ts-ignore
   direction: Vector3;
   maxDistance: number;
   maxHits: number;
@@ -971,9 +970,9 @@ export class RaycastQuery implements SceneQuery {
     // this.flags = args.flags ?? 0;
     this.collisionMask = args.collisionMask ?? 0;
     // @ts-ignore
-    this.origin = args.origin;
+    this.origin = args.origin ?? new Vector3();
     // @ts-ignore
-    this.direction = args.direction;
+    this.direction = args.direction ?? new Vector3();
     this.maxDistance = args.maxDistance ?? 1;
     this.maxHits = args.maxHits ?? 1;
     this.hits = [];
