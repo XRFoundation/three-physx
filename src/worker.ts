@@ -56,7 +56,7 @@ export class PhysXManager {
     if (config.substeps) {
       this.substeps = config.substeps;
     }
-    if(config.maximumDelta) {
+    if (config.maximumDelta) {
       this.maximumDelta = config.maximumDelta;
     }
     if (config.verbose) {
