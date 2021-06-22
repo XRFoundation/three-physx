@@ -31,7 +31,6 @@ export class PhysXManager {
   defaultCCTQueryCallback: PhysX.PxQueryFilterCallback;
 
   updateInterval: any;
-  tps: number = 60;
   substeps: number = 1;
   onUpdate: any;
   onEvent: any;
@@ -53,9 +52,6 @@ export class PhysXManager {
   }
 
   initPhysX = (config: PhysXConfig = {}): void => {
-    if (config.tps) {
-      this.tps = config.tps;
-    }
     if (config.substeps) {
       this.substeps = config.substeps;
     }
@@ -164,20 +160,14 @@ export class PhysXManager {
     //   }
     // });
 
-    // if (config.start) {
-    //   this.startPhysX(true);
-    // }
     if (config.gravity) {
       this.scene.setGravity(config.gravity);
     }
   };
 
-  simulate = () => {
-    const now = Date.now();
-    const delta = now - lastSimulationTick;
-    lastSimulationTick = now;
+  simulate = (deltaTime: number) => {
     for (let i = 0; i < this.substeps; i++) {
-      this.scene.simulate(delta / (1000 * this.substeps), true);
+      this.scene.simulate(deltaTime / (1000 * this.substeps), true);
       this.scene.fetchResults(true);
     }
     const bodyArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
@@ -201,7 +191,9 @@ export class PhysXManager {
     this.onUpdate({ raycastResults, bodyArray }); //, shapeArray);
   };
 
-  update = (kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array, raycastQueryArray: Float32Array, deltaTime: number) => {
+  update = (kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array, raycastQueryArray: Float32Array) => {
+    const now = Date.now();
+    const deltaTime = now - lastSimulationTick;
     for (let offset = 0; offset < kinematicBodiesArray.length; offset += BufferConfig.KINEMATIC_DATA_SIZE) {
       const id = kinematicBodiesArray[offset];
       const body = this.bodies.get(id) as PhysX.PxRigidDynamic;
@@ -268,17 +260,8 @@ export class PhysXManager {
       raycast.origin = newOriginPos;
       raycast.direction = newDir;
     }
-    this.simulate();
+    this.simulate(deltaTime);
   };
-
-  // startPhysX = (start: boolean = true) => {
-  //   if (start) {
-  //     lastSimulationTick = Date.now();
-  //     this.updateInterval = setInterval(this.simulate, 1000 / this.tps);
-  //   } else {
-  //     clearInterval(this.updateInterval);
-  //   }
-  // };
 
   addBody = (config: RigidBody) => {
     const { id, transform, shapes, type } = config;

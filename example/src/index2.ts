@@ -35,6 +35,29 @@ const load = async () => {
     // substeps: 8, verbose: true 
   });
 
+  const kinematicObject = new Group();
+  // kinematicObject.scale.setScalar(2)
+  kinematicObject.add(new Mesh(new BoxBufferGeometry(5, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateX(2).rotateY(Math.PI / 2));
+  kinematicObject.children[0].scale.setScalar(2);
+  kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
+  const kinematicBody = PhysXInstance.instance.addBody(new Body({
+    shapes: getShapesFromObject(kinematicObject).map((shape: Shape, i: number) => {
+      shape.config.collisionLayer = COLLISIONS.HAMMER;
+      shape.config.collisionMask = i ? COLLISIONS.NONE : COLLISIONS.ALL;
+      return shape;
+    }),
+    transform: getTransformFromWorldPos(kinematicObject),
+    type: BodyType.KINEMATIC,
+  }));
+  let isKinematic = true;
+  setInterval(() => {
+    isKinematic = !isKinematic;
+    kinematicBody.type = isKinematic ? BodyType.KINEMATIC : BodyType.DYNAMIC;
+  }, 2000);
+  objects.set(kinematicBody.id, kinematicObject);
+  renderer.addToScene(kinematicObject);
+  (kinematicObject as any).body = kinematicBody;
+
   const character = new Group();
   character.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
   const characterBody = PhysXInstance.instance.createController(new Controller({
@@ -54,6 +77,49 @@ const load = async () => {
     origin: new Vector3(),
     direction: new Vector3(0, -1, 0),
     maxDistance: 1,
+    collisionMask: COLLISIONS.ALL
+  }));
+
+  const character2 = new Group();
+  character2.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
+  character2.position.set(2, 1.5, 2);
+  const characterBody2 = PhysXInstance.instance.createController(new Controller({
+    isCapsule: true,
+    radius: 0.5,
+    position: character2.position,
+    collisionLayer: COLLISIONS.CHARACTER,
+    collisionMask: COLLISIONS.ALL
+  }));
+
+  renderer.addToScene(character2);
+  (character2 as any).body = characterBody2;
+  objects.set(characterBody2.id, character2);
+
+  const triggerBody = PhysXInstance.instance.addBody(new Body({
+    shapes: [
+      {
+        shape: SHAPES.Box,
+        options: {
+          boxExtents: {
+            x: 3, y: 1, z: 3
+          }
+        },
+        config: {
+          isTrigger: true,
+          collisionLayer: COLLISIONS.TRIGGER,
+          collisionMask: COLLISIONS.ALL
+        }
+      }
+    ],
+    transform: new Transform({ translation: { x: 2, y: 1 }}),
+    type: BodyType.STATIC,
+  }));
+
+  const cameraRaycastQuery = PhysXInstance.instance.addRaycastQuery(new RaycastQuery({
+    type: SceneQueryType.Closest,
+    origin: new Vector3(0, 0, 0),
+    direction: new Vector3(0, -1, 0),
+    maxDistance: 10,
     collisionMask: COLLISIONS.ALL
   }));
 
@@ -181,11 +247,18 @@ const load = async () => {
 	  }
   });
 
+  PhysXInstance.instance.startPhysX(true);
   const update = () => {
     const time = Date.now();
     const timeSecs = time / 1000;
     const delta = time - lastTime;
 
+    if (kinematicBody.type === BodyType.KINEMATIC) {
+      kinematicObject.position.set(Math.sin(timeSecs) * 10, 0, Math.cos(timeSecs) * 10);
+      kinematicObject.lookAt(0, 0, 0);
+      kinematicObject.position.setY(2);
+      kinematicBody.updateTransform({ translation: kinematicObject.position, rotation: kinematicObject.quaternion });
+    }
     if (characterBody.collisions.down) {
       if (characterBody.velocity.y < 0)
         characterBody.velocity.y = 0;
@@ -211,6 +284,10 @@ const load = async () => {
     })
     characterBody.delta.y += characterBody.velocity.y;
     characterRaycastQuery.origin.copy(character.position).y -= 1;
+
+    vector3.subVectors(renderer.camera.position, renderer.controls.target).normalize();
+    cameraRaycastQuery.origin.copy(renderer.camera.position);
+    cameraRaycastQuery.direction.copy(vector3);
 
     // console.log('cam', cameraRaycastQuery.hits.length, 'char', characterRaycastQuery.hits.length)
     // console.log(cameraRaycastQuery.hits, characterRaycastQuery.hits)
@@ -260,6 +337,17 @@ const load = async () => {
       }
 
     })
+    kinematicBody.collisionEvents.forEach(({ type, bodySelf, bodyOther, shapeSelf, shapeOther }) => {
+      if(type === CollisionEvents.TRIGGER_START)
+      console.log('TRIGGER DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
+    });
+
+    characterBody.controllerCollisionEvents.forEach((ev: ControllerHitEvent) => {
+      if(ev.body === platformBody) return;
+      console.log(ev)
+    })
+
+
 
     PhysXInstance.instance.update();
     debug.update();

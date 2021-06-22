@@ -28,11 +28,9 @@ let nextAvailableBodyIndex = 0;
 let nextAvailableShapeID = 0;
 let nextAvailableRaycastID = 0;
 let nextAvailableObstacleID = 0;
-let lastUpdateTick = 0;
 
 export class PhysXInstance {
   static instance: PhysXInstance = new PhysXInstance();
-  tps: number;
   _physicsProxy: any;
   _messageQueue: MessageQueue;
 
@@ -44,7 +42,6 @@ export class PhysXInstance {
   _obstacles: Map<number, Obstacle> = new Map<number, Obstacle>();
 
   initPhysX = async (worker: Worker, config: PhysXConfig = {}): Promise<void> => {
-    this.tps = config.tps ?? 60;
     this._messageQueue = new MessageQueue(worker);
     await new Promise((resolve) => {
       this._messageQueue.once('init', resolve);
@@ -174,7 +171,6 @@ export class PhysXInstance {
     this._physicsProxy = {
       initPhysX: pipeRemoteFunction(true, 'initPhysX'),
       update: pipeRemoteFunction(true, 'update'),
-      startPhysX: pipeRemoteFunction(true, 'startPhysX'),
       addBody: pipeRemoteFunction(false, 'addBody'),
       updateBody: pipeRemoteFunction(false, 'updateBody'),
       updateShape: pipeRemoteFunction(false, 'updateShape'),
@@ -196,9 +192,6 @@ export class PhysXInstance {
   // update kinematic bodies
   update() {
     // TODO: make this rely on kinematicBodies.size instead of bodies.size
-    const now = Date.now();
-    const deltaTime = Math.min(Math.max(now - lastUpdateTick, 1000 / this.tps), 10000 / this.tps); // clamp delta between 1*tps and 10*tps (in ms)
-    lastUpdateTick = now;
     let offset = 0;
     const kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.KINEMATIC_DATA_SIZE * this._kinematicBodies.size));
     this._kinematicBodies.forEach((body, id) => {
@@ -223,12 +216,8 @@ export class PhysXInstance {
       raycastArray.set([id, raycast.origin.x, raycast.origin.y, raycast.origin.z, raycast.direction.x, raycast.direction.y, raycast.direction.z], offset);
       offset += BufferConfig.RAYCAST_DATA_SIZE;
     });
-    this._physicsProxy.update([kinematicArray, controllerArray, raycastArray, deltaTime], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);
+    this._physicsProxy.update([kinematicArray, controllerArray, raycastArray], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);
     this._messageQueue.sendQueue();
-  }
-
-  startPhysX(start: boolean) {
-    return this._physicsProxy.startPhysX([start]);
   }
 
   addBody(body: Body) {
@@ -367,14 +356,12 @@ export class PhysXInstance {
   };
 
   dispose = () => {
-    this.startPhysX(false);
     this._messageQueue.sendQueue();
     this._messageQueue.dispose();
     nextAvailableBodyIndex = 0;
     nextAvailableShapeID = 0;
     nextAvailableRaycastID = 0;
     nextAvailableObstacleID = 0;
-    lastUpdateTick = 0;
     this._bodies.clear();
     this._shapes.clear();
     this._kinematicBodies.clear();
@@ -644,6 +631,11 @@ const bodySetterFunctions = [
   'setRigidBodyFlag',
   'setMassandUpdateInertia',
   'setMassSpaceInertiaTensor',
+  'setStabilizationThreshold',
+  'setWakeCounter',
+  'wakeUp',
+  'putToSleep',
+  'setSleepThreshold',
   'updateMassAndInertia',
 ];
 
