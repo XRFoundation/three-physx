@@ -8,20 +8,18 @@ import {
   BufferGeometry,
   MeshBasicMaterial,
   Vector3,
-  SphereGeometry,
-  BoxGeometry,
-  PlaneGeometry,
-  Object3D,
   Matrix4,
   Quaternion,
   LineBasicMaterial,
   Line,
   MeshStandardMaterial,
   Material,
+  BufferAttribute,
 } from 'three';
-import { Body, BoxObstacle, CapsuleObstacle, Controller, Obstacle, PhysXInstance } from '../../src';
-import { Object3DBody, BodyType, SHAPES, ShapeType, SceneQuery } from '../../src/types/ThreePhysX';
+import { Body, BoxObstacle, CapsuleObstacle, Controller, Obstacle, PhysXInstance, Shape } from '../../src';
+import { BodyType, SHAPES } from '../../src/types/ThreePhysX';
 import { CapsuleBufferGeometry } from './CapsuleBufferGeometry';
+
 const parentMatrix = new Matrix4();
 const childMatrix = new Matrix4();
 const pos = new Vector3();
@@ -95,7 +93,7 @@ export class DebugRenderer {
       rot.set(body.transform.rotation.x, body.transform.rotation.y, body.transform.rotation.z, body.transform.rotation.w);
       parentMatrix.compose(pos, rot, scale);
 
-      body.shapes.forEach((shape: ShapeType) => {
+      body.shapes.forEach((shape: Shape) => {
         this._updateMesh(body, shape.id, shape);
 
         if (this._meshes.get(shape.id)) {
@@ -179,7 +177,7 @@ export class DebugRenderer {
     }
   }
 
-  private _updateMesh(body: Body, id: number, shape: ShapeType) {
+  private _updateMesh(body: Body, id: number, shape: Shape) {
     let mesh = this._meshes.get(id);
     let needsUpdate = false;
     if (shape._debugNeedsUpdate) {
@@ -197,7 +195,7 @@ export class DebugRenderer {
     }
   }
 
-  private _createMesh(shape: ShapeType, type: BodyType): Mesh | Points {
+  private _createMesh(shape: Shape, type: BodyType): Mesh | Points {
     let mesh: Mesh | Points;
     let geometry: BufferGeometry;
     const material: Material = this._materials[shape.config.isTrigger ? 4 : type];
@@ -258,11 +256,7 @@ export class DebugRenderer {
       case SHAPES.TriangleMesh:
         geometry = new BufferGeometry();
         points = [];
-        for (let i = 0; i < shape.options.vertices.length; i += 3) {
-          points.push(new Vector3(shape.options.vertices[i], shape.options.vertices[i + 1], shape.options.vertices[i + 2]));
-        }
-        geometry.setFromPoints(points);
-        geometry.setIndex(Array.from(shape.options.indices));
+        geometry.setAttribute("position", new BufferAttribute(new Float32Array(shape.options.vertices), 3));
         mesh = new Mesh(geometry, material);
         break;
 
@@ -309,23 +303,16 @@ export class DebugRenderer {
     return mesh;
   }
 
-  private _scaleMesh(mesh: Mesh | Points, shape: ShapeType) {
+  private _scaleMesh(mesh: Mesh | Points, shape: Shape) {
     const scale = shape.transform.scale as Vector3;
-    switch (shape.shape) {
-      case SHAPES.Sphere:
-        const radius = clampNonzeroPositive(shape.options.radius);
-        mesh.scale.set(radius, radius, radius);
-        break;
-
-      case SHAPES.Box:
-        const { x, y, z } = shape.options.boxExtents;
-        mesh.scale.set(clampNonzeroPositive(x), clampNonzeroPositive(y), clampNonzeroPositive(z)).multiplyScalar(2);
-        break;
-
-      default:
-        mesh.scale.copy(scale);
-        break;
+    if(shape.shape === SHAPES.Sphere) {
+      const radius = clampNonzeroPositive(shape.options.radius);
+      mesh.scale.set(radius, radius, radius);
+    } else if(shape.shape === SHAPES.Box) {
+      const { x, y, z } = shape.options.boxExtents;
+      mesh.scale.set(clampNonzeroPositive(x), clampNonzeroPositive(y), clampNonzeroPositive(z)).multiplyScalar(2);
     }
+    mesh.scale.multiply(scale)
   }
 }
 const clampNonzeroPositive = (num) => {

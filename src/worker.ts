@@ -31,7 +31,6 @@ export class PhysXManager {
   defaultCCTQueryCallback: PhysX.PxQueryFilterCallback;
 
   updateInterval: any;
-  tps: number = 60;
   substeps: number = 1;
   onUpdate: any;
   onEvent: any;
@@ -53,9 +52,6 @@ export class PhysXManager {
   }
 
   initPhysX = (config: PhysXConfig = {}): void => {
-    if (config.tps) {
-      this.tps = config.tps;
-    }
     if (config.substeps) {
       this.substeps = config.substeps;
     }
@@ -236,8 +232,8 @@ export class PhysXManager {
       const afterPosition = controller.getPosition();
       if (distSq(beforePosition, afterPosition) > 1) {
         // if we detect a huge jump, cancel our move (but still send our collision events)
-        logger.warn('detected large controller move', beforePosition, afterPosition);
-        controller.setPosition(beforePosition);
+        logger.warn('detected large controller move', (controller as any)._delta, beforePosition, afterPosition);
+        // controller.setPosition(beforePosition);
       }
       (controller as any)._delta = { x: 0, y: 0, z: 0 };
       (controller as any)._needsUpdate = false;
@@ -270,15 +266,6 @@ export class PhysXManager {
     }
     this.simulate();
   };
-
-  // startPhysX = (start: boolean = true) => {
-  //   if (start) {
-  //     lastSimulationTick = Date.now();
-  //     this.updateInterval = setInterval(this.simulate, 1000 / this.tps);
-  //   } else {
-  //     clearInterval(this.updateInterval);
-  //   }
-  // };
 
   addBody = (config: RigidBody) => {
     const { id, transform, shapes, type } = config;

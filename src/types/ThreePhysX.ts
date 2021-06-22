@@ -2,7 +2,7 @@ import type { EventDispatcher, Object3D } from 'three';
 ///<reference path="./PhysX.d.ts"/>
 
 export interface PhysXConfig {
-  tps?: number;
+  maximumDelta?: number;
   lengthScale?: number;
   start?: boolean;
   bounceThresholdVelocity?: number;

@@ -32,7 +32,8 @@ const load = async () => {
 
   // @ts-ignore
   await PhysXInstance.instance.initPhysX(new Worker(new URL('./worker.ts', import.meta.url), { type: "module" }), { 
-    // substeps: 8, verbose: true 
+    // substeps: 8, 
+    verbose: true 
   });
 
   const kinematicObject = new Group();
@@ -387,7 +388,7 @@ const createBalls = () => {
     new TorusKnotBufferGeometry(),
   ])
   const meshes = [];
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 1000; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     meshes.push(mesh);
