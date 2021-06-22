@@ -35,6 +35,7 @@ export class PhysXManager {
   onUpdate: any;
   onEvent: any;
   transformArray: Float32Array;
+  maximumDelta: number = 1 / 20;
 
   bodies: Map<number, PhysX.PxRigidActor> = new Map<number, PhysX.PxRigidActor>();
   dynamic: Map<number, PhysX.PxRigidActor> = new Map<number, PhysX.PxRigidActor>();
@@ -54,6 +55,9 @@ export class PhysXManager {
   initPhysX = (config: PhysXConfig = {}): void => {
     if (config.substeps) {
       this.substeps = config.substeps;
+    }
+    if(config.maximumDelta) {
+      this.maximumDelta = config.maximumDelta;
     }
     if (config.verbose) {
       logger = globalThis.logger = {
@@ -193,7 +197,7 @@ export class PhysXManager {
 
   update = (kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array, raycastQueryArray: Float32Array) => {
     const now = Date.now();
-    const deltaTime = now - lastSimulationTick;
+    const deltaTime = Math.min(now - lastSimulationTick, this.maximumDelta);
     for (let offset = 0; offset < kinematicBodiesArray.length; offset += BufferConfig.KINEMATIC_DATA_SIZE) {
       const id = kinematicBodiesArray[offset];
       const body = this.bodies.get(id) as PhysX.PxRigidDynamic;
@@ -228,8 +232,8 @@ export class PhysXManager {
       const afterPosition = controller.getPosition();
       if (distSq(beforePosition, afterPosition) > 1) {
         // if we detect a huge jump, cancel our move (but still send our collision events)
-        logger.warn('detected large controller move', beforePosition, afterPosition);
-        controller.setPosition(beforePosition);
+        logger.warn('detected large controller move', (controller as any)._delta, beforePosition, afterPosition);
+        // controller.setPosition(beforePosition);
       }
       (controller as any)._delta = { x: 0, y: 0, z: 0 };
       (controller as any)._needsUpdate = false;

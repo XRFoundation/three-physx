@@ -395,7 +395,7 @@ const generateUUID = (): string => {
 export class Transform implements TransformType {
   translation: Vector3 = new Vector3();
   rotation: Quaternion = new Quaternion();
-  scale: Vector3 = new Vector3();
+  scale: Vector3 = new Vector3(1, 1, 1);
   linearVelocity: Vector3 = new Vector3();
   angularVelocity: Vector3 = new Vector3();
   constructor(args?: TransformType) {
