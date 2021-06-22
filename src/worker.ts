@@ -35,7 +35,7 @@ export class PhysXManager {
   onUpdate: any;
   onEvent: any;
   transformArray: Float32Array;
-  maximumDelta: number = 1 / 20;
+  maximumDelta: number = 1000 / 20;
 
   bodies: Map<number, PhysX.PxRigidActor> = new Map<number, PhysX.PxRigidActor>();
   dynamic: Map<number, PhysX.PxRigidActor> = new Map<number, PhysX.PxRigidActor>();
@@ -198,6 +198,7 @@ export class PhysXManager {
   update = (kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array, raycastQueryArray: Float32Array) => {
     const now = Date.now();
     const deltaTime = Math.min(now - lastSimulationTick, this.maximumDelta);
+    lastSimulationTick = now;
     for (let offset = 0; offset < kinematicBodiesArray.length; offset += BufferConfig.KINEMATIC_DATA_SIZE) {
       const id = kinematicBodiesArray[offset];
       const body = this.bodies.get(id) as PhysX.PxRigidDynamic;
