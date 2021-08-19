@@ -257,6 +257,7 @@ export class DebugRenderer {
         geometry = new BufferGeometry();
         points = [];
         geometry.setAttribute("position", new BufferAttribute(new Float32Array(shape.options.vertices), 3));
+        geometry.setIndex(shape.options.indices)
         mesh = new Mesh(geometry, material);
         break;
 

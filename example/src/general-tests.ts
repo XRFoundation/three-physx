@@ -20,7 +20,7 @@ enum COLLISIONS {
   BALL = 1 << 2,
   HAMMER = 1 << 3,
   TRIGGER = 1 << 4,
-  ALL = FLOOR | CHARACTER | BALL | HAMMER | TRIGGER ,
+  ALL = FLOOR | BALL | HAMMER | TRIGGER ,
 }
 
 const load = async () => {
@@ -247,7 +247,6 @@ const load = async () => {
 	  }
   });
 
-  PhysXInstance.instance.startPhysX(true);
   const update = () => {
     const time = Date.now();
     const timeSecs = time / 1000;

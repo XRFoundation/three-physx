@@ -190,7 +190,7 @@ export class PhysXInstance {
   };
 
   // update kinematic bodies
-  update() {
+  update(deltaTime: number) {
     // TODO: make this rely on kinematicBodies.size instead of bodies.size
     let offset = 0;
     const kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.KINEMATIC_DATA_SIZE * this._kinematicBodies.size));
@@ -216,7 +216,7 @@ export class PhysXInstance {
       raycastArray.set([id, raycast.origin.x, raycast.origin.y, raycast.origin.z, raycast.direction.x, raycast.direction.y, raycast.direction.z], offset);
       offset += BufferConfig.RAYCAST_DATA_SIZE;
     });
-    this._physicsProxy.update([kinematicArray, controllerArray, raycastArray], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);
+    this._physicsProxy.update([deltaTime, kinematicArray, controllerArray, raycastArray], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);
     this._messageQueue.sendQueue();
   }
 
@@ -732,7 +732,7 @@ const DefaultControllerConfig: ControllerConfig = {
   radius: 0.25,
   stepOffset: 0.1,
   contactOffset: 0.01,
-  slopeLimit: 1,
+  slopeLimit: 0,
   invisibleWallHeight: 1,
 };
 

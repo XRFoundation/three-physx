@@ -6,8 +6,6 @@ import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
 import { putIntoPhysXHeap } from './utils/misc';
 
-let lastSimulationTick = 0;
-
 let logger = (globalThis.logger = {
   log(...any: any) {},
   warn(...any: any) {},
@@ -195,10 +193,7 @@ export class PhysXManager {
     this.onUpdate({ raycastResults, bodyArray }); //, shapeArray);
   };
 
-  update = (kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array, raycastQueryArray: Float32Array) => {
-    const now = Date.now();
-    const deltaTime = Math.min(now - lastSimulationTick, this.maximumDelta);
-    lastSimulationTick = now;
+  update = (deltaTime: number, kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array, raycastQueryArray: Float32Array) => {
     for (let offset = 0; offset < kinematicBodiesArray.length; offset += BufferConfig.KINEMATIC_DATA_SIZE) {
       const id = kinematicBodiesArray[offset];
       const body = this.bodies.get(id) as PhysX.PxRigidDynamic;

@@ -1,4 +1,4 @@
-import { Matrix4, Quaternion, Vector3 } from 'three';
+import { Quaternion, Vector3 } from 'three';
 import { TransformType, SHAPES } from './types/ThreePhysX';
 import { putIntoPhysXHeap } from './utils/misc';
 import { PhysXManager } from './worker';
