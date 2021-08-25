@@ -190,8 +190,7 @@ export class PhysXInstance {
   };
 
   // update kinematic bodies
-  update(deltaTime: number) {
-    // TODO: make this rely on kinematicBodies.size instead of bodies.size
+  update() {
     let offset = 0;
     const kinematicArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.KINEMATIC_DATA_SIZE * this._kinematicBodies.size));
     this._kinematicBodies.forEach((body, id) => {
@@ -216,7 +215,7 @@ export class PhysXInstance {
       raycastArray.set([id, raycast.origin.x, raycast.origin.y, raycast.origin.z, raycast.direction.x, raycast.direction.y, raycast.direction.z], offset);
       offset += BufferConfig.RAYCAST_DATA_SIZE;
     });
-    this._physicsProxy.update([deltaTime, kinematicArray, controllerArray, raycastArray], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);
+    this._physicsProxy.update([kinematicArray, controllerArray, raycastArray], [kinematicArray.buffer, controllerArray.buffer, raycastArray.buffer]);
     this._messageQueue.sendQueue();
   }
 

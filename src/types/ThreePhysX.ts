@@ -1,8 +1,5 @@
-import type { EventDispatcher, Object3D } from 'three';
-///<reference path="./PhysX.d.ts"/>
-
 export interface PhysXConfig {
-  maximumDelta?: number;
+  stepTime?: number;
   lengthScale?: number;
   start?: boolean;
   bounceThresholdVelocity?: number;
@@ -149,10 +146,6 @@ export interface ControllerConfig {
 export interface ObstacleType {
   id?: number;
   isCapsule?: boolean;
-}
-
-export interface Object3DBody extends Object3D {
-  body: RigidBody;
 }
 
 export enum SceneQueryType {

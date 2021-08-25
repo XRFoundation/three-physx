@@ -35,28 +35,28 @@ const load = async () => {
     // substeps: 8, verbose: true 
   });
 
-  const kinematicObject = new Group();
-  // kinematicObject.scale.setScalar(2)
-  kinematicObject.add(new Mesh(new BoxBufferGeometry(5, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateX(2).rotateY(Math.PI / 2));
-  kinematicObject.children[0].scale.setScalar(2);
-  kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
-  const kinematicBody = PhysXInstance.instance.addBody(new Body({
-    shapes: getShapesFromObject(kinematicObject).map((shape: Shape, i: number) => {
-      shape.config.collisionLayer = COLLISIONS.HAMMER;
-      shape.config.collisionMask = i ? COLLISIONS.NONE : COLLISIONS.ALL;
-      return shape;
-    }),
-    transform: getTransformFromWorldPos(kinematicObject),
-    type: BodyType.KINEMATIC,
-  }));
-  let isKinematic = true;
-  setInterval(() => {
-    isKinematic = !isKinematic;
-    kinematicBody.type = isKinematic ? BodyType.KINEMATIC : BodyType.DYNAMIC;
-  }, 2000);
-  objects.set(kinematicBody.id, kinematicObject);
-  renderer.addToScene(kinematicObject);
-  (kinematicObject as any).body = kinematicBody;
+  // const kinematicObject = new Group();
+  // // kinematicObject.scale.setScalar(2)
+  // kinematicObject.add(new Mesh(new BoxBufferGeometry(5, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateX(2).rotateY(Math.PI / 2));
+  // kinematicObject.children[0].scale.setScalar(2);
+  // kinematicObject.children[0].add(new Mesh(new BoxBufferGeometry(3, 1, 1), new MeshStandardMaterial({ color: randomColor() })).translateZ(2).rotateY(Math.PI / 2));
+  // const kinematicBody = PhysXInstance.instance.addBody(new Body({
+  //   shapes: getShapesFromObject(kinematicObject).map((shape: Shape, i: number) => {
+  //     shape.config.collisionLayer = COLLISIONS.HAMMER;
+  //     shape.config.collisionMask = i ? COLLISIONS.NONE : COLLISIONS.ALL;
+  //     return shape;
+  //   }),
+  //   transform: getTransformFromWorldPos(kinematicObject),
+  //   type: BodyType.KINEMATIC,
+  // }));
+  // let isKinematic = true;
+  // setInterval(() => {
+  //   isKinematic = !isKinematic;
+  //   kinematicBody.type = isKinematic ? BodyType.KINEMATIC : BodyType.DYNAMIC;
+  // }, 2000);
+  // objects.set(kinematicBody.id, kinematicObject);
+  // renderer.addToScene(kinematicObject);
+  // (kinematicObject as any).body = kinematicBody;
 
   const character = new Group();
   character.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
@@ -252,12 +252,12 @@ const load = async () => {
     const timeSecs = time / 1000;
     const delta = time - lastTime;
 
-    if (kinematicBody.type === BodyType.KINEMATIC) {
-      kinematicObject.position.set(Math.sin(timeSecs) * 10, 0, Math.cos(timeSecs) * 10);
-      kinematicObject.lookAt(0, 0, 0);
-      kinematicObject.position.setY(2);
-      kinematicBody.updateTransform({ translation: kinematicObject.position, rotation: kinematicObject.quaternion });
-    }
+    // if (kinematicBody.type === BodyType.KINEMATIC) {
+    //   kinematicObject.position.set(Math.sin(timeSecs) * 10, 0, Math.cos(timeSecs) * 10);
+    //   kinematicObject.lookAt(0, 0, 0);
+    //   kinematicObject.position.setY(2);
+    //   kinematicBody.updateTransform({ translation: kinematicObject.position, rotation: kinematicObject.quaternion });
+    // }
     if (characterBody.collisions.down) {
       if (characterBody.velocity.y < 0)
         characterBody.velocity.y = 0;
@@ -336,17 +336,14 @@ const load = async () => {
       }
 
     })
-    kinematicBody.collisionEvents.forEach(({ type, bodySelf, bodyOther, shapeSelf, shapeOther }) => {
-      if(type === CollisionEvents.TRIGGER_START)
-      console.log('TRIGGER DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
-    });
-
+    // kinematicBody.collisionEvents.forEach(({ type, bodySelf, bodyOther, shapeSelf, shapeOther }) => {
+    //   if(type === CollisionEvents.TRIGGER_START)
+    //   console.log('TRIGGER DETECTED', bodySelf, bodyOther, shapeSelf, shapeOther);
+    // });
     characterBody.controllerCollisionEvents.forEach((ev: ControllerHitEvent) => {
       if(ev.body === platformBody) return;
       console.log(ev)
     })
-
-
 
     PhysXInstance.instance.update();
     debug.update();
@@ -386,7 +383,7 @@ const createBalls = () => {
     new TorusKnotBufferGeometry(),
   ])
   const meshes = [];
-  for (let i = 0; i < 0; i++) {
+  for (let i = 0; i < 100; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     meshes.push(mesh);

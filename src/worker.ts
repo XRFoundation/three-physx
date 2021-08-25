@@ -6,6 +6,8 @@ import { MessageQueue } from './utils/MessageQueue';
 import * as BufferConfig from './BufferConfig';
 import { putIntoPhysXHeap } from './utils/misc';
 
+let lastSimulationTick = 0;
+
 let logger = (globalThis.logger = {
   log(...any: any) {},
   warn(...any: any) {},
@@ -29,11 +31,11 @@ export class PhysXManager {
   defaultCCTQueryCallback: PhysX.PxQueryFilterCallback;
 
   updateInterval: any;
-  substeps: number = 1;
+  stepTime: number = 1000 / 60;
+  substeps: number = 4;
   onUpdate: any;
   onEvent: any;
   transformArray: Float32Array;
-  maximumDelta: number = 1000 / 20;
 
   bodies: Map<number, PhysX.PxRigidActor> = new Map<number, PhysX.PxRigidActor>();
   dynamic: Map<number, PhysX.PxRigidActor> = new Map<number, PhysX.PxRigidActor>();
@@ -54,8 +56,8 @@ export class PhysXManager {
     if (config.substeps) {
       this.substeps = config.substeps;
     }
-    if (config.maximumDelta) {
-      this.maximumDelta = config.maximumDelta;
+    if (config.stepTime) {
+      this.stepTime = config.stepTime;
     }
     if (config.verbose) {
       logger = globalThis.logger = {
@@ -167,9 +169,9 @@ export class PhysXManager {
     }
   };
 
-  simulate = (deltaTime: number) => {
+  simulate = () => {
     for (let i = 0; i < this.substeps; i++) {
-      this.scene.simulate(deltaTime / (1000 * this.substeps), true);
+      this.scene.simulate(this.stepTime / (1000 * this.substeps), true);
       this.scene.fetchResults(true);
     }
     const bodyArray = new Float32Array(new ArrayBuffer(4 * BufferConfig.BODY_DATA_SIZE * this.bodies.size));
@@ -193,7 +195,7 @@ export class PhysXManager {
     this.onUpdate({ raycastResults, bodyArray }); //, shapeArray);
   };
 
-  update = (deltaTime: number, kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array, raycastQueryArray: Float32Array) => {
+  update = (kinematicBodiesArray: Float32Array, controllerBodiesArray: Float32Array, raycastQueryArray: Float32Array) => {
     for (let offset = 0; offset < kinematicBodiesArray.length; offset += BufferConfig.KINEMATIC_DATA_SIZE) {
       const id = kinematicBodiesArray[offset];
       const body = this.bodies.get(id) as PhysX.PxRigidDynamic;
@@ -224,7 +226,7 @@ export class PhysXManager {
       (controller as any)._delta.z += controllerBodiesArray[offset + 3];
       const filters = new PhysX.PxControllerFilters((controller as any)._filterData, this.defaultCCTQueryCallback, null);
       const beforePosition = controller.getPosition();
-      const collisionFlags = controller.move((controller as any)._delta, 0.001, deltaTime, filters, this.obstacleContext);
+      const collisionFlags = controller.move((controller as any)._delta, 0.001, this.stepTime, filters, this.obstacleContext);
       const afterPosition = controller.getPosition();
       if (distSq(beforePosition, afterPosition) > 1) {
         // if we detect a huge jump, cancel our move (but still send our collision events)
@@ -260,7 +262,7 @@ export class PhysXManager {
       raycast.origin = newOriginPos;
       raycast.direction = newDir;
     }
-    this.simulate(deltaTime);
+    this.simulate();
   };
 
   addBody = (config: RigidBody) => {
@@ -736,7 +738,7 @@ export const receiveWorker = async (physx): Promise<void> => {
     });
     messageQueue.sendQueue();
   });
-  globalThis.physXManager = PhysXManager.instance;
+  globalThis.PhysXManager = PhysXManager.instance;
   PhysXManager.instance.onUpdate = ({ raycastResults, bodyArray }) => {
     messageQueue.sendEvent('data', { raycastResults, bodyArray }, [bodyArray.buffer]);
     messageQueue.sendEvent('colliderEvent', [...latestEvents]);
