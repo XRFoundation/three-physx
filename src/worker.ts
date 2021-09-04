@@ -225,14 +225,7 @@ export class PhysXManager {
       (controller as any)._delta.y += controllerBodiesArray[offset + 2];
       (controller as any)._delta.z += controllerBodiesArray[offset + 3];
       const filters = new PhysX.PxControllerFilters((controller as any)._filterData, this.defaultCCTQueryCallback, null);
-      const beforePosition = controller.getPosition();
       const collisionFlags = controller.move((controller as any)._delta, 0.001, this.stepTime, filters, this.obstacleContext);
-      const afterPosition = controller.getPosition();
-      if (distSq(beforePosition, afterPosition) > 1) {
-        // if we detect a huge jump, cancel our move (but still send our collision events)
-        logger.warn('detected large controller move', (controller as any)._delta, beforePosition, afterPosition);
-        // controller.setPosition(beforePosition);
-      }
       (controller as any)._delta = { x: 0, y: 0, z: 0 };
       (controller as any)._needsUpdate = false;
       const collisions = {
@@ -713,13 +706,6 @@ const getBodyData = (body: PhysX.PxRigidActor) => {
 };
 
 const defaultMask = 0; //1 << 0;
-
-const distSq = (point1, point2) => {
-  const dx = point2.x - point1.x,
-    dy = point2.y - point1.y,
-    dz = point2.z - point1.z;
-  return dx * dx + dy * dy + dz * dz;
-};
 
 export const receiveWorker = async (physx): Promise<void> => {
   const messageQueue = new MessageQueue(globalThis as any);

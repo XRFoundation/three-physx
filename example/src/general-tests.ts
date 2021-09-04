@@ -80,20 +80,20 @@ const load = async () => {
     collisionMask: COLLISIONS.ALL
   }));
 
-  const character2 = new Group();
-  character2.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
-  character2.position.set(2, 1.5, 2);
-  const characterBody2 = PhysXInstance.instance.createController(new Controller({
-    isCapsule: true,
-    radius: 0.5,
-    position: character2.position,
-    collisionLayer: COLLISIONS.CHARACTER,
-    collisionMask: COLLISIONS.ALL
-  }));
+  // const character2 = new Group();
+  // character2.add(new Mesh(new CapsuleBufferGeometry(0.5, 0.5, 1), new MeshBasicMaterial({ color: randomColor() })));
+  // character2.position.set(2, 1.5, 2);
+  // const characterBody2 = PhysXInstance.instance.createController(new Controller({
+  //   isCapsule: true,
+  //   radius: 0.5,
+  //   position: character2.position,
+  //   collisionLayer: COLLISIONS.CHARACTER,
+  //   collisionMask: COLLISIONS.ALL
+  // }));
 
-  renderer.addToScene(character2);
-  (character2 as any).body = characterBody2;
-  objects.set(characterBody2.id, character2);
+  // renderer.addToScene(character2);
+  // (character2 as any).body = characterBody2;
+  // objects.set(characterBody2.id, character2);
 
   const triggerBody = PhysXInstance.instance.addBody(new Body({
     shapes: [
@@ -299,6 +299,7 @@ const load = async () => {
         obj.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
       } else if ((obj.body as Body).type === BodyType.CONTROLLER) {
         const translation = (obj.body as Body).transform.translation;
+        // console.log(translation.x - obj.position.x)
         obj.position.set(translation.x, translation.y, translation.z);
       }
     });
@@ -383,7 +384,7 @@ const createBalls = () => {
     new TorusKnotBufferGeometry(),
   ])
   const meshes = [];
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 0; i++) {
     const mesh = new Mesh(geoms[i % geoms.length], new MeshStandardMaterial({ color: randomColor(), flatShading: true }));
     mesh.position.copy(randomVector3OnPlatform());
     meshes.push(mesh);

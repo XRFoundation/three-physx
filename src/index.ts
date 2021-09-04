@@ -55,6 +55,7 @@ export class PhysXInstance {
         const body = this._bodies.get(bodyArray[offset]) as Body | Controller;
         if (body) {
           if (body.type === BodyType.CONTROLLER) {
+            console.log(bodyArray[offset + 1] - body.transform.translation.x)
             body.transform.translation.x = bodyArray[offset + 1];
             body.transform.translation.y = bodyArray[offset + 2];
             body.transform.translation.z = bodyArray[offset + 3];
@@ -169,22 +170,22 @@ export class PhysXInstance {
     });
 
     this._physicsProxy = {
-      initPhysX: pipeRemoteFunction(true, 'initPhysX'),
-      update: pipeRemoteFunction(true, 'update'),
-      addBody: pipeRemoteFunction(false, 'addBody'),
-      updateBody: pipeRemoteFunction(false, 'updateBody'),
-      updateShape: pipeRemoteFunction(false, 'updateShape'),
-      removeBody: pipeRemoteFunction(false, 'removeBody'),
-      createController: pipeRemoteFunction(false, 'createController'),
-      updateController: pipeRemoteFunction(false, 'updateController'),
-      removeController: pipeRemoteFunction(false, 'removeController'),
-      addRaycastQuery: pipeRemoteFunction(false, 'addRaycastQuery'),
-      updateRaycastQuery: pipeRemoteFunction(false, 'updateRaycastQuery'),
-      removeRaycastQuery: pipeRemoteFunction(false, 'removeRaycastQuery'),
-      addObstacle: pipeRemoteFunction(false, 'addObstacle'),
-      removeObstacle: pipeRemoteFunction(false, 'removeObstacle'),
-      _classGetter: pipeRemoteFunction(true, '_classFunc'),
-      _classSetter: pipeRemoteFunction(false, '_classFunc'),
+      initPhysX: pipeRemoteFunction('initPhysX'),
+      update: pipeRemoteFunction('update'),
+      addBody: pipeRemoteFunction('addBody'),
+      updateBody: pipeRemoteFunction('updateBody'),
+      updateShape: pipeRemoteFunction('updateShape'),
+      removeBody: pipeRemoteFunction('removeBody'),
+      createController: pipeRemoteFunction('createController'),
+      updateController: pipeRemoteFunction('updateController'),
+      removeController: pipeRemoteFunction('removeController'),
+      addRaycastQuery: pipeRemoteFunction('addRaycastQuery'),
+      updateRaycastQuery: pipeRemoteFunction('updateRaycastQuery'),
+      removeRaycastQuery: pipeRemoteFunction('removeRaycastQuery'),
+      addObstacle: pipeRemoteFunction('addObstacle'),
+      removeObstacle: pipeRemoteFunction('removeObstacle'),
+      // _classGetter: pipeRemoteFunction('_classFunc'),
+      _classSetter: pipeRemoteFunction('_classFunc'),
     };
     this._messageQueue.sendQueue();
   };
@@ -371,19 +372,21 @@ export class PhysXInstance {
   };
 }
 
-const pipeRemoteFunction = (awaitResponse: boolean, id: string) => {
+const pipeRemoteFunction = (id: string, awaitResponse = false) => {
   return (args, transferables) => {
-    return awaitResponse
-      ? PhysXInstance.instance._messageQueue.sendEvent(id, { args }, transferables)
-      : new Promise<any>((resolve) => {
-          const uuid = generateUUID();
-          const callback = ({ detail }) => {
-            PhysXInstance.instance._messageQueue.removeEventListener(uuid, callback);
-            resolve(detail.returnValue);
-          };
-          PhysXInstance.instance._messageQueue.addEventListener(uuid, callback);
-          PhysXInstance.instance._messageQueue.sendEvent(id, { args, uuid }, transferables);
-        });
+    // if(awaitResponse) {
+    //   return new Promise<any>((resolve) => {
+    //     const uuid = generateUUID();
+    //     const callback = ({ detail }) => {
+    //       PhysXInstance.instance._messageQueue.removeEventListener(uuid, callback);
+    //       resolve(detail.returnValue);
+    //     };
+    //     PhysXInstance.instance._messageQueue.addEventListener(uuid, callback);
+    //     PhysXInstance.instance._messageQueue.sendEvent(id, { args, uuid }, transferables);
+    //   });
+    // } else {
+      PhysXInstance.instance._messageQueue.sendEvent(id, { args }, transferables)
+    // }
   };
 };
 
@@ -603,7 +606,7 @@ export class Shape implements ShapeType {
   }
 }
 
-const bodyGetterFunctions = ['getAngularDamping', 'getLinearDamping', 'getAngularVelocity', 'getLinearDamping', 'getMass', 'getRigidBodyFlags'];
+// const bodyGetterFunctions = ['getAngularDamping', 'getLinearDamping', 'getAngularVelocity', 'getLinearDamping', 'getMass', 'getRigidBodyFlags'];
 
 const bodySetterFunctions = [
   'setAngularDamping',
@@ -673,9 +676,9 @@ export class Body implements RigidBody {
       assignSetterFunction('body', this, this.id, func);
     });
 
-    bodyGetterFunctions.forEach((func) => {
-      assignGetterFunction('body', this, this.id, func);
-    });
+    // bodyGetterFunctions.forEach((func) => {
+    //   assignGetterFunction('body', this, this.id, func);
+    // });
 
     this.shapes = (shapes ?? []).map((shape) => {
       if (!shape.options) shape.options = {};
@@ -756,9 +759,9 @@ export class Controller extends Body implements ControllerRigidBody {
       assignSetterFunction('body', this, this.id, func);
     });
 
-    controllerGetterFunctions.forEach((func) => {
-      assignGetterFunction('body', this, this.id, func);
-    });
+    // controllerGetterFunctions.forEach((func) => {
+    //   assignGetterFunction('body', this, this.id, func);
+    // });
 
     this._shape = {
       ...DefaultControllerConfig,
