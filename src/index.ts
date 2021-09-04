@@ -55,7 +55,7 @@ export class PhysXInstance {
         const body = this._bodies.get(bodyArray[offset]) as Body | Controller;
         if (body) {
           if (body.type === BodyType.CONTROLLER) {
-            console.log(bodyArray[offset + 1] - body.transform.translation.x)
+            console.log(bodyArray[offset + 1] - body.transform.translation.x);
             body.transform.translation.x = bodyArray[offset + 1];
             body.transform.translation.y = bodyArray[offset + 2];
             body.transform.translation.z = bodyArray[offset + 3];
@@ -385,7 +385,7 @@ const pipeRemoteFunction = (id: string, awaitResponse = false) => {
     //     PhysXInstance.instance._messageQueue.sendEvent(id, { args, uuid }, transferables);
     //   });
     // } else {
-      PhysXInstance.instance._messageQueue.sendEvent(id, { args }, transferables)
+    PhysXInstance.instance._messageQueue.sendEvent(id, { args }, transferables);
     // }
   };
 };
